@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { toast } from 'sonner'
-import { X, FileText, Link, Calendar, ClipboardList, Edit3, Check, Trash2, Youtube, Trello, Eye } from 'lucide-react'
 import { getYoutubeThumbnail } from '@/lib/utils/helpers'
-import type { Task, TaskUpdate, InspirationLink } from '@/types'
-import RichTextEditor from './ui/rich-text-editor'
+import type { Task, TaskUpdate } from '@/types'
+import { Calendar, Check, ClipboardList, Edit3, Eye, FileText, Link, Trash2, Trello, X, Youtube } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import AIAssistant from './AIAssistant'
+import RichTextEditor from './ui/rich-text-editor'
 
 interface TaskDetailModalProps {
   task: Task
@@ -125,36 +125,32 @@ export default function TaskDetailModal({
         <div className="flex border-b border-slate-800">
           <button
             onClick={() => setActiveTab('script')}
-            className={`px-6 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${
-              activeTab === 'script' ? 'text-white border-b-2 border-blue-500' : 'text-slate-500 hover:text-slate-300'
-            }`}
+            className={`px-6 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'script' ? 'text-white border-b-2 border-blue-500' : 'text-slate-500 hover:text-slate-300'
+              }`}
           >
             <FileText size={16} /> Skripta
           </button>
           <button
             onClick={() => setActiveTab('inspiration')}
-            className={`px-6 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${
-              activeTab === 'inspiration'
-                ? 'text-white border-b-2 border-blue-500'
-                : 'text-slate-500 hover:text-slate-300'
-            }`}
+            className={`px-6 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'inspiration'
+              ? 'text-white border-b-2 border-blue-500'
+              : 'text-slate-500 hover:text-slate-300'
+              }`}
           >
             <Link size={16} /> Inspiracija ({editedTask.inspiration_links?.length || 0})
           </button>
           <button
             onClick={() => setActiveTab('schedule')}
-            className={`px-6 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${
-              activeTab === 'schedule' ? 'text-white border-b-2 border-blue-500' : 'text-slate-500 hover:text-slate-300'
-            }`}
+            className={`px-6 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'schedule' ? 'text-white border-b-2 border-blue-500' : 'text-slate-500 hover:text-slate-300'
+              }`}
           >
             <Calendar size={16} /> Raspored
           </button>
           {editedTask.status === 'published' && (
             <button
               onClick={() => setActiveTab('results')}
-              className={`px-6 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${
-                activeTab === 'results' ? 'text-white border-b-2 border-blue-500' : 'text-slate-500 hover:text-slate-300'
-              }`}
+              className={`px-6 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'results' ? 'text-white border-b-2 border-blue-500' : 'text-slate-500 hover:text-slate-300'
+                }`}
             >
               <ClipboardList size={16} /> Rezultati
             </button>
@@ -265,10 +261,10 @@ export default function TaskDetailModal({
                       if (isLongForm) {
                         handleUpdateFullScript(content.trim())
                       } else {
-                        const hookMatch = content.match(/HOOK:?\s*(.+?)(?:\n\n|BODY:|CTA:|$)/is)
-                        const bodyMatch = content.match(/BODY:?\s*(.+?)(?:\n\n|CTA:|$)/is)
-                        const ctaMatch = content.match(/CTA:?\s*(.+?)$/is)
-                        const titleMatch = content.match(/NASLOV:?\s*(.+?)(?:\n|$)/i) || content.match(/^(.+?)(?:\n|HOOK:|BODY:|CTA:)/i)
+                        const hookMatch = content.match(/HOOK:?\s*([\s\S]+?)(?:\n\n|BODY:|CTA:|$)/i)
+                        const bodyMatch = content.match(/BODY:?\s*([\s\S]+?)(?:\n\n|CTA:|$)/i)
+                        const ctaMatch = content.match(/CTA:?\s*([\s\S]+?)$/i)
+                        const titleMatch = content.match(/NASLOV:?\s*([\s\S]+?)(?:\n|$)/i) || content.match(/^([\s\S]+?)(?:\n|HOOK:|BODY:|CTA:)/i)
 
                         if (titleMatch?.[1]) {
                           handleUpdate('title', titleMatch[1].trim())
@@ -328,7 +324,7 @@ export default function TaskDetailModal({
                             alt="YouTube Thumbnail"
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              ;(e.target as HTMLImageElement).style.display = 'none'
+                              ; (e.target as HTMLImageElement).style.display = 'none'
                             }}
                           />
                           <Youtube size={32} fill="red" className="text-white absolute inset-0 m-auto opacity-70 group-hover:opacity-100 transition-opacity" />
@@ -465,11 +461,10 @@ export default function TaskDetailModal({
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className={`py-3 px-6 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
-              isSaving
-                ? 'bg-blue-800 text-blue-300'
-                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
-            }`}
+            className={`py-3 px-6 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${isSaving
+              ? 'bg-blue-800 text-blue-300'
+              : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
+              }`}
           >
             {isSaving ? (
               'Čuvanje...'

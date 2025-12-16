@@ -7,8 +7,8 @@ import type { TaskInsert, Template, UserTier } from '@/types'
 import { Calendar, ChevronLeft, Edit3, FileText, Plus, X, Zap } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import RichTextEditor from './ui/rich-text-editor'
 import AIAssistant from './AIAssistant'
+import RichTextEditor from './ui/rich-text-editor'
 
 interface NewIdeaWizardProps {
   onClose: () => void
@@ -112,7 +112,7 @@ export default function NewIdeaWizard({ onClose, onSaveToPlan, userTier }: NewId
 GLAVNA TEMA 1: ${template.structure.body.replace('[TOPIC]', topic).replace('[RESENJE]', 'koriste automatizaciju')}
 GLAVNA TEMA 2: Detaljna analiza i primer
 ZAKLJUČAK: ${template.structure.cta}`
-      
+
       setFormData((prev) => ({
         ...prev,
         title: prev.title || template.title,
@@ -528,10 +528,10 @@ ZAKLJUČAK: ${template.structure.cta}`
                       fullScriptHtml: content.trim(),
                     }))
                   } else {
-                    const hookMatch = content.match(/HOOK:?\s*(.+?)(?:\n\n|BODY:|CTA:|$)/is)
-                    const bodyMatch = content.match(/BODY:?\s*(.+?)(?:\n\n|CTA:|$)/is)
-                    const ctaMatch = content.match(/CTA:?\s*(.+?)$/is)
-                    const titleMatch = content.match(/NASLOV:?\s*(.+?)(?:\n|$)/i) || content.match(/^(.+?)(?:\n|HOOK:|BODY:|CTA:)/i)
+                    const hookMatch = content.match(/HOOK:?\s*([\s\S]+?)(?:\n\n|BODY:|CTA:|$)/i)
+                    const bodyMatch = content.match(/BODY:?\s*([\s\S]+?)(?:\n\n|CTA:|$)/i)
+                    const ctaMatch = content.match(/CTA:?\s*([\s\S]+?)$/i)
+                    const titleMatch = content.match(/NASLOV:?\s*([\s\S]+?)(?:\n|$)/i) || content.match(/^([\s\S]+?)(?:\n|HOOK:|BODY:|CTA:)/i)
 
                     if (titleMatch?.[1]) {
                       setFormData((p) => ({ ...p, title: titleMatch[1].trim() }))
@@ -573,14 +573,13 @@ ZAKLJUČAK: ${template.structure.cta}`
                 (formData.format === 'Kratka Forma' && !formData.hook.trim() && !formData.body.trim() && !formData.cta.trim()) ||
                 (formData.format === 'Duga Forma' && !formData.fullScript.trim())
               }
-              className={`w-full py-3 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${
-                isSaving ||
+              className={`w-full py-3 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${isSaving ||
                 !formData.title.trim() ||
                 (formData.format === 'Kratka Forma' && !formData.hook.trim() && !formData.body.trim() && !formData.cta.trim()) ||
                 (formData.format === 'Duga Forma' && !formData.fullScript.trim())
-                  ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20'
-              }`}
+                ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20'
+                }`}
             >
               <Calendar size={20} /> {isSaving ? 'Čuvanje...' : 'Sačuvaj u Planer Sadržaja'}
             </button>
