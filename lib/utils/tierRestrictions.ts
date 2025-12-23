@@ -16,13 +16,6 @@ export const TIER_LIMITS: Record<UserTier, TierLimits> = {
     canUseCalendar: false,
     canUseKanban: true,
   },
-  starter: {
-    maxTasks: 50,
-    maxTemplates: 5,
-    maxCaseStudies: null, // unlimited
-    canUseCalendar: true,
-    canUseKanban: true,
-  },
   pro: {
     maxTasks: null, // unlimited
     maxTemplates: null, // unlimited
@@ -30,6 +23,13 @@ export const TIER_LIMITS: Record<UserTier, TierLimits> = {
     canUseCalendar: true,
     canUseKanban: true,
   },
+  admin: {
+    maxTasks: null, // unlimited
+    maxTemplates: null, // unlimited
+    maxCaseStudies: null, // unlimited
+    canUseCalendar: true,
+    canUseKanban: true,
+  }
 }
 
 export function getTierLimits(tier: UserTier): TierLimits {

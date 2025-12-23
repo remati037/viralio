@@ -1,5 +1,5 @@
-import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
+import Stripe from 'stripe'
 
 // Initialize Stripe
 let stripe: Stripe | null = null
@@ -80,32 +80,32 @@ export async function verifyCheckoutSession(
     // Calculate subscription period
     // Try to get dates from subscription object
     const sub = subscription as any
-    
+
     // Log subscription structure for debugging
     console.log('Subscription object keys:', Object.keys(sub))
     console.log('Subscription current_period_start:', sub.current_period_start)
     console.log('Subscription current_period_end:', sub.current_period_end)
-    
+
     // Validate and convert timestamps
     // Check multiple possible property names
-    const currentPeriodStart = sub.current_period_start ?? 
-                               sub.currentPeriodStart ?? 
-                               (subscription as Stripe.Subscription).current_period_start
-    const currentPeriodEnd = sub.current_period_end ?? 
-                             sub.currentPeriodEnd ?? 
-                             (subscription as Stripe.Subscription).current_period_end
-    
+    const currentPeriodStart = sub.current_period_start ??
+      sub.currentPeriodStart ??
+      (subscription as any).current_period_start
+    const currentPeriodEnd = sub.current_period_end ??
+      sub.currentPeriodEnd ??
+      (subscription as any).current_period_end
+
     // Handle trial period - if trial_end exists and is in the future, use it for period_end
     // Otherwise use current_period_end
     const trialEnd = sub.trial_end
     let periodEndToUse = currentPeriodEnd
-    
+
     if (trialEnd) {
       // If trial_end is in the future, subscription period ends at trial end
       // After trial, period_end will be the billing period end
       const trialEndDate = new Date(trialEnd * 1000)
       const periodEndDate = new Date(currentPeriodEnd * 1000)
-      
+
       // Use trial_end if it's later than current_period_end (trial is active)
       if (trialEndDate > periodEndDate) {
         periodEndToUse = trialEnd
@@ -122,17 +122,17 @@ export async function verifyCheckoutSession(
         status: subscription.status,
         trialEnd: trialEnd,
       })
-      
+
       // Fallback: Use current time as start, and add 1 month as end
       const now = Math.floor(Date.now() / 1000)
       const oneMonthFromNow = now + (30 * 24 * 60 * 60) // 30 days in seconds
-      
+
       periodStartTimestamp = now * 1000
       periodEndTimestamp = oneMonthFromNow * 1000
     } else {
       // Convert Unix timestamps to milliseconds
-      periodStartTimestamp = typeof currentPeriodStart === 'number' 
-        ? currentPeriodStart * 1000 
+      periodStartTimestamp = typeof currentPeriodStart === 'number'
+        ? currentPeriodStart * 1000
         : parseInt(String(currentPeriodStart)) * 1000
       periodEndTimestamp = typeof periodEndToUse === 'number'
         ? periodEndToUse * 1000

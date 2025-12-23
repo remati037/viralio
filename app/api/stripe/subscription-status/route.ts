@@ -1,7 +1,7 @@
+import { createClient } from '@/lib/supabase/server'
 import { getUser } from '@/lib/utils/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createClient } from '@/lib/supabase/server'
 
 // Initialize Stripe
 let stripe: Stripe | null = null
@@ -65,14 +65,14 @@ export async function GET(request: NextRequest) {
     // Get subscription status from Stripe
     try {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-      
+
       return NextResponse.json({
-        isCancelled: subscription.cancel_at_period_end === true,
-        hasActiveSubscription: subscription.status === 'active' || subscription.status === 'trialing',
-        cancelAt: subscription.cancel_at,
-        currentPeriodEnd: subscription.current_period_end,
-        trialEnd: subscription.trial_end,
-        status: subscription.status,
+        isCancelled: (subscription as any).cancel_at_period_end === true,
+        hasActiveSubscription: (subscription as any).status === 'active' || (subscription as any).status === 'trialing',
+        cancelAt: (subscription as any).cancel_at,
+        currentPeriodEnd: (subscription as any).current_period_end,
+        trialEnd: (subscription as any).trial_end,
+        status: (subscription as any).status,
       })
     } catch (error: any) {
       // Subscription might not exist in Stripe anymore

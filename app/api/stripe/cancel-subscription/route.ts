@@ -1,7 +1,7 @@
+import { createClient } from '@/lib/supabase/server'
 import { getUser } from '@/lib/utils/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createClient } from '@/lib/supabase/server'
 
 // Initialize Stripe
 let stripe: Stripe | null = null
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     // Get subscription ID from payment record
     const subscriptionId = (latestPayment as any).stripe_subscription_id
-    
+
     if (!subscriptionId) {
       // Try to find subscription by searching Stripe (fallback)
       // Search by customer email
@@ -74,35 +74,35 @@ export async function POST(request: NextRequest) {
           email: customerEmail,
           limit: 1,
         })
-        
+
         if (customers.data.length > 0) {
           const subscriptions = await stripe.subscriptions.list({
             customer: customers.data[0].id,
             status: 'active',
             limit: 1,
           })
-          
+
           if (subscriptions.data.length > 0) {
             const subscription = await stripe.subscriptions.update(subscriptions.data[0].id, {
               cancel_at_period_end: true,
             })
-            
+
             // Update payment record with subscription ID for future reference
             await supabase
               .from('payments')
               .update({ stripe_subscription_id: subscriptions.data[0].id })
               .eq('id', latestPayment.id)
-            
-            return NextResponse.json({ 
+
+            return NextResponse.json({
               success: true,
               message: 'Subscription will be cancelled at the end of the current period',
-              cancelAt: subscription.cancel_at,
-              currentPeriodEnd: subscription.current_period_end,
+              cancelAt: (subscription as any).cancel_at,
+              currentPeriodEnd: (subscription as any).current_period_end,
             })
           }
         }
       }
-      
+
       return NextResponse.json(
         { error: 'Subscription ID not found. Please contact support.' },
         { status: 404 }
@@ -114,11 +114,11 @@ export async function POST(request: NextRequest) {
       cancel_at_period_end: true,
     })
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Subscription will be cancelled at the end of the current period',
-      cancelAt: subscription.cancel_at,
-      currentPeriodEnd: subscription.current_period_end,
+      cancelAt: (subscription as any).cancel_at,
+      currentPeriodEnd: (subscription as any).current_period_end,
     })
   } catch (error: any) {
     console.error('Error cancelling subscription:', error)
