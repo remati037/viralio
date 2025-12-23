@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Trello, Plus, Eye, Trash2 } from 'lucide-react'
 import { parseProfileDetails } from '@/lib/utils/helpers'
 import type { Competitor, CompetitorFeed } from '@/types'
+import Loader from './ui/loader'
 
 interface CompetitorsViewProps {
   competitors: Competitor[]
@@ -21,6 +22,8 @@ export default function CompetitorsView({
 }: CompetitorsViewProps) {
   const [linkInput, setLinkInput] = useState('')
   const [nameInput, setNameInput] = useState('')
+  const [isAdding, setIsAdding] = useState(false)
+  const [removingId, setRemovingId] = useState<string | null>(null)
 
   const handleAdd = async () => {
     if (!linkInput.trim() || !nameInput.trim()) {
@@ -30,6 +33,7 @@ export default function CompetitorsView({
       return
     }
 
+    setIsAdding(true)
     const profileDetails = parseProfileDetails(linkInput.trim(), nameInput.trim())
 
     // Mock feed data
@@ -50,16 +54,20 @@ export default function CompetitorsView({
       },
     ]
 
-    await onAddCompetitor({
-      name: nameInput.trim(),
-      url: linkInput.trim(),
-      icon: profileDetails.icon,
-      niche: profileDetails.niche,
-      feed: mockFeed,
-    })
+    try {
+      await onAddCompetitor({
+        name: nameInput.trim(),
+        url: linkInput.trim(),
+        icon: profileDetails.icon,
+        niche: profileDetails.niche,
+        feed: mockFeed,
+      })
 
-    setLinkInput('')
-    setNameInput('')
+      setLinkInput('')
+      setNameInput('')
+    } finally {
+      setIsAdding(false)
+    }
   }
 
   return (
@@ -92,10 +100,19 @@ export default function CompetitorsView({
           />
           <button
             onClick={handleAdd}
-            disabled={!linkInput.trim() || !nameInput.trim()}
+            disabled={!linkInput.trim() || !nameInput.trim() || isAdding}
             className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500 md:col-span-1 flex items-center justify-center gap-2"
           >
-            <Plus size={18} /> Dodaj Listi
+            {isAdding ? (
+              <>
+                <Loader size="sm" />
+                <span>Dodavanje...</span>
+              </>
+            ) : (
+              <>
+                <Plus size={18} /> Dodaj Listi
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -130,11 +147,23 @@ export default function CompetitorsView({
                   <Eye size={14} /> Feed
                 </button>
                 <button
-                  onClick={() => onRemoveCompetitor(comp.id)}
-                  className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-slate-700 rounded-lg"
+                  onClick={async () => {
+                    setRemovingId(comp.id)
+                    try {
+                      await onRemoveCompetitor(comp.id)
+                    } finally {
+                      setRemovingId(null)
+                    }
+                  }}
+                  disabled={removingId === comp.id}
+                  className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-slate-700 rounded-lg disabled:opacity-50"
                   title="Obriši"
                 >
-                  <Trash2 size={16} />
+                  {removingId === comp.id ? (
+                    <Loader size="sm" />
+                  ) : (
+                    <Trash2 size={16} />
+                  )}
                 </button>
               </div>
             </div>

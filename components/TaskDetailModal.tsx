@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import AIAssistant from './AIAssistant'
 import RichTextEditor from './ui/rich-text-editor'
+import Loader from './ui/loader'
 
 interface TaskDetailModalProps {
   task: Task
@@ -28,6 +29,8 @@ export default function TaskDetailModal({
   const [editedTask, setEditedTask] = useState<Task>(task)
   const [isSaving, setIsSaving] = useState(false)
   const [linkInput, setLinkInput] = useState('')
+  const [isAddingLink, setIsAddingLink] = useState(false)
+  const [removingLinkId, setRemovingLinkId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'script' | 'inspiration' | 'schedule' | 'results'>('script')
 
   const isLongForm = editedTask.format === 'Duga Forma'
@@ -55,11 +58,14 @@ export default function TaskDetailModal({
       return
     }
 
-    const { url, type } = getYoutubeThumbnail(linkInput)
-
-    await onAddInspirationLink(editedTask.id, linkInput.trim(), url || undefined, type || undefined)
-
-    setLinkInput('')
+    setIsAddingLink(true)
+    try {
+      const { url, type } = getYoutubeThumbnail(linkInput)
+      await onAddInspirationLink(editedTask.id, linkInput.trim(), url || undefined, type || undefined)
+      setLinkInput('')
+    } finally {
+      setIsAddingLink(false)
+    }
   }
 
   const handleSave = async () => {
@@ -302,10 +308,17 @@ export default function TaskDetailModal({
                 />
                 <button
                   onClick={handleAddLink}
-                  disabled={!linkInput.trim()}
-                  className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500"
+                  disabled={!linkInput.trim() || isAddingLink}
+                  className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500 flex items-center gap-2"
                 >
-                  Dodaj
+                  {isAddingLink ? (
+                    <>
+                      <Loader size="sm" />
+                      <span>Dodavanje...</span>
+                    </>
+                  ) : (
+                    'Dodaj'
+                  )}
                 </button>
               </div>
 
@@ -345,11 +358,23 @@ export default function TaskDetailModal({
                           {item.link.replace(/^https?:\/\//, '').replace(/^www\./, '')}
                         </a>
                         <button
-                          onClick={() => onRemoveInspirationLink(item.id)}
-                          className="text-slate-600 hover:text-red-400 transition-colors shrink-0"
+                          onClick={async () => {
+                            setRemovingLinkId(item.id)
+                            try {
+                              await onRemoveInspirationLink(item.id)
+                            } finally {
+                              setRemovingLinkId(null)
+                            }
+                          }}
+                          disabled={removingLinkId === item.id}
+                          className="text-slate-600 hover:text-red-400 transition-colors shrink-0 disabled:opacity-50"
                           title="Obriši link"
                         >
-                          <Trash2 size={16} />
+                          {removingLinkId === item.id ? (
+                            <Loader size="sm" />
+                          ) : (
+                            <Trash2 size={16} />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -467,7 +492,10 @@ export default function TaskDetailModal({
               }`}
           >
             {isSaving ? (
-              'Čuvanje...'
+              <>
+                <Loader size="sm" />
+                <span>Čuvanje...</span>
+              </>
             ) : (
               <>
                 <Check size={18} />

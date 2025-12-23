@@ -10,6 +10,7 @@ import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Input } from './ui/input'
 import RichTextEditor from './ui/rich-text-editor'
+import Loader from './ui/loader'
 
 interface AdminCaseStudyCreationProps {
   userId: string
@@ -42,6 +43,7 @@ export default function AdminCaseStudyCreation({ userId, onCaseStudyCreated }: A
       return
     }
 
+    setIsCreating(true)
     try {
       const caseStudy: TaskInsert = {
         user_id: userId, // Will be set to a system user or null
@@ -74,6 +76,8 @@ export default function AdminCaseStudyCreation({ userId, onCaseStudyCreated }: A
       toast.error('Greška', {
         description: error.message,
       })
+    } finally {
+      setIsCreating(false)
     }
   }
 
@@ -273,8 +277,17 @@ export default function AdminCaseStudyCreation({ userId, onCaseStudyCreated }: A
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={handleSave} className="flex items-center gap-2">
-                <Save size={16} /> Kreiraj i Objavi
+              <Button onClick={handleSave} disabled={isCreating} className="flex items-center gap-2">
+                {isCreating ? (
+                  <>
+                    <Loader size="sm" />
+                    <span>Kreiranje...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} /> Kreiraj i Objavi
+                  </>
+                )}
               </Button>
               <Button variant="outline" onClick={resetForm}>
                 Otkaži

@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import RichTextEditor from './ui/rich-text-editor'
+import Loader from './ui/loader'
+import Skeleton from './ui/skeleton'
 
 interface AdminTemplateManagementProps {
   userId: string
@@ -22,6 +24,8 @@ export default function AdminTemplateManagement({ userId }: AdminTemplateManagem
   const [loading, setLoading] = useState(true)
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [savingTemplate, setSavingTemplate] = useState(false)
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: '',
     format: 'Kratka Forma' as 'Kratka Forma' | 'Duga Forma',
@@ -65,6 +69,7 @@ export default function AdminTemplateManagement({ userId }: AdminTemplateManagem
       return
     }
 
+    setSavingTemplate(true)
     try {
       if (editingTemplate) {
         // Update existing template
@@ -122,6 +127,8 @@ export default function AdminTemplateManagement({ userId }: AdminTemplateManagem
       toast.error('Greška', {
         description: error.message,
       })
+    } finally {
+      setSavingTemplate(false)
     }
   }
 
@@ -160,6 +167,7 @@ export default function AdminTemplateManagement({ userId }: AdminTemplateManagem
   const handleDelete = async (templateId: string) => {
     if (!confirm('Da li ste sigurni da želite da obrišete ovaj šablon?')) return
 
+    setDeletingTemplateId(templateId)
     try {
       const { error } = await supabase.from('templates').delete().eq('id', templateId)
       if (error) throw error
@@ -169,6 +177,8 @@ export default function AdminTemplateManagement({ userId }: AdminTemplateManagem
       toast.error('Greška', {
         description: error.message,
       })
+    } finally {
+      setDeletingTemplateId(null)
     }
   }
 
@@ -190,7 +200,30 @@ export default function AdminTemplateManagement({ userId }: AdminTemplateManagem
   }
 
   if (loading) {
-    return <div className="text-white">Loading...</div>
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <Skeleton height={32} width="250px" />
+            <Skeleton height={20} width="300px" />
+          </div>
+          <Skeleton height={40} width="150px" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-slate-900 border border-slate-700 rounded-lg p-4 space-y-3">
+              <Skeleton height={24} width="80%" />
+              <Skeleton height={16} width="60%" />
+              <Skeleton height={60} width="100%" />
+              <div className="flex gap-2">
+                <Skeleton height={32} width="80px" />
+                <Skeleton height={32} width="80px" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -399,8 +432,17 @@ export default function AdminTemplateManagement({ userId }: AdminTemplateManagem
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={handleSave} className="flex items-center gap-2">
-                <Save size={16} /> Sačuvaj
+              <Button onClick={handleSave} disabled={savingTemplate} className="flex items-center gap-2">
+                {savingTemplate ? (
+                  <>
+                    <Loader size="sm" />
+                    <span>Čuvanje...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} /> Sačuvaj
+                  </>
+                )}
               </Button>
               <Button variant="outline" onClick={resetForm}>
                 Otkaži
@@ -450,9 +492,19 @@ export default function AdminTemplateManagement({ userId }: AdminTemplateManagem
                   variant="outline"
                   size="sm"
                   onClick={() => handleDelete(template.id)}
+                  disabled={deletingTemplateId === template.id}
                   className="flex items-center gap-1 text-red-400"
                 >
-                  <Trash2 size={14} /> Obriši
+                  {deletingTemplateId === template.id ? (
+                    <>
+                      <Loader size="sm" />
+                      <span>Brisanje...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={14} /> Obriši
+                    </>
+                  )}
                 </Button>
               </div>
             </CardContent>

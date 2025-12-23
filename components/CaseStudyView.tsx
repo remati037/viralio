@@ -8,6 +8,8 @@ import { ClipboardList, Eye, Heart, Lightbulb, Plus, Target } from 'lucide-react
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from './ui/button'
+import Loader from './ui/loader'
+import Skeleton from './ui/skeleton'
 
 interface CaseStudyViewProps {
   tasks: Task[]
@@ -139,8 +141,24 @@ export default function CaseStudyView({ tasks, onCaseStudyClick, userId, userTie
 
       <div className="space-y-8">
         {loadingCaseStudies ? (
-          <div className="py-20 text-center border-2 border-dashed border-slate-800 rounded-2xl">
-            <p className="text-slate-500">Učitavanje studija slučaja...</p>
+          <div className="space-y-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-slate-900 border border-slate-700 rounded-2xl p-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Skeleton height={200} />
+                  <div className="md:col-span-2 space-y-4">
+                    <Skeleton height={30} width="80%" />
+                    <Skeleton height={20} width="60%" />
+                    <Skeleton height={60} />
+                    <div className="flex gap-4">
+                      <Skeleton height={20} width="80px" />
+                      <Skeleton height={20} width="80px" />
+                      <Skeleton height={20} width="80px" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : visibleCaseStudies.length === 0 ? (
           <div className="py-20 text-center border-2 border-dashed border-slate-800 rounded-2xl">

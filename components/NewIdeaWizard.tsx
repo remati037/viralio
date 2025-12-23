@@ -9,6 +9,8 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import AIAssistant from './AIAssistant'
 import RichTextEditor from './ui/rich-text-editor'
+import Loader from './ui/loader'
+import Skeleton from './ui/skeleton'
 
 interface NewIdeaWizardProps {
   onClose: () => void
@@ -312,7 +314,19 @@ ZAKLJUČAK: ${template.structure.cta}`
           </div>
 
           {loadingTemplates ? (
-            <div className="text-center py-8 text-slate-400">Učitavanje šablona...</div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
+                  <div className="flex justify-between">
+                    <Skeleton height={20} width="60px" />
+                    <Skeleton height={20} width="50px" />
+                  </div>
+                  <Skeleton height={24} width="100%" />
+                  <Skeleton height={40} width="100%" />
+                  <Skeleton height={32} width="100%" />
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto pr-2">
               {activeTemplates.length === 0 ? (

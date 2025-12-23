@@ -69,5 +69,5 @@ export type Payment = Database['public']['Tables']['payments']['Row']
 export type UserStatistics = Database['public']['Tables']['user_statistics']['Row']
 
 export type UserRole = 'admin' | 'user'
-export type UserTier = 'free' | 'starter' | 'pro'
+export type UserTier = 'free' | 'pro' | 'admin'
 

@@ -18,7 +18,7 @@ export interface Database {
           monthly_goal_short: number | null
           monthly_goal_long: number | null
           role: 'admin' | 'user'
-          tier: 'free' | 'starter' | 'pro'
+          tier: 'free' | 'pro' | 'admin'
           created_at: string
           updated_at: string
         }
@@ -30,7 +30,7 @@ export interface Database {
           monthly_goal_short?: number | null
           monthly_goal_long?: number | null
           role?: 'admin' | 'user'
-          tier?: 'free' | 'starter' | 'pro'
+          tier?: 'free' | 'pro' | 'admin'
           created_at?: string
           updated_at?: string
         }
@@ -42,7 +42,7 @@ export interface Database {
           monthly_goal_short?: number | null
           monthly_goal_long?: number | null
           role?: 'admin' | 'user'
-          tier?: 'free' | 'starter' | 'pro'
+          tier?: 'free' | 'pro' | 'admin'
           created_at?: string
           updated_at?: string
         }
@@ -244,13 +244,13 @@ export interface Database {
         Row: {
           id: string
           template_id: string
-          tier: 'free' | 'starter' | 'pro'
+          tier: 'free' | 'pro' | 'admin'
           created_at: string
         }
         Insert: {
           id?: string
           template_id: string
-          tier: 'free' | 'starter' | 'pro'
+          tier: 'free' | 'pro' | 'admin'
           created_at?: string
         }
         Update: {
@@ -271,7 +271,7 @@ export interface Database {
           subscription_period_start: string | null
           subscription_period_end: string | null
           next_payment_date: string | null
-          tier_at_payment: 'free' | 'starter' | 'pro' | null
+          tier_at_payment: 'free' | 'pro' | 'admin' | null
           created_at: string
           updated_at: string
         }
@@ -285,7 +285,7 @@ export interface Database {
           subscription_period_start?: string | null
           subscription_period_end?: string | null
           next_payment_date?: string | null
-          tier_at_payment?: 'free' | 'starter' | 'pro' | null
+          tier_at_payment?: 'free' | 'pro' | 'admin' | null
           created_at?: string
           updated_at?: string
         }
@@ -299,7 +299,7 @@ export interface Database {
           subscription_period_start?: string | null
           subscription_period_end?: string | null
           next_payment_date?: string | null
-          tier_at_payment?: 'free' | 'starter' | 'pro' | null
+          tier_at_payment?: 'free' | 'pro' | 'admin' | null
           created_at?: string
           updated_at?: string
         }

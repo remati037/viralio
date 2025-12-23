@@ -152,9 +152,16 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500"
+          className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500 flex items-center justify-center gap-2"
         >
-          {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
+          {loading ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Učitavanje...</span>
+            </>
+          ) : (
+            <span>{isSignUp ? 'Sign Up' : 'Sign In'}</span>
+          )}
         </button>
       </form>
 

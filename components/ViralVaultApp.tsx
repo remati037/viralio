@@ -21,6 +21,8 @@ import KanbanBoard from './KanbanBoard'
 import NewIdeaWizard from './NewIdeaWizard'
 import ProfileSettings from './ProfileSettings'
 import TaskDetailModal from './TaskDetailModal'
+import Loader from './ui/loader'
+import Skeleton from './ui/skeleton'
 
 export default function ViralVaultApp({ userId }: { userId: string }) {
   const router = useRouter()
@@ -66,6 +68,8 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
     router.push('/login')
   }
 
+  const [isSavingTask, setIsSavingTask] = useState(false)
+
   const handleSaveToPlan = async (taskData: Omit<TaskInsert, 'user_id'>) => {
     // Validate tier limits before creating task
     if (profile?.tier) {
@@ -80,6 +84,7 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
       }
     }
 
+    setIsSavingTask(true)
     // createTask will add user_id automatically
     const result = await createTask({ ...taskData, user_id: userId } as TaskInsert)
     if (result.error) {
@@ -91,9 +96,13 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
         description: `"${taskData.title}" je dodata u planer.`,
       })
     }
+    setIsSavingTask(false)
   }
 
+  const [movingTaskId, setMovingTaskId] = useState<string | null>(null)
+
   const handleMoveTask = async (taskId: string, newStatus: string) => {
+    setMovingTaskId(taskId)
     const result = await updateTask(taskId, { status: newStatus as any })
     if (result.error) {
       toast.error('Greška pri pomeranju', {
@@ -110,9 +119,11 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
         description: `Status promenjen na "${statusLabels[newStatus] || newStatus}".`,
       })
     }
+    setMovingTaskId(null)
   }
 
   const handleTaskDrop = async (taskId: string, columnId: string) => {
+    setMovingTaskId(taskId)
     const result = await updateTask(taskId, { status: columnId as any })
     if (result.error) {
       toast.error('Greška pri pomeranju', {
@@ -129,10 +140,14 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
         description: `Status promenjen na "${statusLabels[columnId] || columnId}".`,
       })
     }
+    setMovingTaskId(null)
   }
+
+  const [isUpdatingTask, setIsUpdatingTask] = useState(false)
 
   const handleUpdateTask = async (updates: TaskUpdate) => {
     if (!selectedTask) return
+    setIsUpdatingTask(true)
     const result = await updateTask(selectedTask.id, updates)
     if (result.error) {
       toast.error('Greška pri ažuriranju', {
@@ -143,10 +158,14 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
         description: 'Izmene su sačuvane.',
       })
     }
+    setIsUpdatingTask(false)
   }
+
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
 
   const handleDeleteTask = async (taskId: string) => {
     const task = tasks.find((t) => t.id === taskId)
+    setDeletingTaskId(taskId)
     const result = await deleteTask(taskId)
     if (result.error) {
       toast.error('Greška pri brisanju', {
@@ -158,6 +177,7 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
       })
       setSelectedTask(null)
     }
+    setDeletingTaskId(null)
   }
 
   const handleSaveProfile = async (profileData: Partial<typeof profile> & { social_links?: SocialLink[] }) => {
@@ -249,8 +269,34 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
 
   if (profileLoading || tasksLoading || competitorsLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+      <div className="min-h-screen bg-slate-950 p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Header Skeleton */}
+          <div className="space-y-4">
+            <Skeleton height={40} width="300px" />
+            <Skeleton height={20} width="500px" />
+          </div>
+
+          {/* Sidebar Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="lg:col-span-1 space-y-4">
+              <Skeleton height={50} />
+              <Skeleton height={50} />
+              <Skeleton height={50} />
+              <Skeleton height={50} />
+            </div>
+
+            {/* Main Content Skeleton */}
+            <div className="lg:col-span-3 space-y-6">
+              <Skeleton height={200} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Skeleton height={150} />
+                <Skeleton height={150} />
+              </div>
+              <Skeleton height={300} />
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -549,6 +595,9 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
           )}
         </main>
       </div>
+
+      {/* Loading overlay for saving task */}
+      {isSavingTask && <Loader fullScreen text="Čuvanje ideje..." />}
 
       {/* Modals */}
       {isNewIdeaWizardOpen && (

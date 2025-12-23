@@ -10,6 +10,8 @@ import AdminTemplateManagement from './AdminTemplateManagement'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Input } from './ui/input'
+import Loader from './ui/loader'
+import Skeleton from './ui/skeleton'
 
 interface AdminDashboardProps {
   userId: string
@@ -22,6 +24,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
   const [loading, setLoading] = useState(true)
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [updatingTierId, setUpdatingTierId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAllUsers()
@@ -65,7 +68,8 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
     }
   }
 
-  const handleTierChange = async (userId: string, newTier: 'free' | 'starter' | 'pro') => {
+  const handleTierChange = async (userId: string, newTier: 'free' | 'pro' | 'admin') => {
+    setUpdatingTierId(userId)
     try {
       const { error } = await supabase
         .from('profiles')
@@ -85,6 +89,8 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
       toast.error('Greška pri ažuriranju', {
         description: error.message,
       })
+    } finally {
+      setUpdatingTierId(null)
     }
   }
 
@@ -96,8 +102,35 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-white">Loading...</div>
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <Skeleton height={40} width="300px" />
+          <Skeleton height={20} width="400px" />
+        </div>
+        
+        {/* Tabs Skeleton */}
+        <div className="flex gap-2">
+          <Skeleton height={40} width="120px" />
+          <Skeleton height={40} width="120px" />
+          <Skeleton height={40} width="120px" />
+        </div>
+        
+        {/* Stats Cards Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Skeleton height={100} />
+          <Skeleton height={100} />
+          <Skeleton height={100} />
+          <Skeleton height={100} />
+        </div>
+        
+        {/* Table Skeleton */}
+        <div className="space-y-4">
+          <Skeleton height={50} />
+          <Skeleton height={60} />
+          <Skeleton height={60} />
+          <Skeleton height={60} />
+          <Skeleton height={60} />
+        </div>
       </div>
     )
   }
@@ -226,10 +259,10 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                         </td>
                         <td className="p-3">
                           <span
-                            className={`px-2 py-1 rounded text-xs font-bold ${user.tier === 'pro'
-                              ? 'bg-purple-900/30 text-purple-300'
-                              : user.tier === 'starter'
-                                ? 'bg-blue-900/30 text-blue-300'
+                            className={`px-2 py-1 rounded text-xs font-bold ${user.tier === 'admin'
+                              ? 'bg-yellow-900/30 text-yellow-300'
+                              : user.tier === 'pro'
+                                ? 'bg-purple-900/30 text-purple-300'
                                 : 'bg-slate-800 text-slate-400'
                               }`}
                           >
@@ -245,13 +278,14 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                             <select
                               value={user.tier || 'free'}
                               onChange={(e) =>
-                                handleTierChange(user.id, e.target.value as 'free' | 'starter' | 'pro')
+                                handleTierChange(user.id, e.target.value as 'free' | 'pro' | 'admin')
                               }
-                              className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-white"
+                              disabled={updatingTierId === user.id}
+                              className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-white disabled:opacity-50"
                             >
                               <option value="free">Free</option>
-                              <option value="starter">Starter</option>
                               <option value="pro">Pro</option>
+                              <option value="admin">Admin</option>
                             </select>
                             <Button
                               variant="outline"

@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Sparkles, Send, Copy, Check, X, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import Loader from './ui/loader'
+import Skeleton from './ui/skeleton'
 
 interface AIMessage {
   role: 'user' | 'assistant'
@@ -273,10 +275,11 @@ export default function AIAssistant({ taskContext, onGenerateComplete, className
             <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center shrink-0">
               <Sparkles size={16} className="text-white" />
             </div>
-            <div className="bg-slate-700 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <Loader2 size={16} className="text-purple-400 animate-spin" />
-                <span className="text-sm text-slate-400">AI razmišlja...</span>
+            <div className="bg-slate-700 rounded-lg p-3 max-w-[80%]">
+              <div className="space-y-2">
+                <Skeleton height={16} width="200px" />
+                <Skeleton height={16} width="180px" />
+                <Skeleton height={16} width="150px" />
               </div>
             </div>
           </div>

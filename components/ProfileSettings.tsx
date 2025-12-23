@@ -2,11 +2,14 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { Payment, Profile, SocialLink } from '@/types'
-import { Calendar, Check, CreditCard, DollarSign, Target, User, Video, Youtube } from 'lucide-react'
+import { Calendar, Check, CreditCard, DollarSign, Target, User, Video, Youtube, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import CancelSubscriptionModal from './CancelSubscriptionModal'
 import SocialLinkInput from './SocialLinkInput'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import Loader from './ui/loader'
+import Skeleton from './ui/skeleton'
 
 interface ProfileSettingsProps {
   profile: Profile | null
@@ -18,6 +21,12 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
   const [isSaving, setIsSaving] = useState(false)
   const [payments, setPayments] = useState<Payment[]>([])
   const [loadingPayments, setLoadingPayments] = useState(true)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [subscriptionStatus, setSubscriptionStatus] = useState<{
+    isCancelled: boolean
+    hasActiveSubscription: boolean
+  } | null>(null)
+  const [loadingStatus, setLoadingStatus] = useState(true) // Start as true to show loader initially
   const supabase = createClient()
   const [formData, setFormData] = useState({
     business_name: profile?.business_name || '',
@@ -31,8 +40,23 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
   useEffect(() => {
     if (activeTab === 'payment' && profile?.id) {
       fetchPayments()
+      fetchSubscriptionStatus()
     }
   }, [activeTab, profile?.id])
+
+  const fetchSubscriptionStatus = async () => {
+    if (!profile?.id) return
+    setLoadingStatus(true)
+    try {
+      const response = await fetch('/api/stripe/subscription-status')
+      const data = await response.json()
+      setSubscriptionStatus(data)
+    } catch (error: any) {
+      console.error('Error fetching subscription status:', error)
+    } finally {
+      setLoadingStatus(false)
+    }
+  }
 
   const fetchPayments = async () => {
     if (!profile?.id) return
@@ -123,28 +147,82 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <div className="text-slate-400 text-sm mb-1">Trenutni Tier</div>
-                  <div className="text-2xl font-bold text-white">
-                    {profile?.tier?.toUpperCase() || 'FREE'}
-                  </div>
+              {loadingPayments || loadingStatus ? (
+                <div className="space-y-4 py-4">
+                  <Skeleton height={30} width="200px" />
+                  <Skeleton height={40} width="150px" />
+                  <Skeleton height={20} width="250px" />
                 </div>
-                {nextPayment && (
+              ) : (
+                <div className="space-y-4">
                   <div>
-                    <div className="text-slate-400 text-sm mb-1 flex items-center gap-2">
-                      <Calendar size={14} /> Sledeće Plaćanje
-                    </div>
-                    <div className="text-lg font-semibold text-white">
-                      {new Date(nextPayment.next_payment_date!).toLocaleDateString('sr-RS', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
+                    <div className="text-slate-400 text-sm mb-1">Trenutni Tier</div>
+                    <div className="text-2xl font-bold text-white">
+                      {profile?.tier?.toUpperCase() || 'FREE'}
                     </div>
                   </div>
-                )}
-              </div>
+                  {/* Only show next payment if subscription is not cancelled */}
+                  {nextPayment && !subscriptionStatus?.isCancelled && (
+                    <div>
+                      <div className="text-slate-400 text-sm mb-1 flex items-center gap-2">
+                        <Calendar size={14} /> Sledeće Plaćanje
+                      </div>
+                      <div className="text-lg font-semibold text-white">
+                        {new Date(nextPayment.next_payment_date!).toLocaleDateString('sr-RS', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Show expiration date if cancelled */}
+                  {nextPayment && subscriptionStatus?.isCancelled && (
+                    <div>
+                      <div className="text-slate-400 text-sm mb-1 flex items-center gap-2">
+                        <Calendar size={14} /> Pretplata ističe
+                      </div>
+                      <div className="text-lg font-semibold text-slate-300">
+                        {new Date(nextPayment.subscription_period_end!).toLocaleDateString('sr-RS', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Sve funkcionalnosti će biti dostupne do ovog datuma
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Active subscription - show cancellation option */}
+                  {profile?.tier === 'pro' && nextPayment && (
+                    <div className="mt-6 pt-6 border-t border-slate-700">
+                      {subscriptionStatus?.isCancelled ? (
+                        <div className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 text-slate-400 rounded-lg flex items-center justify-center gap-2 font-medium cursor-not-allowed">
+                          <X size={16} />
+                          Otkazali ste pretplatu
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => setShowCancelModal(true)}
+                            disabled={loadingStatus}
+                            className="w-full px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-600/50 text-red-400 rounded-lg transition-colors flex items-center justify-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <X size={16} />
+                            Otkaži Pretplatu
+                          </button>
+                          <p className="text-xs text-slate-500 text-center mt-2">
+                            Sve funkcionalnosti će biti dostupne do datuma isteka pretplate
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -157,7 +235,11 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
             </CardHeader>
             <CardContent>
               {loadingPayments ? (
-                <div className="text-slate-400 text-center py-8">Učitavanje...</div>
+                <div className="space-y-3 py-4">
+                  <Skeleton height={80} />
+                  <Skeleton height={80} />
+                  <Skeleton height={80} />
+                </div>
               ) : payments.length === 0 ? (
                 <div className="text-slate-500 text-center py-8">
                   Nema platnih podataka. Plaćanja će se prikazati ovde kada se pretplatite.
@@ -300,6 +382,20 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
             )}
           </button>
         </div>
+      )}
+
+      {/* Cancel Subscription Modal */}
+      {profile && (
+        <CancelSubscriptionModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          subscriptionEndDate={nextPayment?.subscription_period_end || null}
+          onCancelSuccess={() => {
+            // Refresh payments and subscription status after cancellation
+            fetchPayments()
+            fetchSubscriptionStatus()
+          }}
+        />
       )}
     </div>
   )
