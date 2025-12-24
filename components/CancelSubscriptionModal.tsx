@@ -9,6 +9,8 @@ interface CancelSubscriptionModalProps {
   isOpen: boolean
   onClose: () => void
   subscriptionEndDate: string | null
+  trialEndDate?: number | null // Unix timestamp
+  isTrialing?: boolean
   onCancelSuccess: () => void
 }
 
@@ -16,6 +18,8 @@ export default function CancelSubscriptionModal({
   isOpen,
   onClose,
   subscriptionEndDate,
+  trialEndDate,
+  isTrialing,
   onCancelSuccess,
 }: CancelSubscriptionModalProps) {
   const [loading, setLoading] = useState(false)
@@ -70,6 +74,24 @@ export default function CancelSubscriptionModal({
     })
   }
 
+  const formatUnixDate = (timestamp: number | null | undefined) => {
+    if (!timestamp) return 'N/A'
+    const date = new Date(timestamp * 1000)
+    return date.toLocaleDateString('sr-RS', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+  }
+
+  // Determine which date to show - trial end if in trial, otherwise subscription end
+  const getEndDate = () => {
+    if (isTrialing && trialEndDate) {
+      return formatUnixDate(trialEndDate)
+    }
+    return formatDate(subscriptionEndDate)
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-md w-full">
@@ -103,8 +125,13 @@ export default function CancelSubscriptionModal({
                   Vaša pretplata je aktivna do:
                 </p>
                 <p className="text-lg font-bold text-white">
-                  {formatDate(subscriptionEndDate)}
+                  {getEndDate()}
                 </p>
+                {isTrialing && trialEndDate && (
+                  <p className="text-xs text-blue-400 mt-1">
+                    (Kraj probne periode)
+                  </p>
+                )}
               </div>
             </div>
           </div>

@@ -14,7 +14,12 @@ interface TaskDetailModalProps {
   onClose: () => void
   onDelete: (taskId: string) => Promise<void>
   onUpdate: (task: TaskUpdate) => Promise<void>
-  onAddInspirationLink: (taskId: string, link: string, displayUrl?: string, type?: string) => Promise<void>
+  onAddInspirationLink: (
+    taskId: string,
+    link: string,
+    displayUrl?: string,
+    type?: string
+  ) => Promise<{ data: any | null; error: string | null }>
   onRemoveInspirationLink: (linkId: string) => Promise<void>
 }
 
@@ -61,7 +66,23 @@ export default function TaskDetailModal({
     setIsAddingLink(true)
     try {
       const { url, type } = getYoutubeThumbnail(linkInput)
-      await onAddInspirationLink(editedTask.id, linkInput.trim(), url || undefined, type || undefined)
+      const result = await onAddInspirationLink(editedTask.id, linkInput.trim(), url || undefined, type || undefined)
+      
+      // Update local state immediately to show the new link
+      if (result && !result.error) {
+        const newLink = {
+          id: result.data?.id || `temp-${Date.now()}`,
+          task_id: editedTask.id,
+          link: linkInput.trim(),
+          display_url: url || null,
+          type: type || null,
+          created_at: new Date().toISOString(),
+        }
+        setEditedTask((prev) => ({
+          ...prev,
+          inspiration_links: [...(prev.inspiration_links || []), newLink],
+        }))
+      }
       setLinkInput('')
     } finally {
       setIsAddingLink(false)
@@ -362,6 +383,11 @@ export default function TaskDetailModal({
                             setRemovingLinkId(item.id)
                             try {
                               await onRemoveInspirationLink(item.id)
+                              // Update local state immediately
+                              setEditedTask((prev) => ({
+                                ...prev,
+                                inspiration_links: prev.inspiration_links?.filter((link) => link.id !== item.id) || [],
+                              }))
                             } finally {
                               setRemovingLinkId(null)
                             }

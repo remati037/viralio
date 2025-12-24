@@ -5,7 +5,7 @@ import { useProfile } from '@/lib/hooks/useProfile'
 import { useTasks } from '@/lib/hooks/useTasks'
 import { createClient } from '@/lib/supabase/client'
 import { canCreateTask, canUseView, getRemainingTasks, getTierLimits } from '@/lib/utils/tierRestrictions'
-import type { Competitor, SocialLink, Task, TaskInsert, TaskUpdate } from '@/types'
+import type { Competitor, SocialLink, Task, TaskInsert, TaskUpdate, UserTier } from '@/types'
 import { Calendar, ClipboardList, Layout, Menu, Play, Plus, Shield, Trello, User, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
@@ -70,15 +70,19 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
 
   const [isSavingTask, setIsSavingTask] = useState(false)
 
-  const handleSaveToPlan = async (taskData: Omit<TaskInsert, 'user_id'>) => {
+  const handleSaveToPlan = async (
+    taskData: Omit<TaskInsert, 'user_id'>,
+    inspirationLinks?: Array<{ link: string; displayUrl?: string; type?: string }>
+  ) => {
     // Validate tier limits before creating task
     if (profile?.tier) {
       // Only count user's own tasks (exclude admin case studies)
       const userTaskCount = tasks.filter((t) => !t.is_admin_case_study).length
-      const canCreate = canCreateTask(profile.tier, userTaskCount)
+      const tier = profile.tier as UserTier
+      const canCreate = canCreateTask(tier, userTaskCount)
       if (!canCreate) {
         toast.error('Dostigli ste limit zadataka', {
-          description: `Vaš ${profile.tier} tier dozvoljava maksimalno ${getTierLimits(profile.tier).maxTasks} zadataka.`,
+          description: `Vaš ${tier} tier dozvoljava maksimalno ${getTierLimits(tier).maxTasks} zadataka.`,
         })
         return
       }
@@ -91,11 +95,25 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
       toast.error('Greška pri kreiranju ideje', {
         description: result.error,
       })
-    } else {
-      toast.success('Ideja sačuvana!', {
-        description: `"${taskData.title}" je dodata u planer.`,
-      })
+      setIsSavingTask(false)
+      return
     }
+
+    // Add inspiration links if any
+    if (inspirationLinks && inspirationLinks.length > 0 && result.data) {
+      for (const linkData of inspirationLinks) {
+        const linkResult = await addInspirationLink(result.data.id, linkData.link, linkData.displayUrl, linkData.type)
+        if (linkResult.error) {
+          toast.error('Greška pri dodavanju linka', {
+            description: linkResult.error,
+          })
+        }
+      }
+    }
+
+    toast.success('Ideja sačuvana!', {
+      description: `"${taskData.title}" je dodata u planer.`,
+    })
     setIsSavingTask(false)
   }
 
@@ -162,6 +180,31 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
   }
 
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
+
+  const handleAddInspirationLink = async (
+    taskId: string,
+    link: string,
+    displayUrl?: string,
+    type?: string
+  ): Promise<{ data: any | null; error: string | null }> => {
+    const result = await addInspirationLink(taskId, link, displayUrl, type)
+    if (result.error) {
+      toast.error('Greška pri dodavanju linka', {
+        description: result.error,
+      })
+      return { data: null, error: result.error }
+    } else {
+      toast.success('Link dodat', {
+        description: 'Link za inspiraciju je dodat.',
+      })
+      // Update selectedTask to reflect the new link
+      const updatedTask = tasks.find((t) => t.id === taskId)
+      if (updatedTask) {
+        setSelectedTask(updatedTask)
+      }
+      return { data: result.data, error: null }
+    }
+  }
 
   const handleDeleteTask = async (taskId: string) => {
     const task = tasks.find((t) => t.id === taskId)
@@ -336,10 +379,11 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
                   if (profile?.tier) {
                     // Only count user's own tasks (exclude admin case studies)
                     const userTaskCount = tasks.filter((t) => !t.is_admin_case_study).length
-                    const canCreate = canCreateTask(profile.tier, userTaskCount)
+                    const tier = profile.tier as UserTier
+                    const canCreate = canCreateTask(tier, userTaskCount)
                     if (!canCreate) {
                       toast.error('Dostigli ste limit zadataka', {
-                        description: `Vaš ${profile.tier} tier dozvoljava maksimalno ${getTierLimits(profile.tier).maxTasks} zadataka.`,
+                        description: `Vaš ${tier} tier dozvoljava maksimalno ${getTierLimits(tier).maxTasks} zadataka.`,
                       })
                       return
                     }
@@ -353,7 +397,8 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
                 <span>Nova Ideja</span>
                 {profile?.tier && (() => {
                   const userTaskCount = tasks.filter((t) => !t.is_admin_case_study).length
-                  const remaining = getRemainingTasks(profile.tier, userTaskCount)
+                  const tier = profile.tier as UserTier
+                  const remaining = getRemainingTasks(tier, userTaskCount)
                   return remaining !== null && (
                     <span className="ml-auto text-xs opacity-75">
                       ({remaining} preostalo)
@@ -472,10 +517,11 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
                       onClick={() => {
                         if (profile?.tier) {
                           const userTaskCount = tasks.filter((t) => !t.is_admin_case_study).length
-                          const canCreate = canCreateTask(profile.tier, userTaskCount)
+                          const tier = profile.tier as UserTier
+                          const canCreate = canCreateTask(tier, userTaskCount)
                           if (!canCreate) {
                             toast.error('Dostigli ste limit zadataka', {
-                              description: `Vaš ${profile.tier} tier dozvoljava maksimalno ${getTierLimits(profile.tier).maxTasks} zadataka.`,
+                              description: `Vaš ${tier} tier dozvoljava maksimalno ${getTierLimits(tier).maxTasks} zadataka.`,
                             })
                             return
                           }
@@ -498,7 +544,7 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
                     >
                       <Trello size={16} /> Kanban
                     </button>
-                    {profile?.tier && canUseView(profile.tier, 'calendar') && (
+                    {profile?.tier && canUseView(profile.tier as UserTier, 'calendar') && (
                       <button
                         onClick={() => setPlannerView('calendar')}
                         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${plannerView === 'calendar' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-700'
@@ -507,7 +553,7 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
                         <Calendar size={16} /> Kalendar
                       </button>
                     )}
-                    {profile?.tier && !canUseView(profile.tier, 'calendar') && (
+                    {profile?.tier && !canUseView(profile.tier as UserTier, 'calendar') && (
                       <button
                         disabled
                         className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 cursor-not-allowed opacity-50"
@@ -582,7 +628,7 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
               tasks={tasks}
               onCaseStudyClick={setSelectedCaseStudy}
               userId={userId}
-              userTier={profile?.tier}
+              userTier={profile?.tier as UserTier | undefined}
             />
           )}
 
@@ -604,7 +650,7 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
         <NewIdeaWizard
           onClose={() => setIsNewIdeaWizardOpen(false)}
           onSaveToPlan={handleSaveToPlan}
-          userTier={profile?.tier}
+          userTier={profile?.tier as UserTier | undefined}
         />
       )}
 
@@ -614,18 +660,7 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
           onClose={() => setSelectedTask(null)}
           onDelete={handleDeleteTask}
           onUpdate={handleUpdateTask}
-          onAddInspirationLink={async (taskId, link, displayUrl, type) => {
-            const result = await addInspirationLink(taskId, link, displayUrl, type)
-            if (result.error) {
-              toast.error('Greška pri dodavanju linka', {
-                description: result.error,
-              })
-            } else {
-              toast.success('Link dodat', {
-                description: 'Link za inspiraciju je dodat.',
-              })
-            }
-          }}
+          onAddInspirationLink={handleAddInspirationLink as any}
           onRemoveInspirationLink={async (linkId) => {
             const result = await removeInspirationLink(linkId)
             if (result.error) {

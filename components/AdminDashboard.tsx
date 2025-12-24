@@ -2,11 +2,14 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { Payment, Profile, UserStatistics } from '@/types'
-import { ClipboardList, FileText, Shield, Users } from 'lucide-react'
+import { ClipboardList, FileText, Plus, Shield, Trash2, Users, Edit } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import AdminCaseStudyCreation from './AdminCaseStudyCreation'
 import AdminTemplateManagement from './AdminTemplateManagement'
+import CreateUserModal from './CreateUserModal'
+import DeleteUserModal from './DeleteUserModal'
+import UpdateUserModal from './UpdateUserModal'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Input } from './ui/input'
@@ -25,6 +28,13 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [updatingTierId, setUpdatingTierId] = useState<string | null>(null)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<Profile | null>(null)
+  const [userToUpdate, setUserToUpdate] = useState<Profile | null>(null)
+  const [userEmails, setUserEmails] = useState<Record<string, string>>({})
+  const [emailConfirmations, setEmailConfirmations] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     fetchAllUsers()
@@ -59,6 +69,9 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
       }))
 
       setUsers(usersWithData as any)
+
+      // Fetch emails for all users (in background)
+      fetchUserEmails(profiles?.map((p) => p.id) || [])
     } catch (error: any) {
       toast.error('Greška pri učitavanju korisnika', {
         description: error.message,
@@ -66,6 +79,38 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchUserEmails = async (userIds: string[]) => {
+    // Fetch emails and confirmation status in batches to avoid overwhelming the API
+    const batchSize = 5
+    const emailMap: Record<string, string> = {}
+    const confirmationMap: Record<string, boolean> = {}
+
+    for (let i = 0; i < userIds.length; i += batchSize) {
+      const batch = userIds.slice(i, i + batchSize)
+      await Promise.all(
+        batch.map(async (userId) => {
+          try {
+            const response = await fetch(`/api/admin/users/${userId}/get`)
+            if (response.ok) {
+              const data = await response.json()
+              if (data.email) {
+                emailMap[userId] = data.email
+              }
+              if (data.email_confirmed !== undefined) {
+                confirmationMap[userId] = data.email_confirmed
+              }
+            }
+          } catch (error) {
+            console.error(`Error fetching email for user ${userId}:`, error)
+          }
+        })
+      )
+    }
+
+    setUserEmails((prev) => ({ ...prev, ...emailMap }))
+    setEmailConfirmations((prev) => ({ ...prev, ...confirmationMap }))
   }
 
   const handleTierChange = async (userId: string, newTier: 'free' | 'pro' | 'admin') => {
@@ -217,14 +262,20 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
             </Card>
           </div>
 
-          {/* Search */}
-          <div className="flex gap-4">
+          {/* Search and Create User */}
+          <div className="flex gap-4 justify-between items-center">
             <Input
               placeholder="Pretraži korisnike..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-md bg-slate-800 border-slate-700 text-white"
             />
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Plus size={16} /> Kreiraj Korisnika
+            </Button>
           </div>
 
           {/* Users Table */}
@@ -251,10 +302,20 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                       <tr key={user.id} className="border-b border-slate-800 hover:bg-slate-800/50">
                         <td className="p-3">
                           <div>
-                            <div className="text-white font-medium">
+                            <div className="text-white font-medium flex items-center gap-2">
                               {user.business_name || 'Nema imena'}
+                              {emailConfirmations[user.id] === false && (
+                                <span className="px-2 py-0.5 rounded text-xs font-bold bg-yellow-900/30 text-yellow-300 border border-yellow-800">
+                                  Email Nije Potvrđen
+                                </span>
+                              )}
                             </div>
-                            <div className="text-xs text-slate-500">{user.id.substring(0, 8)}...</div>
+                            <div className="text-xs text-slate-500">
+                              {user.id.substring(0, 8)}...
+                              {userEmails[user.id] && (
+                                <span className="ml-2 text-slate-400">• {userEmails[user.id]}</span>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="p-3">
@@ -274,7 +335,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                         </td>
                         <td className="p-3 text-slate-300">{user.statistics?.total_views || '0'}</td>
                         <td className="p-3">
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-wrap">
                             <select
                               value={user.tier || 'free'}
                               onChange={(e) =>
@@ -293,6 +354,28 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                               onClick={() => setSelectedUser(user)}
                             >
                               Detalji
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setUserToUpdate(user)
+                                setIsUpdateModalOpen(true)
+                              }}
+                              className="flex items-center gap-1"
+                            >
+                              <Edit size={14} /> Ažuriraj
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setUserToDelete(user)
+                                setIsDeleteModalOpen(true)
+                              }}
+                              className="flex items-center gap-1 text-red-400 hover:text-red-300 hover:border-red-500"
+                            >
+                              <Trash2 size={14} /> Obriši
                             </Button>
                           </div>
                         </td>
@@ -315,6 +398,28 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                       <CardDescription className="text-slate-400">
                         ID: {selectedUser.id}
                       </CardDescription>
+                      {userEmails[selectedUser.id] && (
+                        <CardDescription className="text-slate-400 flex items-center gap-2">
+                          Email: {userEmails[selectedUser.id]}
+                          {emailConfirmations[selectedUser.id] === false && (
+                            <span className="px-2 py-0.5 rounded text-xs font-bold bg-yellow-900/30 text-yellow-300 border border-yellow-800">
+                              Email Nije Potvrđen
+                            </span>
+                          )}
+                          {emailConfirmations[selectedUser.id] === true && (
+                            <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-900/30 text-green-300 border border-green-800">
+                              Email Potvrđen
+                            </span>
+                          )}
+                        </CardDescription>
+                      )}
+                      {(selectedUser as any).has_unlimited_free && (
+                        <div className="mt-2">
+                          <span className="px-2 py-1 rounded text-xs font-bold bg-green-900/30 text-green-300">
+                            Neograničena Besplatna PRO Pretplata
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <Button variant="ghost" onClick={() => setSelectedUser(null)}>
                       ×
@@ -372,6 +477,43 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
               </Card>
             </div>
           )}
+
+          {/* Create User Modal */}
+          <CreateUserModal
+            isOpen={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+            onUserCreated={fetchAllUsers}
+          />
+
+          {/* Delete User Modal */}
+          <DeleteUserModal
+            isOpen={isDeleteModalOpen}
+            onClose={() => {
+              setIsDeleteModalOpen(false)
+              setUserToDelete(null)
+            }}
+            onUserDeleted={fetchAllUsers}
+            user={userToDelete ? { ...userToDelete, email: userEmails[userToDelete.id] } : null}
+          />
+
+          {/* Update User Modal */}
+          <UpdateUserModal
+            isOpen={isUpdateModalOpen}
+            onClose={() => {
+              setIsUpdateModalOpen(false)
+              setUserToUpdate(null)
+            }}
+            onUserUpdated={fetchAllUsers}
+            user={
+              userToUpdate
+                ? {
+                    ...userToUpdate,
+                    email: userEmails[userToUpdate.id],
+                    email_confirmed: emailConfirmations[userToUpdate.id],
+                  }
+                : null
+            }
+          />
         </>
       )}
     </div>

@@ -19,6 +19,7 @@ export interface Database {
           monthly_goal_long: number | null
           role: 'admin' | 'user'
           tier: 'free' | 'pro' | 'admin'
+          has_unlimited_free: boolean | null
           created_at: string
           updated_at: string
         }
@@ -31,6 +32,7 @@ export interface Database {
           monthly_goal_long?: number | null
           role?: 'admin' | 'user'
           tier?: 'free' | 'pro' | 'admin'
+          has_unlimited_free?: boolean | null
           created_at?: string
           updated_at?: string
         }
@@ -43,6 +45,7 @@ export interface Database {
           monthly_goal_long?: number | null
           role?: 'admin' | 'user'
           tier?: 'free' | 'pro' | 'admin'
+          has_unlimited_free?: boolean | null
           created_at?: string
           updated_at?: string
         }
@@ -256,7 +259,7 @@ export interface Database {
         Update: {
           id?: string
           template_id?: string
-          tier?: 'free' | 'starter' | 'pro'
+          tier?: 'free' | 'pro' | 'admin'
           created_at?: string
         }
       }

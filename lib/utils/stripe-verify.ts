@@ -24,14 +24,6 @@ export async function verifyCheckoutSession(
     // Retrieve the checkout session from Stripe
     const session = await stripe.checkout.sessions.retrieve(sessionId)
 
-    // Check if payment was successful
-    if (session.payment_status !== 'paid') {
-      return {
-        success: false,
-        error: `Payment not completed. Status: ${session.payment_status}`,
-      }
-    }
-
     // Verify the session belongs to this user
     const sessionUserId = session.metadata?.userId || session.client_reference_id
     if (sessionUserId !== userId) {
@@ -41,8 +33,49 @@ export async function verifyCheckoutSession(
       }
     }
 
-    // Check if we already processed this session
     const supabase = await createClient()
+
+    // For trial subscriptions, payment_status might be 'unpaid' initially
+    // We'll check the subscription status instead
+    const subscriptionId = session.subscription as string
+    if (!subscriptionId) {
+      return { success: false, error: 'No subscription found in session' }
+    }
+
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+    const subscriptionData = subscription as any
+    const isTrialing = subscriptionData.status === 'trialing'
+    const tier = session.metadata?.tier || 'pro'
+
+    // If it's a trial, we don't create a payment record yet
+    // Payment will be created when invoice.payment_succeeded fires
+    if (isTrialing) {
+      // Just update the tier, don't create payment record
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ tier: tier })
+        .eq('id', userId)
+
+      if (profileError) {
+        console.error('Error updating profile tier:', profileError)
+        return {
+          success: false,
+          error: `Failed to update profile tier: ${profileError.message}`,
+        }
+      }
+
+      return { success: true }
+    }
+
+    // For non-trial subscriptions, check if payment was successful
+    if (session.payment_status !== 'paid') {
+      return {
+        success: false,
+        error: `Payment not completed. Status: ${session.payment_status}`,
+      }
+    }
+
+    // Check if we already processed this session
     const { data: existingPayments } = await supabase
       .from('payments')
       .select('id')
@@ -68,36 +101,25 @@ export async function verifyCheckoutSession(
       }
     }
 
-    // Get subscription details
-    const subscriptionId = session.subscription as string
-    if (!subscriptionId) {
-      return { success: false, error: 'No subscription found in session' }
-    }
-
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-    const tier = session.metadata?.tier || 'pro'
-
     // Calculate subscription period
     // Try to get dates from subscription object
-    const sub = subscription as any
-
     // Log subscription structure for debugging
-    console.log('Subscription object keys:', Object.keys(sub))
-    console.log('Subscription current_period_start:', sub.current_period_start)
-    console.log('Subscription current_period_end:', sub.current_period_end)
+    console.log('Subscription object keys:', Object.keys(subscriptionData))
+    console.log('Subscription current_period_start:', subscriptionData.current_period_start)
+    console.log('Subscription current_period_end:', subscriptionData.current_period_end)
 
     // Validate and convert timestamps
     // Check multiple possible property names
-    const currentPeriodStart = sub.current_period_start ??
-      sub.currentPeriodStart ??
+    const currentPeriodStart = subscriptionData.current_period_start ??
+      subscriptionData.currentPeriodStart ??
       (subscription as any).current_period_start
-    const currentPeriodEnd = sub.current_period_end ??
-      sub.currentPeriodEnd ??
+    const currentPeriodEnd = subscriptionData.current_period_end ??
+      subscriptionData.currentPeriodEnd ??
       (subscription as any).current_period_end
 
     // Handle trial period - if trial_end exists and is in the future, use it for period_end
     // Otherwise use current_period_end
-    const trialEnd = sub.trial_end
+    const trialEnd = subscriptionData.trial_end
     let periodEndToUse = currentPeriodEnd
 
     if (trialEnd) {

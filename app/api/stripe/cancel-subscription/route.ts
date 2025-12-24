@@ -83,21 +83,40 @@ export async function POST(request: NextRequest) {
           })
 
           if (subscriptions.data.length > 0) {
-            const subscription = await stripe.subscriptions.update(subscriptions.data[0].id, {
+            const subscriptionIdToCancel = subscriptions.data[0].id
+
+            // Get subscription details first to check if it's in trial
+            const subscriptionBeforeCancel = await stripe.subscriptions.retrieve(subscriptionIdToCancel)
+            const subBefore = subscriptionBeforeCancel as any
+            const isTrialing = subBefore.status === 'trialing'
+            const trialEnd = subBefore.trial_end
+            const now = Math.floor(Date.now() / 1000)
+
+            const subscription = await stripe.subscriptions.update(subscriptionIdToCancel, {
               cancel_at_period_end: true,
             })
 
             // Update payment record with subscription ID for future reference
             await supabase
               .from('payments')
-              .update({ stripe_subscription_id: subscriptions.data[0].id })
+              .update({ stripe_subscription_id: subscriptionIdToCancel })
               .eq('id', latestPayment.id)
+
+            // If in trial, use trial_end as the cancellation date, otherwise use current_period_end
+            let cancellationDate: number
+            if (isTrialing && trialEnd && trialEnd > now) {
+              cancellationDate = trialEnd
+            } else {
+              cancellationDate = (subscription as any).current_period_end
+            }
 
             return NextResponse.json({
               success: true,
               message: 'Subscription will be cancelled at the end of the current period',
               cancelAt: (subscription as any).cancel_at,
-              currentPeriodEnd: (subscription as any).current_period_end,
+              currentPeriodEnd: cancellationDate,
+              isTrialing: isTrialing && trialEnd && trialEnd > now,
+              trialEnd: trialEnd,
             })
           }
         }
@@ -109,16 +128,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Get subscription details first to check if it's in trial
+    const subscriptionBeforeCancel = await stripe.subscriptions.retrieve(subscriptionId)
+    const subBefore = subscriptionBeforeCancel as any
+    const isTrialing = subBefore.status === 'trialing'
+    const trialEnd = subBefore.trial_end
+    const now = Math.floor(Date.now() / 1000)
+
     // Cancel the subscription at period end
     const subscription = await stripe.subscriptions.update(subscriptionId, {
       cancel_at_period_end: true,
     })
+    const sub = subscription as any
+
+    // If in trial, use trial_end as the cancellation date, otherwise use current_period_end
+    let cancellationDate: number
+    if (isTrialing && trialEnd && trialEnd > now) {
+      cancellationDate = trialEnd
+    } else {
+      cancellationDate = sub.current_period_end
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Subscription will be cancelled at the end of the current period',
-      cancelAt: (subscription as any).cancel_at,
-      currentPeriodEnd: (subscription as any).current_period_end,
+      cancelAt: sub.cancel_at,
+      currentPeriodEnd: cancellationDate,
+      isTrialing: isTrialing && trialEnd && trialEnd > now,
+      trialEnd: trialEnd,
     })
   } catch (error: any) {
     console.error('Error cancelling subscription:', error)

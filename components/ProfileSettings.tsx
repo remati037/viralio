@@ -2,13 +2,12 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { Payment, Profile, SocialLink } from '@/types'
-import { Calendar, Check, CreditCard, DollarSign, Target, User, Video, Youtube, X } from 'lucide-react'
+import { Calendar, Check, CreditCard, DollarSign, Target, User, Video, X, Youtube } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import CancelSubscriptionModal from './CancelSubscriptionModal'
 import SocialLinkInput from './SocialLinkInput'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import Loader from './ui/loader'
 import Skeleton from './ui/skeleton'
 
 interface ProfileSettingsProps {
@@ -25,6 +24,10 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
   const [subscriptionStatus, setSubscriptionStatus] = useState<{
     isCancelled: boolean
     hasActiveSubscription: boolean
+    isTrialing?: boolean
+    trialDaysRemaining?: number | null
+    trialEnd?: number | null
+    currentPeriodEnd?: number | null
   } | null>(null)
   const [loadingStatus, setLoadingStatus] = useState(true) // Start as true to show loader initially
   const supabase = createClient()
@@ -95,12 +98,12 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
   }, [profile])
 
   const handleSave = async () => {
-    if (!formData.business_name.trim()) {
-      toast.error('Nedostaje ime biznisa', {
-        description: 'Molimo unesite ime biznisa ili lični brend.',
-      })
-      return
-    }
+    // if (!formData.business_name.trim()) {
+    //   toast.error('Nedostaje ime biznisa', {
+    //     description: 'Molimo unesite ime biznisa ili lični brend.',
+    //   })
+    //   return
+    // }
 
     setIsSaving(true)
     await onSave({ ...formData, social_links: socialLinks })
@@ -161,8 +164,35 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
                       {profile?.tier?.toUpperCase() || 'FREE'}
                     </div>
                   </div>
-                  {/* Only show next payment if subscription is not cancelled */}
-                  {nextPayment && !subscriptionStatus?.isCancelled && (
+
+                  {/* Show trial information if in trial */}
+                  {subscriptionStatus?.isTrialing && subscriptionStatus.trialEnd && (
+                    <div className="bg-blue-600/10 border border-blue-600/30 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center shrink-0">
+                          <Calendar className="text-blue-400" size={20} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-blue-300 font-bold mb-1">Besplatna Probna Perioda</div>
+                          <div className="text-white text-lg font-semibold mb-2">
+                            {subscriptionStatus.trialDaysRemaining !== null && subscriptionStatus.trialDaysRemaining !== undefined
+                              ? `${subscriptionStatus.trialDaysRemaining} ${subscriptionStatus.trialDaysRemaining === 1 ? 'dan' : 'dana'} preostalo`
+                              : 'Aktivna probna perioda'}
+                          </div>
+                          <div className="text-slate-300 text-sm">
+                            Prvo plaćanje: {new Date(subscriptionStatus.trialEnd * 1000).toLocaleDateString('sr-RS', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Show next payment date if not in trial and not cancelled */}
+                  {!subscriptionStatus?.isTrialing && nextPayment && !subscriptionStatus?.isCancelled && (
                     <div>
                       <div className="text-slate-400 text-sm mb-1 flex items-center gap-2">
                         <Calendar size={14} /> Sledeće Plaćanje
@@ -176,26 +206,63 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
                       </div>
                     </div>
                   )}
-                  
+
+                  {/* Show next payment from trial end if in trial */}
+                  {subscriptionStatus?.isTrialing && subscriptionStatus.trialEnd && !subscriptionStatus?.isCancelled && (
+                    <div>
+                      <div className="text-slate-400 text-sm mb-1 flex items-center gap-2">
+                        <Calendar size={14} /> Prvo Plaćanje
+                      </div>
+                      <div className="text-lg font-semibold text-white">
+                        {new Date(subscriptionStatus.trialEnd * 1000).toLocaleDateString('sr-RS', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Show expiration date if cancelled */}
-                  {nextPayment && subscriptionStatus?.isCancelled && (
+                  {subscriptionStatus?.isCancelled && (
                     <div>
                       <div className="text-slate-400 text-sm mb-1 flex items-center gap-2">
                         <Calendar size={14} /> Pretplata ističe
                       </div>
                       <div className="text-lg font-semibold text-slate-300">
-                        {new Date(nextPayment.subscription_period_end!).toLocaleDateString('sr-RS', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}
+                        {(() => {
+                          // If in trial and cancelled, use trial end date
+                          if (subscriptionStatus.isTrialing && subscriptionStatus.trialEnd) {
+                            return new Date(subscriptionStatus.trialEnd * 1000).toLocaleDateString('sr-RS', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            })
+                          }
+                          // Otherwise use subscription period end or next payment date
+                          if (subscriptionStatus.currentPeriodEnd) {
+                            return new Date(subscriptionStatus.currentPeriodEnd * 1000).toLocaleDateString('sr-RS', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            })
+                          }
+                          if (nextPayment?.subscription_period_end) {
+                            return new Date(nextPayment.subscription_period_end).toLocaleDateString('sr-RS', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            })
+                          }
+                          return 'N/A'
+                        })()}
                       </div>
                       <p className="text-xs text-slate-500 mt-1">
                         Sve funkcionalnosti će biti dostupne do ovog datuma
                       </p>
                     </div>
                   )}
-                  
+
                   {/* Active subscription - show cancellation option */}
                   {profile?.tier === 'pro' && nextPayment && (
                     <div className="mt-6 pt-6 border-t border-slate-700">
@@ -390,6 +457,8 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
           isOpen={showCancelModal}
           onClose={() => setShowCancelModal(false)}
           subscriptionEndDate={nextPayment?.subscription_period_end || null}
+          trialEndDate={subscriptionStatus?.trialEnd || null}
+          isTrialing={subscriptionStatus?.isTrialing || false}
           onCancelSuccess={() => {
             // Refresh payments and subscription status after cancellation
             fetchPayments()

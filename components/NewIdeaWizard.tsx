@@ -3,8 +3,9 @@
 import { NETWORKS, NICHES, VIRAL_TEMPLATES } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { getTierLimits } from '@/lib/utils/tierRestrictions'
+import { getYoutubeThumbnail } from '@/lib/utils/helpers'
 import type { TaskInsert, Template, UserTier } from '@/types'
-import { Calendar, ChevronLeft, Edit3, FileText, Plus, X, Zap } from 'lucide-react'
+import { Calendar, ChevronLeft, Edit3, FileText, Link, Plus, Trash2, X, Youtube, Zap } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import AIAssistant from './AIAssistant'
@@ -14,7 +15,10 @@ import Skeleton from './ui/skeleton'
 
 interface NewIdeaWizardProps {
   onClose: () => void
-  onSaveToPlan: (task: Omit<TaskInsert, 'user_id'>) => Promise<void>
+  onSaveToPlan: (
+    task: Omit<TaskInsert, 'user_id'>,
+    inspirationLinks?: Array<{ link: string; displayUrl?: string; type?: string }>
+  ) => Promise<void>
   userTier?: UserTier
 }
 
@@ -40,8 +44,12 @@ export default function NewIdeaWizard({ onClose, onSaveToPlan, userTier }: NewId
     fullScript: '',
     fullScriptHtml: '',
     originalTemplate: null as string | null,
+    publish_date: null as string | null,
   })
   const [isSaving, setIsSaving] = useState(false)
+  const [inspirationLinks, setInspirationLinks] = useState<Array<{ link: string; displayUrl?: string; type?: string }>>([])
+  const [linkInput, setLinkInput] = useState('')
+  const [isAddingLink, setIsAddingLink] = useState(false)
 
   useEffect(() => {
     if (step === 'template_select') {
@@ -193,6 +201,35 @@ ZAKLJUČAK: ${template.structure.cta}`
     }
   }
 
+  const handleAddInspirationLink = async () => {
+    if (!linkInput.trim()) {
+      toast.error('Prazan link', {
+        description: 'Molimo unesite validan link.',
+      })
+      return
+    }
+
+    setIsAddingLink(true)
+    try {
+      const { url, type } = getYoutubeThumbnail(linkInput)
+      setInspirationLinks((prev) => [
+        ...prev,
+        { link: linkInput.trim(), displayUrl: url || undefined, type: type || undefined },
+      ])
+      setLinkInput('')
+    } catch (error) {
+      // Still add the link even if thumbnail extraction fails
+      setInspirationLinks((prev) => [...prev, { link: linkInput.trim() }])
+      setLinkInput('')
+    } finally {
+      setIsAddingLink(false)
+    }
+  }
+
+  const handleRemoveInspirationLink = (index: number) => {
+    setInspirationLinks((prev) => prev.filter((_, i) => i !== index))
+  }
+
   const handleSave = async () => {
     if (formData.format === 'Kratka Forma') {
       if (!formData.title.trim() || (!formData.hook.trim() && !formData.body.trim() && !formData.cta.trim())) {
@@ -220,11 +257,11 @@ ZAKLJUČAK: ${template.structure.cta}`
       body: formData.format === 'Duga Forma' ? 'CEO TEKST se nalazi u Hook/Skripta polju u detaljima.' : formData.body.trim(),
       cta: formData.format === 'Duga Forma' ? 'Duga Forma: Nema odvojenog CTA za Kanban.' : formData.cta.trim(),
       status: 'idea' as const,
-      publish_date: null,
+      publish_date: formData.publish_date || null,
       original_template: formData.originalTemplate,
     }
 
-    await onSaveToPlan(newTask as Omit<TaskInsert, 'user_id'>)
+    await onSaveToPlan(newTask as Omit<TaskInsert, 'user_id'>, inspirationLinks)
     setIsSaving(false)
     onClose()
   }
@@ -493,6 +530,117 @@ ZAKLJUČAK: ${template.structure.cta}`
               </div>
             </div>
           )}
+
+          {/* Inspiration Links Section */}
+          <div className="border-t border-slate-800 pt-4 space-y-4">
+            <h4 className="text-sm font-bold text-slate-400 uppercase flex items-center gap-2">
+              <Link size={14} className="text-yellow-400" /> Inspiracija
+            </h4>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={linkInput}
+                onChange={(e) => setLinkInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleAddInspirationLink()
+                  }
+                }}
+                placeholder="Paste link (YouTube, Instagram, TikTok...)"
+                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+              <button
+                onClick={handleAddInspirationLink}
+                disabled={!linkInput.trim() || isAddingLink}
+                className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500 flex items-center gap-2"
+              >
+                {isAddingLink ? (
+                  <>
+                    <Loader size="sm" />
+                    <span>Dodavanje...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus size={16} />
+                    Dodaj
+                  </>
+                )}
+              </button>
+            </div>
+            {inspirationLinks.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                {inspirationLinks.map((item, index) => (
+                  <div key={index} className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700 relative group">
+                    {item.displayUrl && item.type === 'youtube' ? (
+                      <div className="relative">
+                        <img
+                          src={item.displayUrl}
+                          alt="YouTube Thumbnail"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            ; (e.target as HTMLImageElement).style.display = 'none'
+                          }}
+                        />
+                        <Youtube size={24} fill="red" className="text-white absolute inset-0 m-auto opacity-70" />
+                      </div>
+                    ) : (
+                      <div className="p-2 text-xs text-slate-400 bg-slate-700/50 flex items-center gap-2">
+                        <Link size={14} className="text-blue-400" />
+                        Eksterni Link
+                      </div>
+                    )}
+                    <div className="p-2 flex justify-between items-center">
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-400 hover:underline truncate max-w-[70%]"
+                      >
+                        {item.link.replace(/^https?:\/\//, '').replace(/^www\./, '')}
+                      </a>
+                      <button
+                        onClick={() => handleRemoveInspirationLink(index)}
+                        className="text-slate-600 hover:text-red-400 transition-colors shrink-0"
+                        title="Obriši link"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Publish Date Section */}
+          <div className="border-t border-slate-800 pt-4 space-y-4">
+            <h4 className="text-sm font-bold text-slate-400 uppercase flex items-center gap-2">
+              <Calendar size={14} className="text-purple-400" /> Raspored
+            </h4>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Planirani Datum Objavljivanja</label>
+              <input
+                type="date"
+                value={formData.publish_date ? formData.publish_date.substring(0, 10) : ''}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    publish_date: e.target.value ? new Date(e.target.value).toISOString() : null,
+                  }))
+                }
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+              {formData.publish_date && (
+                <button
+                  onClick={() => setFormData((p) => ({ ...p, publish_date: null }))}
+                  className="text-red-400 text-sm hover:text-red-300 flex items-center gap-1 mt-2"
+                >
+                  <Trash2 size={14} /> Ukloni Datum
+                </button>
+              )}
+            </div>
+          </div>
 
           <div className="mt-4">
             <AIAssistant

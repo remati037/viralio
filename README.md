@@ -49,8 +49,22 @@ Create a `.env.local` file in the root directory:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 OPENAI_API_KEY=your_openai_api_key
+STRIPE_SECRET_KEY=your_stripe_secret_key (optional, for payments)
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret (optional, for payments)
 ```
+
+**Where to find the Service Role Key:**
+1. Go to your Supabase project dashboard
+2. Navigate to **Project Settings** > **API**
+3. Under "Project API keys", find the **`service_role`** key (⚠️ Keep this secret!)
+4. Copy it to your `.env.local` file
+
+**⚠️ Important Security Note:**
+- The Service Role Key bypasses Row Level Security (RLS) and should **NEVER** be exposed to the client
+- Only use it in server-side API routes (which we do)
+- Never commit it to version control (it's already in `.gitignore`)
 
 ### 4. Run Database Migrations
 

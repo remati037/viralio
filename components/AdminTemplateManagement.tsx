@@ -1,18 +1,18 @@
 'use client'
 
+import { NICHES } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import type { Template, TemplateVisibility, UserTier } from '@/types'
-import { NICHES } from '@/lib/constants'
-import { Plus, Edit, Trash2, Eye, EyeOff, Save, X } from 'lucide-react'
+import { Edit, Eye, EyeOff, Plus, Save, Trash2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Input } from './ui/input'
-import { Textarea } from './ui/textarea'
-import RichTextEditor from './ui/rich-text-editor'
 import Loader from './ui/loader'
+import RichTextEditor from './ui/rich-text-editor'
 import Skeleton from './ui/skeleton'
+import { Textarea } from './ui/textarea'
 
 interface AdminTemplateManagementProps {
   userId: string
@@ -159,7 +159,7 @@ export default function AdminTemplateManagement({ userId }: AdminTemplateManagem
       structure: template.structure as any,
       vlads_tip: template.vlads_tip || '',
       is_published: template.is_published,
-      visibility: (template.visibility || []).map((v) => v.tier),
+      visibility: (template.visibility || []).map((v) => v.tier as UserTier),
     })
     setIsCreating(true)
   }
@@ -405,7 +405,7 @@ export default function AdminTemplateManagement({ userId }: AdminTemplateManagem
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">Vidljivo za Tiers</label>
               <div className="flex gap-4">
-                {(['free', 'starter', 'pro'] as UserTier[]).map((tier) => (
+                {(['free', 'pro', 'admin'] as UserTier[]).map((tier) => (
                   <label key={tier} className="flex items-center gap-2 text-sm text-slate-300">
                     <input
                       type="checkbox"
