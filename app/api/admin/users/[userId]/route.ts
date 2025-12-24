@@ -44,7 +44,7 @@ async function checkAdmin(supabase: any) {
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -54,7 +54,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const userId = params.userId
+    const { userId } = await params
     const body = await request.json()
 
     const adminClient = getAdminClient()
@@ -116,7 +116,7 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -126,7 +126,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const userId = params.userId
+    const { userId } = await params
 
     // Prevent admin from deleting themselves
     if (userId === currentUser?.id) {

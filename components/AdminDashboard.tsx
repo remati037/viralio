@@ -493,7 +493,15 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
               setUserToDelete(null)
             }}
             onUserDeleted={fetchAllUsers}
-            user={userToDelete ? { ...userToDelete, email: userEmails[userToDelete.id] } : null}
+            user={
+              userToDelete
+                ? {
+                    id: userToDelete.id,
+                    email: userEmails[userToDelete.id],
+                    business_name: userToDelete.business_name || undefined,
+                  }
+                : null
+            }
           />
 
           {/* Update User Modal */}

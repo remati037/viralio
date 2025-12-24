@@ -44,7 +44,7 @@ async function checkAdmin(supabase: any) {
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -54,7 +54,7 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const userId = params.userId
+    const { userId } = await params
     const adminClient = getAdminClient()
 
     // Get user email
@@ -90,30 +90,53 @@ export async function POST(
     
     const redirectTo = `${siteUrl}/auth/callback`
 
-    // Generate confirmation link - this should trigger email sending
-    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
-      type: 'signup',
-      email: email,
-      options: {
-        redirectTo: redirectTo,
-      },
-    })
+    // For resending confirmation, we can't use 'signup' type as it requires password
+    // Instead, we'll use 'magiclink' or 'recovery' type, or update the user to trigger email
+    // The best approach is to use 'magiclink' which doesn't require password
+    try {
+      const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+        type: 'magiclink',
+        email: email,
+        options: {
+          redirectTo: redirectTo,
+        },
+      })
 
-    if (linkError) {
+      if (linkError) {
+        // If magiclink fails, try recovery type
+        const { data: recoveryLink, error: recoveryError } = await adminClient.auth.admin.generateLink({
+          type: 'recovery',
+          email: email,
+          options: {
+            redirectTo: redirectTo,
+          },
+        })
+
+        if (recoveryError) {
+          return NextResponse.json(
+            { error: recoveryError.message || 'Failed to generate confirmation link' },
+            { status: 400 }
+          )
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: 'Confirmation link generated. Note: Email may need to be sent manually depending on Supabase configuration.',
+          confirmationLink: recoveryLink?.properties?.action_link,
+        })
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Confirmation link generated. Note: Email may need to be sent manually depending on Supabase configuration.',
+        confirmationLink: linkData?.properties?.action_link,
+      })
+    } catch (error: any) {
       return NextResponse.json(
-        { error: linkError.message || 'Failed to generate confirmation link' },
+        { error: error.message || 'Failed to generate confirmation link' },
         { status: 400 }
       )
     }
-
-    // Note: generateLink doesn't automatically send the email
-    // We need to use the REST API or a webhook to actually send it
-    // For now, return the link so admin can manually send it if needed
-    return NextResponse.json({
-      success: true,
-      message: 'Confirmation link generated. Note: Email may need to be sent manually depending on Supabase configuration.',
-      confirmationLink: linkData.properties?.action_link,
-    })
   } catch (error: any) {
     console.error('Error resending confirmation email:', error)
     return NextResponse.json(

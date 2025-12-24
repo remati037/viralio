@@ -93,7 +93,6 @@ export async function POST(request: NextRequest) {
     const redirectTo = `${siteUrl}/auth/callback`
 
     let authData
-    let authError
     let userId
 
       // Use inviteUserByEmail - this automatically sends an invitation/confirmation email
@@ -159,37 +158,18 @@ export async function POST(request: NextRequest) {
       authData = createData
       userId = createData.user.id
 
-      // For createUser, we need to manually send the confirmation email
-      // Use generateLink with type 'signup' and then trigger email sending
-      try {
-        // Generate the confirmation link
-        const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
-          type: 'signup',
-          email: email,
-          options: {
-            redirectTo: redirectTo,
-          },
-        })
-
-        if (linkError) {
-          console.error('Error generating confirmation link:', linkError)
-        } else if (linkData?.properties?.action_link) {
-          // The link is generated, but Supabase doesn't automatically send it
-          // We need to manually send the email or use a webhook
-          console.log('Confirmation link generated:', linkData.properties.action_link)
-          console.warn('Email may not be sent automatically. Consider using inviteUserByEmail or configuring SMTP.')
-          
-          // Note: generateLink doesn't send the email, it just generates the link
-          // You would need to send it manually via your email service or use inviteUserByEmail
-        }
-      } catch (emailError: any) {
-        console.error('Error handling confirmation email:', emailError)
-      }
+      // For createUser, we can't use generateLink with type 'signup' as it requires password
+      // Since we already have the password, we can use it, but it's better to just rely on
+      // inviteUserByEmail which handles email sending automatically
+      // If we fall back to createUser, the email won't be sent automatically
+      // The admin should use inviteUserByEmail for proper email delivery
+      console.warn('User created with createUser. Email confirmation may not be sent automatically.')
+      console.warn('Consider using inviteUserByEmail for automatic email delivery, or configure SMTP in Supabase.')
     }
 
     if (!authData?.user || !userId) {
       return NextResponse.json(
-        { error: authError?.message || 'Failed to create user' },
+        { error: 'Failed to create user - no user data returned' },
         { status: 400 }
       )
     }
