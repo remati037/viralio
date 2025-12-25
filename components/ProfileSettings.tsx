@@ -2,10 +2,11 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { Payment, Profile, SocialLink } from '@/types'
-import { Calendar, Check, CreditCard, DollarSign, Target, User, Video, X, Youtube } from 'lucide-react'
+import { Calendar, Check, CreditCard, DollarSign, Tag, Target, User, Video, X, Youtube } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import CancelSubscriptionModal from './CancelSubscriptionModal'
+import CategoryManagement from './CategoryManagement'
 import SocialLinkInput from './SocialLinkInput'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import Skeleton from './ui/skeleton'
@@ -16,7 +17,7 @@ interface ProfileSettingsProps {
 }
 
 export default function ProfileSettings({ profile, onSave }: ProfileSettingsProps) {
-  const [activeTab, setActiveTab] = useState<'profile' | 'payment'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'payment' | 'categories'>('profile')
   const [isSaving, setIsSaving] = useState(false)
   const [payments, setPayments] = useState<Payment[]>([])
   const [loadingPayments, setLoadingPayments] = useState(true)
@@ -139,7 +140,24 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
         >
           <DollarSign size={16} /> Plaćanje
         </button>
+        <button
+          onClick={() => setActiveTab('categories')}
+          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'categories'
+            ? 'text-white border-b-2 border-blue-500'
+            : 'text-slate-400 hover:text-white'
+            }`}
+        >
+          <Tag size={16} /> Kategorije
+        </button>
       </div>
+
+      {activeTab === 'categories' && profile?.id && (
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="pt-6">
+            <CategoryManagement userId={profile.id} />
+          </CardContent>
+        </Card>
+      )}
 
       {activeTab === 'payment' && (
         <div className="space-y-6">

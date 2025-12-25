@@ -30,7 +30,7 @@ export default function CaseStudyView({ tasks, onCaseStudyClick, userId, userTie
       try {
         const { data, error } = await supabase
           .from('tasks')
-          .select('*, inspiration_links(*)')
+          .select('*, inspiration_links(*), category:task_categories(*)')
           .eq('is_admin_case_study', true)
           .order('created_at', { ascending: false })
 
@@ -79,7 +79,7 @@ export default function CaseStudyView({ tasks, onCaseStudyClick, userId, userTie
     
     const limits = getTierLimits(userTier)
     if (limits.maxCaseStudies === null) {
-      // Starter and Pro: show all
+      // Pro and Admin: show all
       return adminCaseStudies
     } else {
       // Free: show random 2 (or all if less than 2 available)
@@ -200,7 +200,19 @@ export default function CaseStudyView({ tasks, onCaseStudyClick, userId, userTie
                 <div className="md:col-span-2">
                   <h2 className="text-xl font-bold text-white mb-1">{task.title}</h2>
                   <p className="text-xs text-slate-500 mb-3">
-                    {task.niche} | Šablon: {task.original_template || 'N/A'}
+                    {task.category ? (
+                      <span
+                        className="inline-block text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded mr-2"
+                        style={{
+                          color: task.category.color,
+                          backgroundColor: `${task.category.color}20`,
+                          border: `1px solid ${task.category.color}40`,
+                        }}
+                      >
+                        {task.category.name}
+                      </span>
+                    ) : null}
+                    Šablon: {task.original_template || 'N/A'}
                   </p>
 
                   <h3 className="text-md font-bold text-slate-300 mb-2 flex items-center gap-2">

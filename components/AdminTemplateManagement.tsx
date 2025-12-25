@@ -405,7 +405,7 @@ export default function AdminTemplateManagement({ userId }: AdminTemplateManagem
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">Vidljivo za Tiers</label>
               <div className="flex gap-4">
-                {(['free', 'pro', 'admin'] as UserTier[]).map((tier) => (
+                {(['pro', 'admin'] as UserTier[]).map((tier) => (
                   <label key={tier} className="flex items-center gap-2 text-sm text-slate-300">
                     <input
                       type="checkbox"

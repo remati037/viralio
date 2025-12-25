@@ -13,6 +13,7 @@ export interface Database {
         Row: {
           id: string
           business_name: string | null
+          business_category: string | null
           target_audience: string | null
           persona: string | null
           monthly_goal_short: number | null
@@ -26,6 +27,7 @@ export interface Database {
         Insert: {
           id: string
           business_name?: string | null
+          business_category?: string | null
           target_audience?: string | null
           persona?: string | null
           monthly_goal_short?: number | null
@@ -39,6 +41,7 @@ export interface Database {
         Update: {
           id?: string
           business_name?: string | null
+          business_category?: string | null
           target_audience?: string | null
           persona?: string | null
           monthly_goal_short?: number | null
@@ -122,6 +125,7 @@ export interface Database {
           analysis: string | null
           created_by: string | null
           is_admin_case_study: boolean
+          category_id: string | null
           created_at: string
           updated_at: string
         }
@@ -144,6 +148,7 @@ export interface Database {
           analysis?: string | null
           created_by?: string | null
           is_admin_case_study?: boolean
+          category_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -166,6 +171,33 @@ export interface Database {
           analysis?: string | null
           created_by?: string | null
           is_admin_case_study?: boolean
+          category_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      task_categories: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          color: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          color?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          color?: string
           created_at?: string
           updated_at?: string
         }

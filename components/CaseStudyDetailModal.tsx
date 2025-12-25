@@ -14,8 +14,19 @@ export default function CaseStudyDetailModal({ task, onClose }: CaseStudyDetailM
       <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-slate-800">
           <div>
+            {task.category ? (
+              <span
+                className="text-xs font-bold uppercase tracking-wider bg-slate-800 px-2 py-1 rounded border inline-block mr-2"
+                style={{
+                  color: task.category.color,
+                  borderColor: `${task.category.color}40`,
+                }}
+              >
+                {task.category.name}
+              </span>
+            ) : null}
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-800 px-2 py-1 rounded border border-slate-700">
-              {task.niche} - {task.format}
+              {task.format}
             </span>
             <h3 className="text-2xl font-bold text-white mt-2">{task.title}</h3>
             <p className="text-slate-400 text-sm mt-1">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Move, ChevronRight } from 'lucide-react'
+import { Plus, Move, ChevronRight, Trash2 } from 'lucide-react'
 import { KANBAN_COLUMNS } from '@/lib/constants'
 import type { Task } from '@/types'
 
@@ -85,17 +85,41 @@ export default function KanbanBoard({
                     onClick={() => onTaskClick(task)}
                     className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-900/10 transition-all cursor-pointer group relative active:cursor-grabbing"
                   >
-                    <div className="flex justify-between items-start mb-2 pointer-events-none">
-                      <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500 bg-slate-900 px-2 py-1 rounded">
-                        {task.niche}
-                      </span>
-                      <Move size={14} className="text-slate-600 opacity-50" />
+                    <div className="flex justify-between items-start mb-2">
+                      {task.category && (
+                        <span
+                          className="text-[10px] uppercase tracking-wider font-bold bg-slate-900 px-2 py-1 rounded pointer-events-none"
+                          style={{
+                            color: task.category.color,
+                            border: `1px solid ${task.category.color}40`,
+                          }}
+                        >
+                          {task.category.name}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-1">
+                        {!task.is_admin_case_study && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (window.confirm(`Da li ste sigurni da želite da obrišete zadatak "${task.title}"?`)) {
+                                onDeleteTask(task.id)
+                              }
+                            }}
+                            className="p-1 rounded hover:bg-red-900/30 text-slate-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                            title="Obriši zadatak"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                        <Move size={14} className="text-slate-600 opacity-50 pointer-events-none" />
+                      </div>
                     </div>
                     <h4 className="font-bold text-white text-sm mb-3 leading-snug pointer-events-none">{task.title}</h4>
 
                     <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-700/50">
                       <span
-                        className={`px-2 py-0.5 text-[10px] rounded-full font-bold ${
+                        className={`px-2 py-0.5 text-[10px] rounded-full font-bold pointer-events-none ${
                           task.format === 'Kratka Forma' ? 'bg-red-900/30 text-red-300' : 'bg-green-900/30 text-green-300'
                         }`}
                       >

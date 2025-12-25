@@ -24,7 +24,10 @@ export type InspirationLink = Database['public']['Tables']['inspiration_links'][
 
 export type Task = Database['public']['Tables']['tasks']['Row'] & {
   inspiration_links?: InspirationLink[]
+  category?: TaskCategory
 }
+
+export type TaskCategory = Database['public']['Tables']['task_categories']['Row']
 
 export type TaskInsert = Database['public']['Tables']['tasks']['Insert']
 export type TaskUpdate = Database['public']['Tables']['tasks']['Update']
@@ -69,5 +72,5 @@ export type Payment = Database['public']['Tables']['payments']['Row']
 export type UserStatistics = Database['public']['Tables']['user_statistics']['Row']
 
 export type UserRole = 'admin' | 'user'
-export type UserTier = 'free' | 'pro' | 'admin'
+export type UserTier = 'pro' | 'admin'
 

@@ -1,10 +1,6 @@
-import ViralVaultApp from '@/components/ViralVaultApp';
-import SubscriptionGate from '@/components/SubscriptionGate';
-import Skeleton from '@/components/ui/skeleton';
 import { getUser } from '@/lib/utils/auth';
 import { checkSubscriptionStatus } from '@/lib/utils/subscription';
 import { redirect } from 'next/navigation';
-import { Suspense } from 'react';
 
 export default async function Home({
   searchParams,
@@ -40,7 +36,7 @@ export default async function Home({
         
         if (finalSubscriptionStatus.hasActiveSubscription) {
           // Redirect to clear the session_id from URL and show updated status
-          redirect('/')
+          redirect('/planner')
         }
       } else {
         // Log error but don't block the app - user can still access if they have subscription
@@ -50,7 +46,7 @@ export default async function Home({
         
         if (finalSubscriptionStatus.hasActiveSubscription) {
           // Redirect to clear the session_id from URL
-          redirect('/')
+          redirect('/planner')
         }
       }
     } catch (error) {
@@ -60,39 +56,11 @@ export default async function Home({
       finalSubscriptionStatus = await checkSubscriptionStatus(user.id)
       
       if (finalSubscriptionStatus.hasActiveSubscription) {
-        redirect('/')
+        redirect('/planner')
       }
     }
   }
 
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-slate-950 p-8">
-        <div className="max-w-7xl mx-auto space-y-8">
-          <div className="space-y-4">
-            <Skeleton height={40} width="300px" />
-            <Skeleton height={20} width="500px" />
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div className="lg:col-span-1 space-y-4">
-              <Skeleton height={50} />
-              <Skeleton height={50} />
-              <Skeleton height={50} />
-            </div>
-            <div className="lg:col-span-3 space-y-6">
-              <Skeleton height={200} />
-              <Skeleton height={300} />
-            </div>
-          </div>
-        </div>
-      </div>
-    }>
-      <SubscriptionGate
-        userId={user.id}
-        hasActiveSubscription={finalSubscriptionStatus.hasActiveSubscription}
-      >
-        <ViralVaultApp userId={user.id} />
-      </SubscriptionGate>
-    </Suspense>
-  )
+  // Redirect to planner by default
+  redirect('/planner')
 }

@@ -1,13 +1,17 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
+import { BUSINESS_CATEGORIES } from '@/lib/constants'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import Select from './ui/select'
 
 export default function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [businessName, setBusinessName] = useState('')
+  const [businessCategory, setBusinessCategory] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSignUp, setIsSignUp] = useState(false)
@@ -26,15 +30,44 @@ export default function LoginForm() {
 
     try {
       if (isSignUp) {
+        // Validate business name
+        if (!businessName.trim()) {
+          setError('Business name or personal name is required')
+          toast.error('Greška', {
+            description: 'Molimo unesite ime biznisa ili lično ime.',
+          })
+          setLoading(false)
+          return
+        }
+
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/auth/callback`,
+            data: {
+              business_name: businessName.trim(),
+            },
           },
         })
 
         if (signUpError) throw signUpError
+
+        // Update profile with business name and category immediately after signup
+        if (data.user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              business_name: businessName.trim(),
+              business_category: businessCategory || null,
+            })
+            .eq('id', data.user.id)
+
+          if (profileError) {
+            console.error('Error updating profile:', profileError)
+            // Don't fail signup if profile update fails, but log it
+          }
+        }
 
         // Profile will be automatically created by database trigger
         toast.success('Nalog kreiran!', {
@@ -42,6 +75,8 @@ export default function LoginForm() {
         })
         setEmail('')
         setPassword('')
+        setBusinessName('')
+        setBusinessCategory('')
       } else {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email,
@@ -90,6 +125,7 @@ export default function LoginForm() {
           <p className="text-slate-400">Sign in to your account</p>
         </div>
         <div className="space-y-4">
+          <div className="h-12 bg-slate-800 rounded-lg animate-pulse"></div>
           <div className="h-12 bg-slate-800 rounded-lg animate-pulse"></div>
           <div className="h-12 bg-slate-800 rounded-lg animate-pulse"></div>
           <div className="h-12 bg-slate-800 rounded-lg animate-pulse"></div>
@@ -148,6 +184,46 @@ export default function LoginForm() {
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
           />
         </div>
+
+        {isSignUp && (
+          <>
+            <div>
+              <label htmlFor="businessName" className="block text-sm font-medium text-slate-300 mb-2">
+                Business Name or Personal Name <span className="text-red-400">*</span>
+              </label>
+              <input
+                id="businessName"
+                type="text"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                required
+                suppressHydrationWarning
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter your business or personal name"
+                autoComplete="name"
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                This will be used to identify your account
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="businessCategory" className="block text-sm font-medium text-slate-300 mb-2">
+                Business Category
+              </label>
+              <Select
+                options={BUSINESS_CATEGORIES}
+                value={businessCategory}
+                onChange={setBusinessCategory}
+                placeholder="Select your business category (optional)"
+                className="w-full"
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Help us personalize your experience
+              </p>
+            </div>
+          </>
+        )}
 
         <button
           type="submit"

@@ -23,16 +23,12 @@ export default function DeleteUserModal({
   user,
 }: DeleteUserModalProps) {
   const [loading, setLoading] = useState(false)
-  const [confirmText, setConfirmText] = useState('')
 
   if (!isOpen || !user) return null
 
   const userDisplayName = user.business_name || user.email || user.id.substring(0, 8)
-  const isConfirmed = confirmText === 'OBRIŠI'
 
   const handleDelete = async () => {
-    if (!isConfirmed) return
-
     setLoading(true)
 
     try {
@@ -52,7 +48,6 @@ export default function DeleteUserModal({
 
       onUserDeleted()
       onClose()
-      setConfirmText('')
     } catch (error: any) {
       toast.error('Greška pri brisanju korisnika', {
         description: error.message,
@@ -89,20 +84,6 @@ export default function DeleteUserModal({
             </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Unesite <strong className="text-red-400">OBRIŠI</strong> da potvrdite:
-            </label>
-            <input
-              type="text"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-              placeholder="OBRIŠI"
-              disabled={loading}
-            />
-          </div>
-
           <div className="flex gap-2 pt-4">
             <Button
               type="button"
@@ -117,7 +98,7 @@ export default function DeleteUserModal({
               type="button"
               onClick={handleDelete}
               className="flex-1 bg-red-600 hover:bg-red-700"
-              disabled={!isConfirmed || loading}
+              disabled={loading}
             >
               {loading ? 'Brisanje...' : 'Obriši Korisnika'}
             </Button>

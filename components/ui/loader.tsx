@@ -31,7 +31,7 @@ export default function Loader({ size = 'md', text, fullScreen = false, classNam
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm" suppressHydrationWarning>
         {loader}
       </div>
     )
