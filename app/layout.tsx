@@ -5,7 +5,7 @@ import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://viralio.com'
 const siteName = 'Viralio'
-const defaultTitle = 'Viralio - Planirajte svoj kontent i postanite viralni'
+const defaultTitle = 'Viralio'
 const defaultDescription = 'Viralio je platforma za planiranje i upravljanje viralnim kontentom. Kreirajte ideje, organizujte zadatke, pratite rezultate i postanite viralni sa našim AI asistentom za generisanje kontenta.'
 
 export const metadata: Metadata = {
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
     locale: 'sr_RS',
     url: siteUrl,
     siteName: siteName,
-    title: defaultTitle,
+    title: `${defaultTitle} - Planirajte svoj kontent i postanite viralni`,
     description: defaultDescription,
     images: [
       {
@@ -79,7 +79,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: defaultTitle,
+    title: `${defaultTitle} - Planirajte svoj kontent i postanite viralni`,
     description: defaultDescription,
     images: [`${siteUrl}/viralio-icon-512.png`],
     creator: '@viralio',

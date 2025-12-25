@@ -4,7 +4,7 @@ import LoginForm from '@/components/LoginForm'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Prijava - Viralio',
+  title: 'Prijava',
   description: 'Prijavite se na Viralio i počnite da planirate svoj viralni kontent. Kreirajte nalog ili se prijavite sa postojećim nalogom.',
   robots: {
     index: false,

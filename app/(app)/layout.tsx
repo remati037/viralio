@@ -6,8 +6,6 @@ import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Planer - Viralio',
-  description: 'Upravljajte svojim kontentom sa Kanban tablom i kalendarom. Organizujte ideje, pratite napredak i postanite viralni.',
   robots: {
     index: false,
     follow: false,
