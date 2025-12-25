@@ -1,6 +1,16 @@
 import { redirect } from 'next/navigation'
 import { getUser } from '@/lib/utils/auth'
 import LoginForm from '@/components/LoginForm'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Prijava - Viralio',
+  description: 'Prijavite se na Viralio i počnite da planirate svoj viralni kontent. Kreirajte nalog ili se prijavite sa postojećim nalogom.',
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
 
 export default async function LoginPage() {
   const user = await getUser()

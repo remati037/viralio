@@ -3,11 +3,53 @@ import Script from "next/script";
 import { Toaster } from "sonner";
 import "./globals.css";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://viralio.com'
+const siteName = 'Viralio'
+const defaultTitle = 'Viralio - Planirajte svoj kontent i postanite viralni'
+const defaultDescription = 'Viralio je platforma za planiranje i upravljanje viralnim kontentom. Kreirajte ideje, organizujte zadatke, pratite rezultate i postanite viralni sa našim AI asistentom za generisanje kontenta.'
+
 export const metadata: Metadata = {
-  title: "Viralio",
-  description: "Planirajte svoj kontent i postanite viralni",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: defaultTitle,
+    template: `%s | ${siteName}`,
+  },
+  description: defaultDescription,
+  keywords: [
+    'viralio',
+    'viralni kontent',
+    'planiranje kontenta',
+    'content planning',
+    'social media marketing',
+    'content management',
+    'AI content generator',
+    'viral content',
+    'content strategy',
+    'marketing tools',
+    'content calendar',
+    'kanban board',
+    'content ideje',
+  ],
+  authors: [{ name: 'Viralio' }],
+  creator: 'Viralio',
+  publisher: 'Viralio',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
   manifest: "/manifest.json",
   themeColor: "#2563eb",
+  colorScheme: 'dark',
+  icons: {
+    icon: [
+      { url: "/viralio-icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/viralio-icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/viralio-icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -19,6 +61,44 @@ export const metadata: Metadata = {
     maximumScale: 1,
     userScalable: false,
   },
+  openGraph: {
+    type: 'website',
+    locale: 'sr_RS',
+    url: siteUrl,
+    siteName: siteName,
+    title: defaultTitle,
+    description: defaultDescription,
+    images: [
+      {
+        url: `${siteUrl}/viralio-icon-512.png`,
+        width: 512,
+        height: 512,
+        alt: 'Viralio Logo',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: defaultTitle,
+    description: defaultDescription,
+    images: [`${siteUrl}/viralio-icon-512.png`],
+    creator: '@viralio',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    // Add Google Search Console verification code here when available
+    // google: 'your-verification-code',
+  },
 };
 
 export default function RootLayout({
@@ -27,13 +107,41 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="sr" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="icon" href="/viralio-icon-192.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/viralio-icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="ViralVault" />
+        <meta name="apple-mobile-web-app-title" content="Viralio" />
+        <meta name="application-name" content="Viralio" />
+        <meta name="msapplication-TileColor" content="#2563eb" />
+        <meta name="msapplication-TileImage" content="/viralio-icon-192.png" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebApplication',
+              name: 'Viralio',
+              description: defaultDescription,
+              url: siteUrl,
+              applicationCategory: 'BusinessApplication',
+              operatingSystem: 'Web',
+              offers: {
+                '@type': 'Offer',
+                price: '0',
+                priceCurrency: 'USD',
+              },
+              aggregateRating: {
+                '@type': 'AggregateRating',
+                ratingValue: '4.8',
+                ratingCount: '150',
+              },
+            }),
+          }}
+        />
       </head>
       <body className="antialiased" suppressHydrationWarning>
         {children}

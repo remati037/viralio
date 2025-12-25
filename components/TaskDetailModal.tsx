@@ -2,12 +2,14 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { getYoutubeThumbnail } from '@/lib/utils/helpers'
+import { KANBAN_COLUMNS } from '@/lib/constants'
 import type { Task, TaskUpdate } from '@/types'
 import { Calendar, Check, ClipboardList, Edit3, Eye, FileText, Link, Trash2, Trello, X, Youtube } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import AIAssistant from './AIAssistant'
 import CategorySelect, { type TaskCategory } from './ui/category-select'
+import StatusSelect from './ui/status-select'
 import RichTextEditor from './ui/rich-text-editor'
 import Loader from './ui/loader'
 
@@ -112,6 +114,25 @@ export default function TaskDetailModal({
 
   const handleUpdate = (field: keyof Task, value: any) => {
     setEditedTask((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleStatusChange = async (newStatus: 'idea' | 'ready' | 'scheduled' | 'published') => {
+    // Update local state immediately
+    setEditedTask((prev) => ({ ...prev, status: newStatus }))
+    
+    // Persist to database
+    try {
+      await onUpdate({ status: newStatus })
+      toast.success('Status ažuriran', {
+        description: `Zadatak je premešten u "${KANBAN_COLUMNS.find(col => col.id === newStatus)?.title || newStatus}".`,
+      })
+    } catch (error: any) {
+      // Revert on error
+      setEditedTask((prev) => ({ ...prev, status: task.status }))
+      toast.error('Greška pri ažuriranju statusa', {
+        description: error?.message || 'Pokušajte ponovo.',
+      })
+    }
   }
 
   const handleUpdateFullScript = (html: string) => {
@@ -305,6 +326,16 @@ export default function TaskDetailModal({
                 <Edit3 size={14} className="text-blue-400" />
                 Skripta (Edit) - <span className={`ml-1 font-bold ${isLongForm ? 'text-green-400' : 'text-red-400'}`}>{editedTask.format}</span>
               </h4>
+
+              {/* Status Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Status</label>
+                <StatusSelect
+                  value={editedTask.status}
+                  onChange={handleStatusChange}
+                  className="w-full"
+                />
+              </div>
 
               {/* Category Selection */}
               <div>
