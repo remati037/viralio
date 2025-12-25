@@ -557,7 +557,7 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
                       <button
                         disabled
                         className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 cursor-not-allowed opacity-50"
-                        title="Kalendar view je dostupan samo za Starter i Pro tier"
+                        title="Kalendar view je dostupan samo za Pro tier"
                       >
                         <Calendar size={16} /> Kalendar 🔒
                       </button>
@@ -651,6 +651,7 @@ export default function ViralVaultApp({ userId }: { userId: string }) {
           onClose={() => setIsNewIdeaWizardOpen(false)}
           onSaveToPlan={handleSaveToPlan}
           userTier={profile?.tier as UserTier | undefined}
+          userId={userId}
         />
       )}
 

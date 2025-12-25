@@ -9,6 +9,7 @@ import { Calendar, ChevronLeft, Edit3, FileText, Link, Plus, Trash2, X, Youtube,
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import AIAssistant from './AIAssistant'
+import CategorySelect, { type TaskCategory } from './ui/category-select'
 import RichTextEditor from './ui/rich-text-editor'
 import Loader from './ui/loader'
 import Skeleton from './ui/skeleton'
@@ -20,16 +21,20 @@ interface NewIdeaWizardProps {
     inspirationLinks?: Array<{ link: string; displayUrl?: string; type?: string }>
   ) => Promise<void>
   userTier?: UserTier
+  userId: string
 }
 
 const WORDS_PER_MINUTE = 150
 
-export default function NewIdeaWizard({ onClose, onSaveToPlan, userTier }: NewIdeaWizardProps) {
+export default function NewIdeaWizard({ onClose, onSaveToPlan, userTier, userId }: NewIdeaWizardProps) {
   const supabase = createClient()
   const [step, setStep] = useState<'start' | 'template_select' | 'script_edit'>('start')
   const [selectedNiche, setSelectedNiche] = useState('marketing')
   const [dbTemplates, setDbTemplates] = useState<Template[]>([])
   const [loadingTemplates, setLoadingTemplates] = useState(true)
+  const [categories, setCategories] = useState<TaskCategory[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(true)
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: '',
     niche: NICHES[0].name,
@@ -50,6 +55,38 @@ export default function NewIdeaWizard({ onClose, onSaveToPlan, userTier }: NewId
   const [inspirationLinks, setInspirationLinks] = useState<Array<{ link: string; displayUrl?: string; type?: string }>>([])
   const [linkInput, setLinkInput] = useState('')
   const [isAddingLink, setIsAddingLink] = useState(false)
+
+  useEffect(() => {
+    if (userId) {
+      fetchCategories()
+    }
+  }, [userId])
+
+  const fetchCategories = async () => {
+    if (!userId) {
+      setLoadingCategories(false)
+      return
+    }
+    
+    setLoadingCategories(true)
+    try {
+      const { data, error } = await supabase
+        .from('task_categories')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+      setCategories((data || []) as TaskCategory[])
+    } catch (error: any) {
+      console.error('Error fetching categories:', error)
+      toast.error('Greška pri učitavanju kategorija', {
+        description: error?.message || 'Pokušajte ponovo',
+      })
+    } finally {
+      setLoadingCategories(false)
+    }
+  }
 
   useEffect(() => {
     if (step === 'template_select') {
@@ -84,7 +121,7 @@ export default function NewIdeaWizard({ onClose, onSaveToPlan, userTier }: NewId
         // Pro tier: show all templates
         filtered = allTemplates
       } else {
-        // Free (2) or Starter (5): show random templates
+        // Limited tier: show random templates
         const shuffled = [...allTemplates].sort(() => Math.random() - 0.5)
         filtered = shuffled.slice(0, limits.maxTemplates)
       }
@@ -259,6 +296,7 @@ ZAKLJUČAK: ${template.structure.cta}`
       status: 'idea' as const,
       publish_date: formData.publish_date || null,
       original_template: formData.originalTemplate,
+      category_id: selectedCategoryId,
     }
 
     await onSaveToPlan(newTask as Omit<TaskInsert, 'user_id'>, inspirationLinks)
@@ -391,7 +429,15 @@ ZAKLJUČAK: ${template.structure.cta}`
               <Edit3 className="text-emerald-400 w-5 h-5" /> 3. Skripta i Detalji
             </h3>
             <button
-              onClick={() => setStep('template_select')}
+              onClick={() => {
+                // If user came from manual entry, go back to start
+                // Otherwise, go back to template selection
+                if (formData.originalTemplate === 'Ručni Unos') {
+                  setStep('start')
+                } else {
+                  setStep('template_select')
+                }
+              }}
               className="text-slate-400 hover:text-white transition-colors text-sm flex items-center gap-1"
             >
               <ChevronLeft size={16} /> {formData.originalTemplate === 'Ručni Unos' ? 'Nazad' : 'Izaberi drugi šablon'}
@@ -407,6 +453,23 @@ ZAKLJUČAK: ${template.structure.cta}`
               placeholder="Unesite naslov (Npr. 3 Alata za Brzi Viral)"
               className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Kategorija</label>
+            {loadingCategories ? (
+              <div className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-slate-400">
+                Učitavanje kategorija...
+              </div>
+            ) : (
+              <CategorySelect
+                categories={categories}
+                value={selectedCategoryId}
+                onChange={setSelectedCategoryId}
+                placeholder="Izaberi kategoriju (opciono)"
+                className="w-full"
+              />
+            )}
           </div>
 
           <div>

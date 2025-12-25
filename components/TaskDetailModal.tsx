@@ -1,11 +1,13 @@
 'use client'
 
+import { createClient } from '@/lib/supabase/client'
 import { getYoutubeThumbnail } from '@/lib/utils/helpers'
 import type { Task, TaskUpdate } from '@/types'
 import { Calendar, Check, ClipboardList, Edit3, Eye, FileText, Link, Trash2, Trello, X, Youtube } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import AIAssistant from './AIAssistant'
+import CategorySelect, { type TaskCategory } from './ui/category-select'
 import RichTextEditor from './ui/rich-text-editor'
 import Loader from './ui/loader'
 
@@ -31,28 +33,97 @@ export default function TaskDetailModal({
   onAddInspirationLink,
   onRemoveInspirationLink,
 }: TaskDetailModalProps) {
+  const supabase = createClient()
   const [editedTask, setEditedTask] = useState<Task>(task)
   const [isSaving, setIsSaving] = useState(false)
   const [linkInput, setLinkInput] = useState('')
   const [isAddingLink, setIsAddingLink] = useState(false)
   const [removingLinkId, setRemovingLinkId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'script' | 'inspiration' | 'schedule' | 'results'>('script')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [categories, setCategories] = useState<TaskCategory[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(true)
 
   const isLongForm = editedTask.format === 'Duga Forma'
-  const initialScriptValue = isLongForm ? editedTask.hook || '' : ''
+  
+  // Helper function to convert plain text to HTML if needed
+  const textToHtml = (text: string | null | undefined): string => {
+    if (!text) return ''
+    // If it already contains HTML tags, return as is
+    if (text.trim().startsWith('<') && text.includes('>')) {
+      return text
+    }
+    // Otherwise, wrap in paragraph tags and preserve line breaks
+    const lines = text.split('\n')
+    if (lines.length === 1 && lines[0].trim()) {
+      // Single line - just wrap in paragraph
+      return `<p>${lines[0]}</p>`
+    }
+    // Multiple lines - wrap each in paragraph
+    return lines.map(line => line.trim() ? `<p>${line}</p>` : '<p><br></p>').join('')
+  }
+  
+  // Helper function to get HTML content for editor
+  const getHtmlContent = (field: string | null | undefined): string => {
+    return textToHtml(field)
+  }
+  
+  const initialScriptValue = isLongForm ? getHtmlContent(editedTask.hook) : ''
   const [fullScriptText, setFullScriptText] = useState(initialScriptValue)
+  const [hookHtml, setHookHtml] = useState(getHtmlContent(editedTask.hook))
+  const [bodyHtml, setBodyHtml] = useState(getHtmlContent(editedTask.body))
+  const [ctaHtml, setCtaHtml] = useState(getHtmlContent(editedTask.cta))
+  const [analysisHtml, setAnalysisHtml] = useState(getHtmlContent(editedTask.analysis))
 
   useEffect(() => {
     setEditedTask(task)
-    setFullScriptText(isLongForm ? task.hook || '' : '')
-  }, [task, isLongForm])
+    const isLong = task.format === 'Duga Forma'
+    setFullScriptText(isLong ? getHtmlContent(task.hook) : '')
+    setHookHtml(getHtmlContent(task.hook))
+    setBodyHtml(getHtmlContent(task.body))
+    setCtaHtml(getHtmlContent(task.cta))
+    setAnalysisHtml(getHtmlContent(task.analysis))
+  }, [task])
+
+  useEffect(() => {
+    if (task.user_id) {
+      fetchCategories()
+    }
+  }, [task.user_id])
+
+  const fetchCategories = async () => {
+    setLoadingCategories(true)
+    try {
+      const { data, error } = await supabase
+        .from('task_categories')
+        .select('*')
+        .eq('user_id', task.user_id)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+      setCategories((data || []) as TaskCategory[])
+    } catch (error: any) {
+      console.error('Error fetching categories:', error)
+    } finally {
+      setLoadingCategories(false)
+    }
+  }
 
   const handleUpdate = (field: keyof Task, value: any) => {
     setEditedTask((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleUpdateFullScript = (value: string) => {
-    setFullScriptText(value)
+  const handleUpdateFullScript = (html: string) => {
+    setFullScriptText(html)
+  }
+  
+  // Helper to extract plain text from HTML for saving (if needed)
+  const htmlToText = (html: string): string => {
+    if (!html) return ''
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = html
+    return tempDiv.textContent || tempDiv.innerText || ''
   }
 
   const handleAddLink = async () => {
@@ -103,9 +174,10 @@ export default function TaskDetailModal({
       title: editedTask.title,
       niche: editedTask.niche,
       format: editedTask.format,
-      hook: isLongForm ? fullScriptText : editedTask.hook,
-      body: isLongForm ? 'CEO TEKST se nalazi u Hook/Skripta polju u detaljima.' : editedTask.body,
-      cta: isLongForm ? 'Duga Forma: Nema odvojenog CTA za Kanban.' : editedTask.cta,
+      // Store HTML directly to preserve formatting
+      hook: isLongForm ? fullScriptText : hookHtml,
+      body: isLongForm ? 'CEO TEKST se nalazi u Hook/Skripta polju u detaljima.' : bodyHtml,
+      cta: isLongForm ? 'Duga Forma: Nema odvojenog CTA za Kanban.' : ctaHtml,
       status: editedTask.status,
       publish_date: editedTask.publish_date,
       original_template: editedTask.original_template,
@@ -113,12 +185,35 @@ export default function TaskDetailModal({
       result_views: editedTask.result_views,
       result_engagement: editedTask.result_engagement,
       result_conversions: editedTask.result_conversions,
-      analysis: editedTask.analysis,
+      analysis: analysisHtml,
+      category_id: editedTask.category_id,
     }
 
     await onUpdate(updatedTask)
     setIsSaving(false)
     onClose()
+  }
+
+  const handleDelete = async () => {
+    if (task.is_admin_case_study) {
+      toast.error('Ne možete obrisati', {
+        description: 'Ne možete obrisati admin studiju slučaja.',
+      })
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      await onDelete(task.id)
+      onClose()
+    } catch (error: any) {
+      toast.error('Greška pri brisanju', {
+        description: error.message || 'Došlo je do greške pri brisanju zadatka.',
+      })
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
+    }
   }
 
   const taskFormat = editedTask.format === 'Kratka Forma' ? 'text-red-400' : 'text-green-400'
@@ -128,9 +223,17 @@ export default function TaskDetailModal({
       <div className="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between p-6 border-b border-slate-800">
           <div>
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-800 px-2 py-1 rounded border border-slate-700">
-              {editedTask.niche}
-            </span>
+            {editedTask.category && (
+              <span
+                className="text-xs font-bold uppercase tracking-wider bg-slate-800 px-2 py-1 rounded border"
+                style={{
+                  color: editedTask.category.color,
+                  borderColor: `${editedTask.category.color}40`,
+                }}
+              >
+                {editedTask.category.name}
+              </span>
+            )}
             <h3 className="text-xl font-bold text-white mt-2 flex items-center gap-2">
               <span className={`text-sm font-bold ${taskFormat}`}>[{editedTask.format}]</span>
               {editedTask.title}
@@ -144,9 +247,20 @@ export default function TaskDetailModal({
               )}
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
-            <X size={24} />
-          </button>
+          <div className="flex items-center gap-2">
+            {!task.is_admin_case_study && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-red-400 hover:text-red-300 transition-colors p-2 hover:bg-red-900/20 rounded-lg"
+                title="Obriši zadatak"
+              >
+                <Trash2 size={20} />
+              </button>
+            )}
+            <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+              <X size={24} />
+            </button>
+          </div>
         </div>
 
         <div className="flex border-b border-slate-800">
@@ -192,16 +306,33 @@ export default function TaskDetailModal({
                 Skripta (Edit) - <span className={`ml-1 font-bold ${isLongForm ? 'text-green-400' : 'text-red-400'}`}>{editedTask.format}</span>
               </h4>
 
+              {/* Category Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Kategorija</label>
+                {loadingCategories ? (
+                  <div className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-slate-400">
+                    Učitavanje kategorija...
+                  </div>
+                ) : (
+                  <CategorySelect
+                    categories={categories}
+                    value={editedTask.category_id || null}
+                    onChange={(categoryId) => {
+                      setEditedTask((prev) => ({ ...prev, category_id: categoryId }))
+                    }}
+                    placeholder="Izaberi kategoriju (opciono)"
+                    className="w-full"
+                  />
+                )}
+              </div>
+
               {isLongForm ? (
                 <div className="flex-1 flex flex-col min-h-[300px]">
                   <label className="text-green-400 text-xs font-bold block mb-1">CEO SCENARIO / TEKST (Duga Forma)</label>
                   <RichTextEditor
                     content={fullScriptText}
                     onChange={(html) => {
-                      const tempDiv = document.createElement('div')
-                      tempDiv.innerHTML = html
-                      const plainText = tempDiv.textContent || tempDiv.innerText || ''
-                      handleUpdateFullScript(plainText)
+                      handleUpdateFullScript(html)
                     }}
                     placeholder="Pišite ceo scenario bez razdvajanja na HOOK/BODY/CTA"
                     minHeight="350px"
@@ -216,12 +347,9 @@ export default function TaskDetailModal({
                   <div>
                     <label className="text-red-400 text-xs font-bold block mb-1">01. HOOK (Udica)</label>
                     <RichTextEditor
-                      content={editedTask.hook || ''}
+                      content={hookHtml}
                       onChange={(html) => {
-                        const tempDiv = document.createElement('div')
-                        tempDiv.innerHTML = html
-                        const plainText = tempDiv.textContent || tempDiv.innerText || ''
-                        handleUpdate('hook', plainText)
+                        setHookHtml(html)
                       }}
                       placeholder="Unesite udicu ovde (0-3 sekunde)"
                       minHeight="80px"
@@ -231,12 +359,9 @@ export default function TaskDetailModal({
                   <div>
                     <label className="text-blue-400 text-xs font-bold block mb-1">02. BODY (Vrednost)</label>
                     <RichTextEditor
-                      content={editedTask.body || ''}
+                      content={bodyHtml}
                       onChange={(html) => {
-                        const tempDiv = document.createElement('div')
-                        tempDiv.innerHTML = html
-                        const plainText = tempDiv.textContent || tempDiv.innerText || ''
-                        handleUpdate('body', plainText)
+                        setBodyHtml(html)
                       }}
                       placeholder="Unesite ključnu vrednost ovde (3-45 sekundi)"
                       minHeight="120px"
@@ -246,12 +371,9 @@ export default function TaskDetailModal({
                   <div>
                     <label className="text-emerald-400 text-xs font-bold block mb-1">03. CTA (Poziv na akciju)</label>
                     <RichTextEditor
-                      content={editedTask.cta || ''}
+                      content={ctaHtml}
                       onChange={(html) => {
-                        const tempDiv = document.createElement('div')
-                        tempDiv.innerHTML = html
-                        const plainText = tempDiv.textContent || tempDiv.innerText || ''
-                        handleUpdate('cta', plainText)
+                        setCtaHtml(html)
                       }}
                       placeholder="Unesite poziv na akciju ovde"
                       minHeight="60px"
@@ -446,12 +568,9 @@ export default function TaskDetailModal({
               <div>
                 <label className="text-blue-400 text-xs font-bold block mb-1">Detaljna Analiza (Zašto je radilo?)</label>
                 <RichTextEditor
-                  content={editedTask.analysis || ''}
+                  content={analysisHtml}
                   onChange={(html) => {
-                    const tempDiv = document.createElement('div')
-                    tempDiv.innerHTML = html
-                    const plainText = tempDiv.textContent || tempDiv.innerText || ''
-                    handleUpdate('analysis', plainText)
+                    setAnalysisHtml(html)
                   }}
                   placeholder="Opišite detaljno zašto je ova objava bila uspešna i koje ste lekcije naučili."
                   minHeight="120px"
@@ -508,28 +627,91 @@ export default function TaskDetailModal({
           )}
         </div>
 
-        <div className="p-6 border-t border-slate-800 flex justify-end gap-3">
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className={`py-3 px-6 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${isSaving
-              ? 'bg-blue-800 text-blue-300'
-              : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
-              }`}
-          >
-            {isSaving ? (
-              <>
-                <Loader size="sm" />
-                <span>Čuvanje...</span>
-              </>
-            ) : (
-              <>
-                <Check size={18} />
-                Sačuvaj Izmene i Zatvori
-              </>
-            )}
-          </button>
+        <div className="p-6 border-t border-slate-800 flex justify-between items-center gap-3">
+          {!task.is_admin_case_study && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={isDeleting}
+              className="py-3 px-6 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/20 disabled:bg-red-800 disabled:text-red-300"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader size="sm" />
+                  <span>Brisanje...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 size={18} />
+                  Obriši Zadatak
+                </>
+              )}
+            </button>
+          )}
+          <div className="flex gap-3 ml-auto">
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className={`py-3 px-6 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${isSaving
+                ? 'bg-blue-800 text-blue-300'
+                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
+                }`}
+            >
+              {isSaving ? (
+                <>
+                  <Loader size="sm" />
+                  <span>Čuvanje...</span>
+                </>
+              ) : (
+                <>
+                  <Check size={18} />
+                  Sačuvaj Izmene i Zatvori
+                </>
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+              <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                <Trash2 size={24} className="text-red-400" />
+                Potvrdite Brisanje
+              </h3>
+              <p className="text-slate-400 mb-6">
+                Da li ste sigurni da želite da obrišete zadatak <span className="font-semibold text-white">"{task.title}"</span>?
+                Ova akcija se ne može poništiti.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                  className="py-2 px-4 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+                >
+                  Otkaži
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="py-2 px-4 rounded-lg font-medium bg-red-600 hover:bg-red-500 text-white transition-colors disabled:bg-red-800 disabled:text-red-300 flex items-center gap-2"
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader size="sm" />
+                      <span>Brisanje...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} />
+                      Obriši
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

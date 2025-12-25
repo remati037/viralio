@@ -41,10 +41,10 @@ export async function updateSession(request: NextRequest) {
   const publicPaths = ['/login', '/auth/callback', '/_next', '/api', '/favicon.ico']
   const isPublicPath = publicPaths.some((path) => request.nextUrl.pathname.startsWith(path))
 
-  // If user is authenticated and on login page, redirect to home
+  // If user is authenticated and on login page, redirect to planner
   if (user && request.nextUrl.pathname === '/login') {
     const url = request.nextUrl.clone()
-    url.pathname = '/'
+    url.pathname = '/planner'
     return NextResponse.redirect(url)
   }
 

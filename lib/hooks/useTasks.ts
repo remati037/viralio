@@ -6,7 +6,7 @@ import type { Task, TaskInsert, TaskUpdate, InspirationLink } from '@/types'
 
 export function useTasks(userId: string | null) {
   const [tasks, setTasks] = useState<Task[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false) // Start as false to avoid hydration mismatch
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
 
@@ -15,12 +15,15 @@ export function useTasks(userId: string | null) {
       setLoading(false)
       return
     }
+    
+    // Set loading to true only on client after mount
+    setLoading(true)
 
     async function fetchTasks() {
       try {
         const { data, error: fetchError } = await supabase
           .from('tasks')
-          .select('*, inspiration_links(*)')
+          .select('*, inspiration_links(*), category:task_categories(*)')
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
 
@@ -44,7 +47,7 @@ export function useTasks(userId: string | null) {
       const { data, error: insertError } = await supabase
         .from('tasks')
         .insert({ ...task, user_id: userId })
-        .select('*, inspiration_links(*)')
+        .select('*, inspiration_links(*), category:task_categories(*)')
         .single()
 
       if (insertError) throw insertError
@@ -63,7 +66,7 @@ export function useTasks(userId: string | null) {
         .from('tasks')
         .update(updates)
         .eq('id', taskId)
-        .select('*, inspiration_links(*)')
+        .select('*, inspiration_links(*), category:task_categories(*)')
         .single()
 
       if (updateError) throw updateError

@@ -132,3 +132,25 @@ export const KANBAN_COLUMNS = [
   },
 ]
 
+export const BUSINESS_CATEGORIES = [
+  { value: 'marketing', label: 'Marketing & Reklama' },
+  { value: 'ecommerce', label: 'E-commerce & Online Prodaja' },
+  { value: 'fitness', label: 'Fitness & Zdravlje' },
+  { value: 'realestate', label: 'Nekretnine' },
+  { value: 'education', label: 'Edukacija & Online Kursevi' },
+  { value: 'coaching', label: 'Kočing & Konsalting' },
+  { value: 'restaurant', label: 'Restorani & Hrana' },
+  { value: 'beauty', label: 'Kozmetika & Lepota' },
+  { value: 'technology', label: 'Tehnologija & SaaS' },
+  { value: 'finance', label: 'Finansije & Investiranje' },
+  { value: 'travel', label: 'Putovanja & Turizam' },
+  { value: 'fashion', label: 'Moda & Stil' },
+  { value: 'entertainment', label: 'Zabava & Mediji' },
+  { value: 'automotive', label: 'Automobili & Transport' },
+  { value: 'home', label: 'Dom & Enterijer' },
+  { value: 'sports', label: 'Sport & Rekreacija' },
+  { value: 'healthcare', label: 'Zdravstvena Zaštita' },
+  { value: 'legal', label: 'Pravne Usluge' },
+  { value: 'other', label: 'Ostalo' },
+]
+

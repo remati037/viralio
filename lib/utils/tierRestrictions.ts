@@ -9,13 +9,6 @@ export interface TierLimits {
 }
 
 export const TIER_LIMITS: Record<UserTier, TierLimits> = {
-  free: {
-    maxTasks: 5,
-    maxTemplates: 2,
-    maxCaseStudies: 2,
-    canUseCalendar: false,
-    canUseKanban: true,
-  },
   pro: {
     maxTasks: null, // unlimited
     maxTemplates: null, // unlimited

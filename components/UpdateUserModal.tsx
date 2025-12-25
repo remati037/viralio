@@ -27,13 +27,13 @@ export default function UpdateUserModal({
     persona: '',
     monthly_goal_short: 0,
     monthly_goal_long: 0,
-    tier: 'free' as 'free' | 'pro' | 'admin',
+    tier: 'pro' as 'pro' | 'admin',
     has_unlimited_free: false,
     email: '',
     password: '',
   })
   const [loading, setLoading] = useState(false)
-  const [confirmText, setConfirmText] = useState('')
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [fetchingEmail, setFetchingEmail] = useState(false)
   const [originalEmail, setOriginalEmail] = useState<string>('')
 
@@ -46,12 +46,12 @@ export default function UpdateUserModal({
         persona: user.persona || '',
         monthly_goal_short: user.monthly_goal_short || 0,
         monthly_goal_long: user.monthly_goal_long || 0,
-        tier: (user.tier || 'free') as 'free' | 'pro' | 'admin',
+                  tier: (user.tier || 'pro') as 'pro' | 'admin',
         has_unlimited_free: (user as any).has_unlimited_free || false,
         email: (user as any).email || '',
         password: '',
       })
-      setConfirmText('')
+      setShowConfirmModal(false)
 
       // Fetch email if not already available
       if ((user as any).email) {
@@ -90,19 +90,14 @@ export default function UpdateUserModal({
 
   if (!isOpen || !user) return null
 
-  const isConfirmed = confirmText === 'SAČUVAJ'
   const userDisplayName = user.business_name || user.id.substring(0, 8)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setShowConfirmModal(true)
+  }
 
-    if (!isConfirmed) {
-      toast.error('Potvrda potrebna', {
-        description: 'Unesite "SAČUVAJ" da potvrdite izmene.',
-      })
-      return
-    }
-
+  const handleConfirmSubmit = async () => {
     setLoading(true)
 
     try {
@@ -144,7 +139,7 @@ export default function UpdateUserModal({
 
       onUserUpdated()
       onClose()
-      setConfirmText('')
+      setShowConfirmModal(false)
     } catch (error: any) {
       toast.error('Greška pri ažuriranju korisnika', {
         description: error.message,
@@ -171,7 +166,7 @@ export default function UpdateUserModal({
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleFormSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1">
@@ -310,12 +305,11 @@ export default function UpdateUserModal({
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    tier: e.target.value as 'free' | 'pro' | 'admin',
+                    tier: e.target.value as 'pro' | 'admin',
                   })
                 }
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="free">Free</option>
                 <option value="pro">Pro</option>
                 <option value="admin">Admin</option>
               </select>
@@ -342,20 +336,6 @@ export default function UpdateUserModal({
               </label>
             </div>
 
-            <div className="bg-yellow-900/20 border border-yellow-800 rounded-lg p-4">
-              <label className="block text-sm font-medium text-yellow-300 mb-2">
-                Unesite <strong>SAČUVAJ</strong> da potvrdite izmene:
-              </label>
-              <input
-                type="text"
-                value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                placeholder="SAČUVAJ"
-                disabled={loading}
-              />
-            </div>
-
             <div className="flex gap-2 pt-4">
               <Button
                 type="button"
@@ -369,14 +349,49 @@ export default function UpdateUserModal({
               <Button
                 type="submit"
                 className="flex-1 bg-blue-600 hover:bg-blue-700"
-                disabled={!isConfirmed || loading}
+                disabled={loading}
               >
-                {loading ? 'Ažuriranje...' : 'Sačuvaj Izmene'}
+                Sačuvaj Izmene
               </Button>
             </div>
           </form>
         </CardContent>
       </Card>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
+          <Card className="bg-slate-900 border-slate-700 w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-white">Potvrdite Ažuriranje</CardTitle>
+              <CardDescription className="text-slate-400">
+                Da li ste sigurni da želite da sačuvate izmene za korisnika {userDisplayName}?
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowConfirmModal(false)}
+                  className="flex-1"
+                  disabled={loading}
+                >
+                  Otkaži
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleConfirmSubmit}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  disabled={loading}
+                >
+                  {loading ? 'Ažuriranje...' : 'Sačuvaj'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

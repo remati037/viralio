@@ -6,7 +6,7 @@ import type { Competitor } from '@/types'
 
 export function useCompetitors(userId: string | null) {
   const [competitors, setCompetitors] = useState<Competitor[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false) // Start as false to avoid hydration mismatch
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
 
@@ -15,6 +15,9 @@ export function useCompetitors(userId: string | null) {
       setLoading(false)
       return
     }
+    
+    // Set loading to true only on client after mount
+    setLoading(true)
 
     async function fetchCompetitors() {
       try {
