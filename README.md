@@ -1,4 +1,4 @@
-# ViralVault - Content Planning App
+# Viralio
 
 A Next.js 15.1.9 application with Supabase integration for planning and managing viral content.
 

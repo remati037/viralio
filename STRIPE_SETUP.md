@@ -1,6 +1,6 @@
 # Stripe Payment Integration Setup
 
-This document explains how to set up Stripe payments for the ViralVault app.
+This document explains how to set up Stripe payments for the Viralio app.
 
 ## Overview
 
@@ -48,7 +48,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 1. Navigate to **Products** → **Add Product**
 2. Create **Starter Plan**:
    - Name: `Starter Plan`
-   - Description: `Monthly subscription for ViralVault`
+   - Description: `Monthly subscription for Viralio`
    - Pricing: `$29.00 USD`
    - Billing period: `Monthly (recurring)`
 3. Click **Save product**

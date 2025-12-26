@@ -1,18 +1,38 @@
-'use client'
+'use client';
 
-import { cn } from '@/lib/utils/cn'
-import Placeholder from '@tiptap/extension-placeholder'
-import { EditorContent, useEditor } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import { Bold, Italic, List, ListOrdered, Quote, Redo, Undo } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { cn } from '@/lib/utils/cn';
+import Placeholder from '@tiptap/extension-placeholder';
+import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import {
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  Quote,
+  Redo,
+  Undo,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import AIButton from './ai-button';
 
-interface RichTextEditorProps {
-  content: string
-  onChange: (content: string) => void
-  placeholder?: string
-  className?: string
-  minHeight?: string
+export interface RichTextEditorProps {
+  content: string;
+  onChange: (content: string) => void;
+  placeholder?: string;
+  className?: string;
+  minHeight?: string;
+  aiButton?: {
+    fieldType: 'hook' | 'body' | 'cta' | 'title' | 'fullScript';
+    taskContext?: {
+      title?: string;
+      niche?: string;
+      format?: 'Kratka Forma' | 'Duga Forma';
+      hook?: string;
+      body?: string;
+      cta?: string;
+    };
+  };
 }
 
 export default function RichTextEditor({
@@ -21,8 +41,9 @@ export default function RichTextEditor({
   placeholder = 'Start typing...',
   className,
   minHeight = '200px',
+  aiButton,
 }: RichTextEditorProps) {
-  const [mounted, setMounted] = useState(false)
+  const [mounted, setMounted] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -56,13 +77,14 @@ export default function RichTextEditor({
     ],
     content: content || '<p></p>',
     onUpdate: ({ editor }) => {
-      const html = editor.getHTML()
+      const html = editor.getHTML();
       // Only call onChange if content actually changed
-      onChange(html)
+      onChange(html);
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-invert prose-sm max-w-none focus:outline-none min-h-[200px] p-4 prose-ul:list-disc prose-ol:list-decimal',
+        class:
+          'prose prose-invert prose-sm max-w-none focus:outline-none min-h-[200px] p-4 prose-ul:list-disc prose-ol:list-decimal',
         spellcheck: 'false',
       },
       handleDOMEvents: {
@@ -70,44 +92,52 @@ export default function RichTextEditor({
           // Ensure Enter key creates new paragraphs/headings properly
           if (event.key === 'Enter' && !event.shiftKey) {
             // Let TipTap handle Enter normally
-            return false
+            return false;
           }
-          return false
+          return false;
         },
       },
     },
     immediatelyRender: false,
-  })
+  });
 
   // Update editor content when prop changes
   useEffect(() => {
     if (editor && content !== undefined) {
-      const currentContent = editor.getHTML()
+      const currentContent = editor.getHTML();
       // Only update if content actually changed (normalize for comparison)
       if (content !== currentContent) {
-        editor.commands.setContent(content || '', { emitUpdate: false })
+        editor.commands.setContent(content || '', { emitUpdate: false });
       }
     }
-  }, [content, editor])
+  }, [content, editor]);
 
   // Ensure component only renders on client
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
   if (!editor || !mounted) {
     return (
       <div
-        className={cn('border border-slate-700 rounded-lg bg-slate-800 overflow-hidden', className)}
+        className={cn(
+          'border border-slate-700 rounded-lg bg-slate-800 overflow-hidden',
+          className
+        )}
         style={{ minHeight }}
       >
         <div className="p-4 text-slate-400">Loading editor...</div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className={cn('border border-slate-700 rounded-lg bg-slate-800 overflow-hidden', className)}>
+    <div
+      className={cn(
+        'border border-slate-700 rounded-lg bg-slate-800 overflow-hidden',
+        className
+      )}
+    >
       {/* Toolbar */}
       <div className="flex items-center gap-1 p-2 border-b border-slate-700 bg-slate-900/50 flex-wrap">
         {/* Heading and Paragraph Controls */}
@@ -117,7 +147,9 @@ export default function RichTextEditor({
             onClick={() => editor.chain().focus().setParagraph().run()}
             className={cn(
               'px-2.5 py-1.5 rounded text-xs font-semibold transition-colors',
-              editor.isActive('paragraph') ? 'bg-slate-700 text-white' : 'text-slate-400 hover:bg-slate-700/50'
+              editor.isActive('paragraph')
+                ? 'bg-slate-700 text-white'
+                : 'text-slate-400 hover:bg-slate-700/50'
             )}
             title="Paragraph"
           >
@@ -125,10 +157,14 @@ export default function RichTextEditor({
           </button>
           <button
             type="button"
-            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 1 }).run()
+            }
             className={cn(
               'px-2.5 py-1.5 rounded text-xs font-bold transition-colors',
-              editor.isActive('heading', { level: 1 }) ? 'bg-slate-700 text-white' : 'text-slate-400 hover:bg-slate-700/50'
+              editor.isActive('heading', { level: 1 })
+                ? 'bg-slate-700 text-white'
+                : 'text-slate-400 hover:bg-slate-700/50'
             )}
             title="Heading 1"
           >
@@ -136,10 +172,14 @@ export default function RichTextEditor({
           </button>
           <button
             type="button"
-            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 2 }).run()
+            }
             className={cn(
               'px-2.5 py-1.5 rounded text-xs font-bold transition-colors',
-              editor.isActive('heading', { level: 2 }) ? 'bg-slate-700 text-white' : 'text-slate-400 hover:bg-slate-700/50'
+              editor.isActive('heading', { level: 2 })
+                ? 'bg-slate-700 text-white'
+                : 'text-slate-400 hover:bg-slate-700/50'
             )}
             title="Heading 2"
           >
@@ -147,10 +187,14 @@ export default function RichTextEditor({
           </button>
           <button
             type="button"
-            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 3 }).run()
+            }
             className={cn(
               'px-2.5 py-1.5 rounded text-xs font-bold transition-colors',
-              editor.isActive('heading', { level: 3 }) ? 'bg-slate-700 text-white' : 'text-slate-400 hover:bg-slate-700/50'
+              editor.isActive('heading', { level: 3 })
+                ? 'bg-slate-700 text-white'
+                : 'text-slate-400 hover:bg-slate-700/50'
             )}
             title="Heading 3"
           >
@@ -164,7 +208,9 @@ export default function RichTextEditor({
           disabled={!editor.can().chain().focus().toggleBold().run()}
           className={cn(
             'p-2 rounded hover:bg-slate-700 transition-colors',
-            editor.isActive('bold') ? 'bg-slate-700 text-white' : 'text-slate-400'
+            editor.isActive('bold')
+              ? 'bg-slate-700 text-white'
+              : 'text-slate-400'
           )}
           title="Bold"
         >
@@ -176,7 +222,9 @@ export default function RichTextEditor({
           disabled={!editor.can().chain().focus().toggleItalic().run()}
           className={cn(
             'p-2 rounded hover:bg-slate-700 transition-colors',
-            editor.isActive('italic') ? 'bg-slate-700 text-white' : 'text-slate-400'
+            editor.isActive('italic')
+              ? 'bg-slate-700 text-white'
+              : 'text-slate-400'
           )}
           title="Italic"
         >
@@ -186,11 +234,13 @@ export default function RichTextEditor({
         <button
           type="button"
           onClick={() => {
-            editor.chain().focus().toggleBulletList().run()
+            editor.chain().focus().toggleBulletList().run();
           }}
           className={cn(
             'p-2 rounded hover:bg-slate-700 transition-colors',
-            editor.isActive('bulletList') ? 'bg-slate-700 text-white' : 'text-slate-400'
+            editor.isActive('bulletList')
+              ? 'bg-slate-700 text-white'
+              : 'text-slate-400'
           )}
           title="Bullet List"
         >
@@ -199,11 +249,13 @@ export default function RichTextEditor({
         <button
           type="button"
           onClick={() => {
-            editor.chain().focus().toggleOrderedList().run()
+            editor.chain().focus().toggleOrderedList().run();
           }}
           className={cn(
             'p-2 rounded hover:bg-slate-700 transition-colors',
-            editor.isActive('orderedList') ? 'bg-slate-700 text-white' : 'text-slate-400'
+            editor.isActive('orderedList')
+              ? 'bg-slate-700 text-white'
+              : 'text-slate-400'
           )}
           title="Numbered List"
         >
@@ -214,7 +266,9 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
           className={cn(
             'p-2 rounded hover:bg-slate-700 transition-colors',
-            editor.isActive('blockquote') ? 'bg-slate-700 text-white' : 'text-slate-400'
+            editor.isActive('blockquote')
+              ? 'bg-slate-700 text-white'
+              : 'text-slate-400'
           )}
           title="Quote"
         >
@@ -246,14 +300,30 @@ export default function RichTextEditor({
         <EditorContent editor={editor} />
       </div>
 
+      {/* AI Button */}
+      {aiButton && (
+        <div className="p-3 border-t border-slate-700 bg-slate-900/50">
+          <AIButton
+            fieldType={aiButton.fieldType}
+            currentContent={content}
+            taskContext={aiButton.taskContext}
+            onGenerate={(generatedContent) => {
+              editor.commands.setContent(generatedContent);
+              onChange(generatedContent);
+            }}
+            className="w-fit"
+          />
+        </div>
+      )}
+
       <style jsx global>{`
         .ProseMirror {
           outline: none;
           color: rgb(226 232 240);
-          padding: 1rem;
+          padding: 16px;
         }
         .ProseMirror p {
-          margin: 0.5rem 0;
+          margin: 8px 0;
         }
         .ProseMirror p.is-editor-empty:first-child::before {
           content: attr(data-placeholder);
@@ -265,15 +335,15 @@ export default function RichTextEditor({
         /* Override prose list styles */
         .ProseMirror ul,
         .ProseMirror ol {
-          padding-left: 1.75rem !important;
-          margin: 0.75rem 0 !important;
+          padding-left: 28px !important;
+          margin: 12px 0 !important;
           list-style-position: outside !important;
           list-style-image: none !important;
         }
         .ProseMirror ul {
           list-style-type: disc !important;
         }
-        .ProseMirror ul[data-type="taskList"] {
+        .ProseMirror ul[data-type='taskList'] {
           list-style: none !important;
           padding-left: 0 !important;
         }
@@ -282,8 +352,8 @@ export default function RichTextEditor({
         }
         .ProseMirror li {
           display: list-item !important;
-          margin: 0.25rem 0 !important;
-          padding-left: 0.25rem !important;
+          margin: 4px 0 !important;
+          padding-left: 4px !important;
           list-style-position: outside !important;
           list-style-image: none !important;
         }
@@ -314,23 +384,23 @@ export default function RichTextEditor({
         .ProseMirror h2,
         .ProseMirror h3 {
           font-weight: bold;
-          margin-top: 1rem;
-          margin-bottom: 0.5rem;
+          margin-top: 16px;
+          margin-bottom: 8px;
           color: rgb(226 232 240);
         }
         .ProseMirror h1 {
-          font-size: 1.5rem;
+          font-size: 24px;
         }
         .ProseMirror h2 {
-          font-size: 1.25rem;
+          font-size: 20px;
         }
         .ProseMirror h3 {
-          font-size: 1.125rem;
+          font-size: 18px;
         }
         .ProseMirror blockquote {
           border-left: 3px solid rgb(59 130 246);
-          padding-left: 1rem;
-          margin: 0.5rem 0;
+          padding-left: 16px;
+          margin: 8px 0;
           font-style: italic;
           color: rgb(148 163 184);
         }
@@ -342,16 +412,16 @@ export default function RichTextEditor({
         }
         .ProseMirror code {
           background-color: rgb(30 41 59);
-          padding: 0.125rem 0.25rem;
-          border-radius: 0.25rem;
-          font-size: 0.875rem;
+          padding: 2px 4px;
+          border-radius: 4px;
+          font-size: 14px;
           color: rgb(226 232 240);
         }
         .ProseMirror pre {
           background-color: rgb(30 41 59);
-          padding: 1rem;
-          border-radius: 0.5rem;
-          margin: 0.5rem 0;
+          padding: 16px;
+          border-radius: 8px;
+          margin: 8px 0;
           overflow-x: auto;
         }
         .ProseMirror pre code {
@@ -360,6 +430,5 @@ export default function RichTextEditor({
         }
       `}</style>
     </div>
-  )
+  );
 }
-

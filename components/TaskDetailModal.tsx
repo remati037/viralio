@@ -12,6 +12,7 @@ import CategorySelect, { type TaskCategory } from './ui/category-select'
 import StatusSelect from './ui/status-select'
 import RichTextEditor from './ui/rich-text-editor'
 import Loader from './ui/loader'
+import DatePicker from './ui/date-picker'
 
 interface TaskDetailModalProps {
   task: Task
@@ -367,6 +368,17 @@ export default function TaskDetailModal({
                     }}
                     placeholder="Pišite ceo scenario bez razdvajanja na HOOK/BODY/CTA"
                     minHeight="350px"
+                    aiButton={{
+                      fieldType: 'fullScript',
+                      taskContext: {
+                        title: editedTask.title,
+                        niche: editedTask.niche,
+                        format: editedTask.format,
+                        hook: editedTask.hook || undefined,
+                        body: editedTask.body || undefined,
+                        cta: editedTask.cta || undefined,
+                      },
+                    }}
                   />
                   <p className="text-xs text-slate-500 mt-2">
                     *Napomena: Za Dugu Formu koristi se jedno polje. Procena trajanja bi bila:{' '}
@@ -384,6 +396,17 @@ export default function TaskDetailModal({
                       }}
                       placeholder="Unesite udicu ovde (0-3 sekunde)"
                       minHeight="80px"
+                      aiButton={{
+                        fieldType: 'hook',
+                        taskContext: {
+                          title: editedTask.title,
+                          niche: editedTask.niche,
+                          format: editedTask.format,
+                          hook: editedTask.hook || undefined,
+                          body: editedTask.body || undefined,
+                          cta: editedTask.cta || undefined,
+                        },
+                      }}
                     />
                   </div>
 
@@ -396,6 +419,17 @@ export default function TaskDetailModal({
                       }}
                       placeholder="Unesite ključnu vrednost ovde (3-45 sekundi)"
                       minHeight="120px"
+                      aiButton={{
+                        fieldType: 'body',
+                        taskContext: {
+                          title: editedTask.title,
+                          niche: editedTask.niche,
+                          format: editedTask.format,
+                          hook: editedTask.hook || undefined,
+                          body: editedTask.body || undefined,
+                          cta: editedTask.cta || undefined,
+                        },
+                      }}
                     />
                   </div>
 
@@ -408,6 +442,17 @@ export default function TaskDetailModal({
                       }}
                       placeholder="Unesite poziv na akciju ovde"
                       minHeight="60px"
+                      aiButton={{
+                        fieldType: 'cta',
+                        taskContext: {
+                          title: editedTask.title,
+                          niche: editedTask.niche,
+                          format: editedTask.format,
+                          hook: editedTask.hook || undefined,
+                          body: editedTask.body || undefined,
+                          cta: editedTask.cta || undefined,
+                        },
+                      }}
                     />
                   </div>
                 </>
@@ -570,23 +615,15 @@ export default function TaskDetailModal({
               </h4>
 
               <label className="block text-sm font-medium text-slate-300 mb-2">Planirani Datum</label>
-              <input
-                type="date"
-                value={editedTask.publish_date ? editedTask.publish_date.substring(0, 10) : ''}
-                onChange={(e) =>
-                  handleUpdate('publish_date', e.target.value ? new Date(e.target.value).toISOString() : null)
+              <DatePicker
+                value={editedTask.publish_date ? editedTask.publish_date.substring(0, 10) : null}
+                onChange={(date) =>
+                  handleUpdate('publish_date', date ? new Date(date).toISOString() : null)
                 }
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                placeholder="Izaberi datum objavljivanja"
+                className="w-full"
+                disablePast={true}
               />
-
-              {editedTask.publish_date && (
-                <button
-                  onClick={() => handleUpdate('publish_date', null)}
-                  className="text-red-400 text-sm hover:text-red-300 flex items-center gap-1 mt-2"
-                >
-                  <Trash2 size={14} /> Ukloni Datum
-                </button>
-              )}
             </div>
           )}
 

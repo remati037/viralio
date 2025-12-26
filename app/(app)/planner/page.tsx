@@ -1,12 +1,5 @@
 'use client'
 
-import { useProfile } from '@/lib/hooks/useProfile'
-import { useTasks } from '@/lib/hooks/useTasks'
-import { canCreateTask, canUseView, getTierLimits } from '@/lib/utils/tierRestrictions'
-import type { Task, TaskInsert, UserTier } from '@/types'
-import { Calendar, Plus, Trello } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { toast } from 'sonner'
 import CalendarView from '@/components/CalendarView'
 import GoalProgressDashboard from '@/components/GoalProgressDashboard'
 import KanbanBoard from '@/components/KanbanBoard'
@@ -14,6 +7,13 @@ import NewIdeaWizard from '@/components/NewIdeaWizard'
 import TaskDetailModal from '@/components/TaskDetailModal'
 import Loader from '@/components/ui/loader'
 import { useUserId } from '@/components/UserContext'
+import { useProfile } from '@/lib/hooks/useProfile'
+import { useTasks } from '@/lib/hooks/useTasks'
+import { canCreateTask, canUseView, getTierLimits } from '@/lib/utils/tierRestrictions'
+import type { Task, TaskInsert, UserTier } from '@/types'
+import { Calendar, Plus, Trello } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 export default function PlannerPage() {
   const userId = useUserId()
@@ -206,9 +206,9 @@ export default function PlannerPage() {
     let notification: string | null = null
 
     if ((profile.monthly_goal_short || 0) > 0 && completedShort < requiredShort) {
-      notification = `Kratka forma: Zaostajete (${completedShort}/${requiredShort} potrebno). Ubrzajte kreiranje!`
+      notification = `Kratka forma: ${completedShort}/${requiredShort}. Ubrzajte kreiranje!`
     } else if ((profile.monthly_goal_long || 0) > 0 && completedLong < requiredLong) {
-      notification = `Duga forma: Zaostajete (${completedLong}/${requiredLong} potrebno). Ubrzajte kreiranje!`
+      notification = `Duga forma: ${completedLong}/${requiredLong}. Ubrzajte kreiranje!`
     } else if (
       completedShort >= (profile.monthly_goal_short || 0) &&
       completedLong >= (profile.monthly_goal_long || 0)
@@ -231,13 +231,13 @@ export default function PlannerPage() {
 
   return (
     <>
-      <header className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">Planer Sadržaja</h1>
-          <p className="text-slate-400">
+      <header className="mb-4 md:mb-8 flex items-start md:items-center justify-between flex-col md:flex-row gap-6">
+        <div className='flex flex-col gap-1'>
+          <h1 className="text-3xl font-bold text-white flex items-center gap-3">Planer sadržaja</h1>
+          <p className="text-slate-400 text-sm text-balance">
             {plannerView === 'kanban'
-              ? "Prevucite kartice (Drag 'n Drop) da promenite status ili kliknite za detalje."
-              : 'Vizuelno planiranje objava. Past obaveze su zatamnjene.'}
+              ? "Prevucite kartice da promenite status ili kliknite na karticu za detalje."
+              : 'Vizuelno planiranje objava. Objavljene skripte su zatamnjene.'}
           </p>
         </div>
         <div className="flex gap-3">
@@ -259,27 +259,25 @@ export default function PlannerPage() {
               }}
               className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition-colors flex items-center gap-2"
             >
-              <Plus size={16} /> Nova Ideja
+              <Plus size={16} /> Nova ideja
             </button>
           )}
-          <div className="bg-slate-800 px-4 py-2 rounded-lg text-sm text-slate-400 border border-slate-700 hidden md:block">
+          <div className="bg-slate-800 px-4 py-2 rounded-lg text-sm text-slate-400 border border-slate-700 hidden md:flex items-center">
             Ukupno ideja: <span className="text-white font-bold ml-1">{tasks.length}</span>
           </div>
-          <div className="flex bg-slate-800 rounded-xl p-1 border border-slate-700">
+          <div className="flex bg-slate-800 rounded-lg p-1 border border-slate-700">
             <button
               onClick={() => setPlannerView('kanban')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                plannerView === 'kanban' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-700'
-              }`}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${plannerView === 'kanban' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-700'
+                }`}
             >
               <Trello size={16} /> Kanban
             </button>
             {profile?.tier && canUseView(profile.tier as UserTier, 'calendar') && (
               <button
                 onClick={() => setPlannerView('calendar')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                  plannerView === 'calendar' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-700'
-                }`}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${plannerView === 'calendar' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-700'
+                  }`}
               >
                 <Calendar size={16} /> Kalendar
               </button>
@@ -287,7 +285,7 @@ export default function PlannerPage() {
             {profile?.tier && !canUseView(profile.tier as UserTier, 'calendar') && (
               <button
                 disabled
-                className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 cursor-not-allowed opacity-50"
+                className="px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 cursor-not-allowed opacity-50"
                 title="Kalendar view je dostupan samo za Starter i Pro tier"
               >
                 <Calendar size={16} /> Kalendar 🔒

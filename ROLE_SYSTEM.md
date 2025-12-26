@@ -1,6 +1,6 @@
 # Role-Based Access Control System
 
-This document explains the role and tier system implemented in ViralVault.
+This document explains the role and tier system implemented in Viralio.
 
 ## Overview
 

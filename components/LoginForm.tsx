@@ -1,43 +1,43 @@
-'use client'
+'use client';
 
-import { createClient } from '@/lib/supabase/client'
-import { BUSINESS_CATEGORIES } from '@/lib/constants'
-import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
-import Select from './ui/select'
+import { BUSINESS_CATEGORIES } from '@/lib/constants';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import Select from './ui/select';
 
 export default function LoginForm() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [businessName, setBusinessName] = useState('')
-  const [businessCategory, setBusinessCategory] = useState<string>('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [isSignUp, setIsSignUp] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const router = useRouter()
-  const supabase = createClient()
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [businessCategory, setBusinessCategory] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
     try {
       if (isSignUp) {
         // Validate business name
         if (!businessName.trim()) {
-          setError('Business name or personal name is required')
+          setError('Business name or personal name is required');
           toast.error('Greška', {
             description: 'Molimo unesite ime biznisa ili lično ime.',
-          })
-          setLoading(false)
-          return
+          });
+          setLoading(false);
+          return;
         }
 
         const { data, error: signUpError } = await supabase.auth.signUp({
@@ -49,9 +49,9 @@ export default function LoginForm() {
               business_name: businessName.trim(),
             },
           },
-        })
+        });
 
-        if (signUpError) throw signUpError
+        if (signUpError) throw signUpError;
 
         // Update profile with business name and category immediately after signup
         if (data.user) {
@@ -61,10 +61,10 @@ export default function LoginForm() {
               business_name: businessName.trim(),
               business_category: businessCategory || null,
             })
-            .eq('id', data.user.id)
+            .eq('id', data.user.id);
 
           if (profileError) {
-            console.error('Error updating profile:', profileError)
+            console.error('Error updating profile:', profileError);
             // Don't fail signup if profile update fails, but log it
           }
         }
@@ -72,57 +72,58 @@ export default function LoginForm() {
         // Profile will be automatically created by database trigger
         toast.success('Nalog kreiran!', {
           description: 'Proverite email za verifikaciju naloga.',
-        })
-        setEmail('')
-        setPassword('')
-        setBusinessName('')
-        setBusinessCategory('')
+        });
+        setEmail('');
+        setPassword('');
+        setBusinessName('');
+        setBusinessCategory('');
       } else {
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
+        const { data, error: signInError } =
+          await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
 
         if (signInError) {
-          throw signInError
+          throw signInError;
         }
 
         if (!data.session) {
-          setError('Failed to create session. Please try again.')
+          setError('Failed to create session. Please try again.');
           toast.error('Greška pri prijavljivanju', {
             description: 'Neuspešno kreiranje sesije. Pokušajte ponovo.',
-          })
-          setLoading(false)
-          return
+          });
+          setLoading(false);
+          return;
         }
 
         toast.success('Uspešno prijavljivanje!', {
           description: 'Preusmeravanje...',
-        })
+        });
 
         // Wait for cookies to be set by the updated @supabase/ssr package
         // The new version handles cookies better
-        await new Promise((resolve) => setTimeout(resolve, 400))
+        await new Promise((resolve) => setTimeout(resolve, 400));
 
         // Use full page reload to ensure cookies are sent
-        window.location.href = '/'
+        window.location.href = '/';
       }
     } catch (err: any) {
-      setError(err.message)
+      setError(err.message);
       toast.error('Greška', {
         description: err.message || 'Došlo je do greške. Pokušajte ponovo.',
-      })
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (!mounted) {
     return (
       <>
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-white mb-2">ViralVault</h1>
-          <p className="text-slate-400">Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Viralio</h1>
+          <p className="text-slate-400">Prijavite se</p>
         </div>
         <div className="space-y-4">
           <div className="h-12 bg-slate-800 rounded-lg animate-pulse"></div>
@@ -131,19 +132,25 @@ export default function LoginForm() {
           <div className="h-12 bg-slate-800 rounded-lg animate-pulse"></div>
         </div>
       </>
-    )
+    );
   }
 
   return (
     <>
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-white mb-2">ViralVault</h1>
+        <h1 className="text-3xl font-bold text-white mb-2">Viralio</h1>
         <p className="text-slate-400">
-          {isSignUp ? 'Create your account' : 'Sign in to your account'}
+          {isSignUp
+            ? 'Napravite novi nalog'
+            : 'Prijavite se ukoliko već imate nalog'}
         </p>
       </div>
 
-      <form onSubmit={handleAuth} className="space-y-4" suppressHydrationWarning>
+      <form
+        onSubmit={handleAuth}
+        className="space-y-4"
+        suppressHydrationWarning
+      >
         {error && (
           <div className="bg-red-900/50 border border-red-700 text-red-300 p-3 rounded-lg text-sm">
             {error}
@@ -151,7 +158,10 @@ export default function LoginForm() {
         )}
 
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
+          <label
+            htmlFor="email"
+            className="block text-sm font-medium text-slate-300 mb-2"
+          >
             Email
           </label>
           <input
@@ -168,8 +178,11 @@ export default function LoginForm() {
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
-            Password
+          <label
+            htmlFor="password"
+            className="block text-sm font-medium text-slate-300 mb-2"
+          >
+            Lozinka
           </label>
           <input
             id="password"
@@ -188,8 +201,12 @@ export default function LoginForm() {
         {isSignUp && (
           <>
             <div>
-              <label htmlFor="businessName" className="block text-sm font-medium text-slate-300 mb-2">
-                Business Name or Personal Name <span className="text-red-400">*</span>
+              <label
+                htmlFor="businessName"
+                className="block text-sm font-medium text-slate-300 mb-2"
+              >
+                Naziv firme ili lično ime i prezime{' '}
+                <span className="text-red-400">*</span>
               </label>
               <input
                 id="businessName"
@@ -199,28 +216,31 @@ export default function LoginForm() {
                 required
                 suppressHydrationWarning
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your business or personal name"
+                placeholder="Unesite naziv firme ili lično ime i prezime"
                 autoComplete="name"
               />
-              <p className="mt-1 text-xs text-slate-500">
+              {/* <p className="mt-1 text-xs text-slate-500">
                 This will be used to identify your account
-              </p>
+              </p> */}
             </div>
 
             <div>
-              <label htmlFor="businessCategory" className="block text-sm font-medium text-slate-300 mb-2">
-                Business Category
+              <label
+                htmlFor="businessCategory"
+                className="block text-sm font-medium text-slate-300 mb-2"
+              >
+                Kategorija biznisa
               </label>
               <Select
                 options={BUSINESS_CATEGORIES}
                 value={businessCategory}
                 onChange={setBusinessCategory}
-                placeholder="Select your business category (optional)"
+                placeholder="Odaberite kategoriju Vašeg biznisa"
                 className="w-full"
               />
-              <p className="mt-1 text-xs text-slate-500">
+              {/* <p className="mt-1 text-xs text-slate-500">
                 Help us personalize your experience
-              </p>
+              </p> */}
             </div>
           </>
         )}
@@ -236,20 +256,20 @@ export default function LoginForm() {
               <span>Učitavanje...</span>
             </>
           ) : (
-            <span>{isSignUp ? 'Sign Up' : 'Sign In'}</span>
+            <span>{isSignUp ? 'Registrujte se' : 'Prijavite se'}</span>
           )}
         </button>
       </form>
 
-      <div className="mt-6 text-center">
+      {/* <div className="mt-6 text-center">
         <button
           onClick={() => setIsSignUp(!isSignUp)}
           className="text-sm text-blue-400 hover:text-blue-300"
           type="button"
         >
-          {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+          {isSignUp ? 'Već imate nalog? Prijavite se' : "Nemate nalog? Registrujte se"}
         </button>
-      </div>
+      </div> */}
     </>
-  )
+  );
 }

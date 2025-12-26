@@ -100,8 +100,8 @@ export default function SubscriptionModal({ isOpen, onClose, userId }: Subscript
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-800">
           <div>
-            <h2 className="text-2xl font-bold text-white">Subscribe to ViralVault</h2>
-            <p className="text-slate-400 mt-1">Unlock all features with a subscription</p>
+            <h2 className="text-2xl font-bold text-white">Pretplatite se na Viralio</h2>
+            <p className="text-slate-400 mt-1">Otključajte sve funkcije sa pretplatom</p>
           </div>
           <button
             onClick={onClose}

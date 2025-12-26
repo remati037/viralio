@@ -1,40 +1,65 @@
-'use client'
+'use client';
 
-import { NETWORKS, NICHES, VIRAL_TEMPLATES } from '@/lib/constants'
-import { createClient } from '@/lib/supabase/client'
-import { getTierLimits } from '@/lib/utils/tierRestrictions'
-import { getYoutubeThumbnail } from '@/lib/utils/helpers'
-import type { TaskInsert, Template, UserTier } from '@/types'
-import { Calendar, ChevronLeft, Edit3, FileText, Link, Plus, Trash2, X, Youtube, Zap } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
-import AIAssistant from './AIAssistant'
-import CategorySelect, { type TaskCategory } from './ui/category-select'
-import RichTextEditor from './ui/rich-text-editor'
-import Loader from './ui/loader'
-import Skeleton from './ui/skeleton'
+import { NETWORKS, NICHES, VIRAL_TEMPLATES } from '@/lib/constants';
+import { createClient } from '@/lib/supabase/client';
+import { getYoutubeThumbnail } from '@/lib/utils/helpers';
+import { getTierLimits } from '@/lib/utils/tierRestrictions';
+import type { TaskInsert, Template, UserTier } from '@/types';
+import {
+  Calendar,
+  ChevronLeft,
+  Edit3,
+  FileText,
+  Link,
+  Plus,
+  Trash2,
+  X,
+  Youtube,
+  Zap,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import AIAssistant from './AIAssistant';
+import CategorySelect, { type TaskCategory } from './ui/category-select';
+import DatePicker from './ui/date-picker';
+import Loader from './ui/loader';
+import RichTextEditor from './ui/rich-text-editor';
+import Skeleton from './ui/skeleton';
 
 interface NewIdeaWizardProps {
-  onClose: () => void
+  onClose: () => void;
   onSaveToPlan: (
     task: Omit<TaskInsert, 'user_id'>,
-    inspirationLinks?: Array<{ link: string; displayUrl?: string; type?: string }>
-  ) => Promise<void>
-  userTier?: UserTier
-  userId: string
+    inspirationLinks?: Array<{
+      link: string;
+      displayUrl?: string;
+      type?: string;
+    }>
+  ) => Promise<void>;
+  userTier?: UserTier;
+  userId: string;
 }
 
-const WORDS_PER_MINUTE = 150
+const WORDS_PER_MINUTE = 150;
 
-export default function NewIdeaWizard({ onClose, onSaveToPlan, userTier, userId }: NewIdeaWizardProps) {
-  const supabase = createClient()
-  const [step, setStep] = useState<'start' | 'template_select' | 'script_edit'>('start')
-  const [selectedNiche, setSelectedNiche] = useState('marketing')
-  const [dbTemplates, setDbTemplates] = useState<Template[]>([])
-  const [loadingTemplates, setLoadingTemplates] = useState(true)
-  const [categories, setCategories] = useState<TaskCategory[]>([])
-  const [loadingCategories, setLoadingCategories] = useState(true)
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+export default function NewIdeaWizard({
+  onClose,
+  onSaveToPlan,
+  userTier,
+  userId,
+}: NewIdeaWizardProps) {
+  const supabase = createClient();
+  const [step, setStep] = useState<'start' | 'template_select' | 'script_edit'>(
+    'start'
+  );
+  const [selectedNiche, setSelectedNiche] = useState('marketing');
+  const [dbTemplates, setDbTemplates] = useState<Template[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [categories, setCategories] = useState<TaskCategory[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null
+  );
   const [formData, setFormData] = useState({
     title: '',
     niche: NICHES[0].name,
@@ -50,89 +75,94 @@ export default function NewIdeaWizard({ onClose, onSaveToPlan, userTier, userId 
     fullScriptHtml: '',
     originalTemplate: null as string | null,
     publish_date: null as string | null,
-  })
-  const [isSaving, setIsSaving] = useState(false)
-  const [inspirationLinks, setInspirationLinks] = useState<Array<{ link: string; displayUrl?: string; type?: string }>>([])
-  const [linkInput, setLinkInput] = useState('')
-  const [isAddingLink, setIsAddingLink] = useState(false)
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [inspirationLinks, setInspirationLinks] = useState<
+    Array<{ link: string; displayUrl?: string; type?: string }>
+  >([]);
+  const [linkInput, setLinkInput] = useState('');
+  const [isAddingLink, setIsAddingLink] = useState(false);
 
   useEffect(() => {
     if (userId) {
-      fetchCategories()
+      fetchCategories();
     }
-  }, [userId])
+  }, [userId]);
 
   const fetchCategories = async () => {
     if (!userId) {
-      setLoadingCategories(false)
-      return
+      setLoadingCategories(false);
+      return;
     }
-    
-    setLoadingCategories(true)
+
+    setLoadingCategories(true);
     try {
       const { data, error } = await supabase
         .from('task_categories')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: true });
 
-      if (error) throw error
-      setCategories((data || []) as TaskCategory[])
+      if (error) throw error;
+      setCategories((data || []) as TaskCategory[]);
     } catch (error: any) {
-      console.error('Error fetching categories:', error)
+      console.error('Error fetching categories:', error);
       toast.error('Greška pri učitavanju kategorija', {
         description: error?.message || 'Pokušajte ponovo',
-      })
+      });
     } finally {
-      setLoadingCategories(false)
+      setLoadingCategories(false);
     }
-  }
+  };
 
   useEffect(() => {
     if (step === 'template_select') {
-      fetchTemplates()
+      fetchTemplates();
     }
-  }, [step, selectedNiche])
+  }, [step, selectedNiche]);
 
   const fetchTemplates = async () => {
-    setLoadingTemplates(true)
+    setLoadingTemplates(true);
     try {
       const { data, error } = await supabase
         .from('templates')
         .select('*')
         .eq('is_published', true)
-        .eq('niche', NICHES.find((n) => n.id === selectedNiche)?.name || 'Marketing')
+        .eq(
+          'niche',
+          NICHES.find((n) => n.id === selectedNiche)?.name || 'Marketing'
+        );
 
-      if (error) throw error
+      if (error) throw error;
 
       // Get all published templates
-      const allTemplates = (data || []) as Template[]
+      const allTemplates = (data || []) as Template[];
 
       // Apply tier-based random selection
       if (!userTier) {
-        setDbTemplates([])
-        return
+        setDbTemplates([]);
+        return;
       }
 
-      const limits = getTierLimits(userTier)
+      const limits = getTierLimits(userTier);
 
-      let filtered: Template[]
+      let filtered: Template[];
       if (limits.maxTemplates === null) {
         // Pro tier: show all templates
-        filtered = allTemplates
+        filtered = allTemplates;
       } else {
         // Limited tier: show random templates
-        const shuffled = [...allTemplates].sort(() => Math.random() - 0.5)
-        filtered = shuffled.slice(0, limits.maxTemplates)
+        const shuffled = [...allTemplates].sort(() => Math.random() - 0.5);
+        filtered = shuffled.slice(0, limits.maxTemplates);
       }
 
-      setDbTemplates(filtered)
+      setDbTemplates(filtered);
     } catch (error: any) {
-      console.error('Error fetching templates:', error)
+      console.error('Error fetching templates:', error);
     } finally {
-      setLoadingTemplates(false)
+      setLoadingTemplates(false);
     }
-  }
+  };
 
   // Combine DB templates with static templates (for backward compatibility)
   const activeTemplates = [
@@ -147,18 +177,20 @@ export default function NewIdeaWizard({ onClose, onSaveToPlan, userTier, userId 
       vlads_tip: t.vlads_tip || '',
     })),
     ...(VIRAL_TEMPLATES[selectedNiche] || []),
-  ]
+  ];
 
-  const activeNicheInfo = NICHES.find((n) => n.id === selectedNiche)
+  const activeNicheInfo = NICHES.find((n) => n.id === selectedNiche);
 
-  const handleSelectTemplate = (template: typeof activeTemplates[0]) => {
-    const topic = formData.title || 'Moja Tema'
+  const handleSelectTemplate = (template: (typeof activeTemplates)[0]) => {
+    const topic = formData.title || 'Moja Tema';
 
     if (template.format === 'Duga Forma') {
       const generatedScript = `UVOD: U prve 3 sekunde kaži zašto bi trebalo da ostanu do kraja.
-GLAVNA TEMA 1: ${template.structure.body.replace('[TOPIC]', topic).replace('[RESENJE]', 'koriste automatizaciju')}
+GLAVNA TEMA 1: ${template.structure.body
+        .replace('[TOPIC]', topic)
+        .replace('[RESENJE]', 'koriste automatizaciju')}
 GLAVNA TEMA 2: Detaljna analiza i primer
-ZAKLJUČAK: ${template.structure.cta}`
+ZAKLJUČAK: ${template.structure.cta}`;
 
       setFormData((prev) => ({
         ...prev,
@@ -168,11 +200,16 @@ ZAKLJUČAK: ${template.structure.cta}`
         fullScript: generatedScript,
         fullScriptHtml: generatedScript,
         niche: activeNicheInfo?.name || prev.niche,
-      }))
+      }));
     } else {
-      const hookText = template.structure.hook.replace('[TOPIC]', topic).replace('[CENA]', '150.000').replace('[RESENJE]', 'fokusiraju na LTV')
-      const bodyText = template.structure.body.replace('[TOPIC]', topic).replace('[RESENJE]', 'koriste automatizaciju')
-      const ctaText = template.structure.cta
+      const hookText = template.structure.hook
+        .replace('[TOPIC]', topic)
+        .replace('[CENA]', '150.000')
+        .replace('[RESENJE]', 'fokusiraju na LTV');
+      const bodyText = template.structure.body
+        .replace('[TOPIC]', topic)
+        .replace('[RESENJE]', 'koriste automatizaciju');
+      const ctaText = template.structure.cta;
 
       setFormData((prev) => ({
         ...prev,
@@ -186,10 +223,10 @@ ZAKLJUČAK: ${template.structure.cta}`
         cta: ctaText,
         ctaHtml: ctaText,
         niche: activeNicheInfo?.name || prev.niche,
-      }))
+      }));
     }
-    setStep('script_edit')
-  }
+    setStep('script_edit');
+  };
 
   const handleManualStart = () => {
     setFormData((prev) => ({
@@ -201,127 +238,179 @@ ZAKLJUČAK: ${template.structure.cta}`
       cta: '',
       ctaHtml: '',
       originalTemplate: 'Ručni Unos',
-    }))
-    setStep('script_edit')
-  }
+    }));
+    setStep('script_edit');
+  };
 
   const getDurationEstimate = (script: string) => {
     if (formData.format === 'Kratka Forma') {
-      const words = script.trim().split(/\s+/).length
-      const seconds = Math.round(words / 2.5)
-      if (seconds > 60) return '> 60 sekundi (Predugo za Reel)'
-      return `${seconds} sekundi`
+      const words = script.trim().split(/\s+/).length;
+      const seconds = Math.round(words / 2.5);
+      if (seconds > 60) return '> 60 sekundi (Predugo za Reel)';
+      return `${seconds} sekundi`;
     } else {
-      const words = script.trim().split(/\s+/).length
-      if (words === 0) return '0 minuta'
+      const words = script.trim().split(/\s+/).length;
+      if (words === 0) return '0 minuta';
 
-      const minutes = Math.round(words / WORDS_PER_MINUTE)
+      const minutes = Math.round(words / WORDS_PER_MINUTE);
 
-      if (minutes < 1) return '< 1 minut'
-      if (minutes <= 60) return `${minutes} minuta`
+      if (minutes < 1) return '< 1 minut';
+      if (minutes <= 60) return `${minutes} minuta`;
 
-      const hours = Math.floor(minutes / 60)
-      const remainingMinutes = minutes % 60
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
 
-      return `${hours}h ${remainingMinutes} min`
+      return `${hours}h ${remainingMinutes} min`;
     }
-  }
+  };
 
   const getTotalWordCount = () => {
     if (formData.format === 'Kratka Forma') {
-      const hookWords = formData.hook.trim().split(/\s+/).filter(w => w).length
-      const bodyWords = formData.body.trim().split(/\s+/).filter(w => w).length
-      const ctaWords = formData.cta.trim().split(/\s+/).filter(w => w).length
-      return hookWords + bodyWords + ctaWords
+      const hookWords = formData.hook
+        .trim()
+        .split(/\s+/)
+        .filter((w) => w).length;
+      const bodyWords = formData.body
+        .trim()
+        .split(/\s+/)
+        .filter((w) => w).length;
+      const ctaWords = formData.cta
+        .trim()
+        .split(/\s+/)
+        .filter((w) => w).length;
+      return hookWords + bodyWords + ctaWords;
     } else {
-      return formData.fullScript.trim().split(/\s+/).filter(w => w).length
+      return formData.fullScript
+        .trim()
+        .split(/\s+/)
+        .filter((w) => w).length;
     }
-  }
+  };
 
   const handleAddInspirationLink = async () => {
     if (!linkInput.trim()) {
       toast.error('Prazan link', {
         description: 'Molimo unesite validan link.',
-      })
-      return
+      });
+      return;
     }
 
-    setIsAddingLink(true)
+    setIsAddingLink(true);
     try {
-      const { url, type } = getYoutubeThumbnail(linkInput)
+      const { url, type } = getYoutubeThumbnail(linkInput);
       setInspirationLinks((prev) => [
         ...prev,
-        { link: linkInput.trim(), displayUrl: url || undefined, type: type || undefined },
-      ])
-      setLinkInput('')
+        {
+          link: linkInput.trim(),
+          displayUrl: url || undefined,
+          type: type || undefined,
+        },
+      ]);
+      setLinkInput('');
     } catch (error) {
       // Still add the link even if thumbnail extraction fails
-      setInspirationLinks((prev) => [...prev, { link: linkInput.trim() }])
-      setLinkInput('')
+      setInspirationLinks((prev) => [...prev, { link: linkInput.trim() }]);
+      setLinkInput('');
     } finally {
-      setIsAddingLink(false)
+      setIsAddingLink(false);
     }
-  }
+  };
 
   const handleRemoveInspirationLink = (index: number) => {
-    setInspirationLinks((prev) => prev.filter((_, i) => i !== index))
-  }
+    setInspirationLinks((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSave = async () => {
+    if (!selectedCategoryId) {
+      toast.error('Kategorija je obavezna', {
+        description: 'Molimo izaberite kategoriju pre čuvanja skripte.',
+      });
+      return;
+    }
+
     if (formData.format === 'Kratka Forma') {
-      if (!formData.title.trim() || (!formData.hook.trim() && !formData.body.trim() && !formData.cta.trim())) {
+      if (
+        !formData.title.trim() ||
+        (!formData.hook.trim() && !formData.body.trim() && !formData.cta.trim())
+      ) {
         toast.error('Nedostaju podaci', {
-          description: 'Molimo unesite naslov i bar jedan deo skripte (Hook, Body ili CTA) pre čuvanja.',
-        })
-        return
+          description:
+            'Molimo unesite naslov i bar jedan deo skripte (Hook, Body ili CTA) pre čuvanja.',
+        });
+        return;
       }
     } else {
       if (!formData.title.trim() || !formData.fullScript.trim()) {
         toast.error('Nedostaju podaci', {
           description: 'Molimo unesite naslov i skriptu pre čuvanja.',
-        })
-        return
+        });
+        return;
       }
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
 
     const newTask = {
       title: formData.title.trim(),
       niche: formData.niche,
       format: formData.format,
-      hook: formData.format === 'Duga Forma' ? formData.fullScript.trim() : formData.hook.trim(),
-      body: formData.format === 'Duga Forma' ? 'CEO TEKST se nalazi u Hook/Skripta polju u detaljima.' : formData.body.trim(),
-      cta: formData.format === 'Duga Forma' ? 'Duga Forma: Nema odvojenog CTA za Kanban.' : formData.cta.trim(),
+      hook:
+        formData.format === 'Duga Forma'
+          ? formData.fullScript.trim()
+          : formData.hook.trim(),
+      body:
+        formData.format === 'Duga Forma'
+          ? 'CEO TEKST se nalazi u Hook/Skripta polju u detaljima.'
+          : formData.body.trim(),
+      cta:
+        formData.format === 'Duga Forma'
+          ? 'Duga Forma: Nema odvojenog CTA za Kanban.'
+          : formData.cta.trim(),
       status: 'idea' as const,
       publish_date: formData.publish_date || null,
       original_template: formData.originalTemplate,
       category_id: selectedCategoryId,
-    }
+    };
 
-    await onSaveToPlan(newTask as Omit<TaskInsert, 'user_id'>, inspirationLinks)
-    setIsSaving(false)
-    onClose()
-  }
+    await onSaveToPlan(
+      newTask as Omit<TaskInsert, 'user_id'>,
+      inspirationLinks
+    );
+    setIsSaving(false);
+    onClose();
+  };
 
-  const IdeaSelectorCard = ({ template }: { template: typeof activeTemplates[0] }) => (
+  const IdeaSelectorCard = ({
+    template,
+  }: {
+    template: (typeof activeTemplates)[0];
+  }) => (
     <div
-      className="group bg-slate-800 border border-slate-700 hover:border-blue-500/50 rounded-xl p-4 transition-all duration-300 hover:shadow-xl hover:shadow-blue-900/10 flex flex-col h-full cursor-pointer"
+      className="group bg-slate-800 border border-slate-700 hover:border-blue-500/50 rounded-lg p-4 transition-all duration-300 hover:shadow-xl hover:shadow-blue-900/10 flex flex-col h-full cursor-pointer"
       onClick={() => handleSelectTemplate(template)}
     >
       <div className="flex justify-between items-start mb-2">
         <span
-          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${template.format === 'Kratka Forma' ? 'bg-red-900/30 text-red-300' : 'bg-green-900/30 text-green-300'
-            }`}
+          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+            template.format === 'Kratka Forma'
+              ? 'bg-red-900/30 text-red-300'
+              : 'bg-green-900/30 text-green-300'
+          }`}
         >
           {template.format}
         </span>
-        <span className="text-xs font-bold text-slate-500">{template.difficulty}</span>
+        <span className="text-xs font-bold text-slate-500">
+          {template.difficulty}
+        </span>
       </div>
 
-      <h3 className="text-md font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">{template.title}</h3>
+      <h3 className="text-md font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">
+        {template.title}
+      </h3>
 
-      <p className="text-slate-400 text-xs mb-4 flex-grow line-clamp-2">{template.why_it_works}</p>
+      <p className="text-slate-400 text-xs mb-4 flex-grow line-clamp-2">
+        {template.why_it_works}
+      </p>
 
       <div className="mt-auto">
         <button className="w-full py-1.5 bg-blue-600 text-white rounded-lg font-bold text-xs hover:bg-blue-500 transition-colors flex items-center justify-center gap-1">
@@ -329,33 +418,39 @@ ZAKLJUČAK: ${template.structure.cta}`
         </button>
       </div>
     </div>
-  )
+  );
 
   const renderContent = () => {
     if (step === 'start') {
       return (
-        <div className="p-6 space-y-6">
-          <h3 className="text-xl font-bold text-white">1. Odaberi Način Kreiranja Ideje</h3>
-          <div className="grid grid-cols-2 gap-4">
+        <div className="p-4 space-y-4">
+          <h3 className="text-lg font-bold text-white">
+            1. Odaberi način kreiranja ideje
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
             <div
               onClick={handleManualStart}
-              className="p-6 bg-slate-800 border border-slate-700 rounded-xl hover:border-blue-500/50 cursor-pointer transition-all flex flex-col items-center text-center space-y-2"
+              className="py-4 px-2 bg-slate-800 border border-slate-700 rounded-lg hover:border-blue-500/50 cursor-pointer transition-all flex flex-col items-center text-center space-y-2"
             >
-              <FileText size={24} className="text-blue-400" />
-              <p className="font-bold text-white">Ručni Unos</p>
-              <p className="text-xs text-slate-400">Počnite od nule sa praznom skriptom.</p>
+              <FileText size={22} className="text-blue-400" />
+              <p className="font-bold text-white text-md">Ručni Unos</p>
+              <p className="text-sm text-slate-400">
+                Počnite od nule sa praznom skriptom.
+              </p>
             </div>
             <div
               onClick={() => setStep('template_select')}
-              className="p-6 bg-slate-800 border border-slate-700 rounded-xl hover:border-emerald-500/50 cursor-pointer transition-all flex flex-col items-center text-center space-y-2"
+              className="py-4 px-2 bg-slate-800 border border-slate-700 rounded-lg hover:border-emerald-500/50 cursor-pointer transition-all flex flex-col items-center text-center space-y-2"
             >
-              <Zap size={24} className="text-emerald-400" />
-              <p className="font-bold text-white">Koristi Šablon</p>
-              <p className="text-xs text-slate-400">Izaberite viralni format za brzi start.</p>
+              <Zap size={22} className="text-emerald-400" />
+              <p className="font-bold text-white text-md">Koristi Šablon</p>
+              <p className="text-sm text-slate-400">
+                Izaberite viralni format za brzi start.
+              </p>
             </div>
           </div>
         </div>
-      )
+      );
     }
 
     if (step === 'template_select') {
@@ -378,10 +473,11 @@ ZAKLJUČAK: ${template.structure.cta}`
               <button
                 key={niche.id}
                 onClick={() => setSelectedNiche(niche.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedNiche === niche.id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                  }`}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  selectedNiche === niche.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                }`}
               >
                 {niche.name}
               </button>
@@ -391,7 +487,10 @@ ZAKLJUČAK: ${template.structure.cta}`
           {loadingTemplates ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
+                <div
+                  key={i}
+                  className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-3"
+                >
                   <div className="flex justify-between">
                     <Skeleton height={20} width="60px" />
                     <Skeleton height={20} width="50px" />
@@ -416,47 +515,57 @@ ZAKLJUČAK: ${template.structure.cta}`
             </div>
           )}
         </div>
-      )
+      );
     }
 
     if (step === 'script_edit') {
-      const isLongForm = formData.format === 'Duga Forma'
+      const isLongForm = formData.format === 'Duga Forma';
 
       return (
-        <div className="p-6 space-y-6 flex-1 flex flex-col">
+        <div className="p-4 space-y-4 flex-1 flex flex-col">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <Edit3 className="text-emerald-400 w-5 h-5" /> 3. Skripta i Detalji
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Edit3 className="text-emerald-400 w-4 h-4" /> 2. Skripta i
+              detalji
             </h3>
             <button
               onClick={() => {
                 // If user came from manual entry, go back to start
                 // Otherwise, go back to template selection
                 if (formData.originalTemplate === 'Ručni Unos') {
-                  setStep('start')
+                  setStep('start');
                 } else {
-                  setStep('template_select')
+                  setStep('template_select');
                 }
               }}
               className="text-slate-400 hover:text-white transition-colors text-sm flex items-center gap-1"
             >
-              <ChevronLeft size={16} /> {formData.originalTemplate === 'Ručni Unos' ? 'Nazad' : 'Izaberi drugi šablon'}
+              <ChevronLeft size={16} />{' '}
+              {formData.originalTemplate === 'Ručni Unos'
+                ? 'Nazad'
+                : 'Izaberi drugi šablon'}
             </button>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Naslov Video Zapisa</label>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Naslov ideje
+            </label>
             <input
               type="text"
               value={formData.title}
-              onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))}
-              placeholder="Unesite naslov (Npr. 3 Alata za Brzi Viral)"
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              onChange={(e) =>
+                setFormData((p) => ({ ...p, title: e.target.value }))
+              }
+              placeholder="Unesite naslov (npr. 3 Alata za brže kreiranje sadržaja)"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-md"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Kategorija</label>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Kategorija <span className="text-red-400">*</span>
+            </label>
             {loadingCategories ? (
               <div className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-slate-400">
                 Učitavanje kategorija...
@@ -466,17 +575,19 @@ ZAKLJUČAK: ${template.structure.cta}`
                 categories={categories}
                 value={selectedCategoryId}
                 onChange={setSelectedCategoryId}
-                placeholder="Izaberi kategoriju (opciono)"
+                placeholder="Izaberite kategoriju"
                 className="w-full"
               />
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Mreža za Objavljivanje</label>
-            <div className="flex gap-3">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Mreža za objavljivanje
+            </label>
+            <div className="flex gap-2 flex-wrap">
               {NETWORKS.map((net) => {
-                const Icon = net.icon
+                const Icon = net.icon;
                 return (
                   <button
                     key={net.id}
@@ -484,24 +595,37 @@ ZAKLJUČAK: ${template.structure.cta}`
                       setFormData((p) => ({
                         ...p,
                         network: net.name,
-                        format: net.id === 'youtube' || net.id === 'facebook' ? 'Duga Forma' : 'Kratka Forma',
+                        format:
+                          net.id === 'youtube' || net.id === 'facebook'
+                            ? 'Duga Forma'
+                            : 'Kratka Forma',
                       }))
                     }
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${formData.network === net.name
-                      ? 'bg-blue-600 text-white border-blue-500'
-                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
-                      } flex items-center gap-2`}
+                    className={`py-2 px-4 rounded-lg text-sm font-medium transition-colors border ${
+                      formData.network === net.name
+                        ? 'bg-blue-600 text-white border-blue-500'
+                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+                    } flex items-center gap-2`}
                   >
-                    <Icon size={16} className={formData.network === net.name ? 'text-white' : net.color} />
+                    <Icon
+                      size={16}
+                      className={
+                        formData.network === net.name ? 'text-white' : net.color
+                      }
+                    />
                     {net.name}
                   </button>
-                )
+                );
               })}
             </div>
             <p className="text-xs text-slate-500 mt-2">
-              Automatski format:{' '}
+              Automatski format:
               <span
-                className={`ml-1 font-semibold ${formData.format === 'Kratka Forma' ? 'text-red-400' : 'text-green-400'}`}
+                className={`ml-1 font-semibold ${
+                  formData.format === 'Kratka Forma'
+                    ? 'text-red-400'
+                    : 'text-green-400'
+                }`}
               >
                 {formData.format}
               </span>
@@ -511,92 +635,161 @@ ZAKLJUČAK: ${template.structure.cta}`
           {isLongForm ? (
             <div className="flex-1 flex flex-col min-h-[300px]">
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Ceo Scenario / Tekst Duge Forme (YouTube)
+                Ceo scenario / Tekst duge forme
               </label>
               <RichTextEditor
                 content={formData.fullScriptHtml || formData.fullScript}
                 onChange={(html) => {
                   // Store HTML for rich text
-                  setFormData((p) => ({ ...p, fullScriptHtml: html }))
+                  setFormData((p) => ({ ...p, fullScriptHtml: html }));
                   // Convert HTML to plain text for word count and duration estimate
-                  const tempDiv = document.createElement('div')
-                  tempDiv.innerHTML = html
-                  const plainText = tempDiv.textContent || tempDiv.innerText || ''
-                  setFormData((p) => ({ ...p, fullScript: plainText }))
+                  const tempDiv = document.createElement('div');
+                  tempDiv.innerHTML = html;
+                  const plainText =
+                    tempDiv.textContent || tempDiv.innerText || '';
+                  setFormData((p) => ({ ...p, fullScript: plainText }));
                 }}
                 placeholder="Pišite ceo scenario, uključujući uvod, glavne tačke i zaključak. Nije potrebno odvajati sekcije."
                 minHeight="300px"
                 className="flex-1"
+                aiButton={{
+                  fieldType: 'fullScript' as const,
+                  taskContext: {
+                    title: formData.title,
+                    niche: formData.niche,
+                    format: formData.format,
+                    hook: formData.hook,
+                    body: formData.body,
+                    cta: formData.cta,
+                  },
+                }}
               />
               <div className="text-xs text-slate-500 mt-2 flex justify-between items-center">
                 <span>
-                  Procena Trajanja Videa: {getDurationEstimate(formData.fullScript)} (~{WORDS_PER_MINUTE} WPM)
+                  Procena trajanja videa:{' '}
+                  {getDurationEstimate(formData.fullScript)} (~
+                  {WORDS_PER_MINUTE} WPM)
                 </span>
-                <span className="text-slate-400 font-mono">{formData.fullScript.trim().split(/\s+/).filter(w => w).length} reči</span>
+                <span className="text-slate-400">
+                  {
+                    formData.fullScript
+                      .trim()
+                      .split(/\s+/)
+                      .filter((w) => w).length
+                  }{' '}
+                  reči
+                </span>
               </div>
             </div>
           ) : (
             <div className="space-y-4">
               <div>
-                <label className="text-red-400 text-xs font-bold block mb-1">01. HOOK (Udica)</label>
+                <label className="text-red-400 text-sm font-bold block mb-2">
+                  01. HOOK (Udica)
+                </label>
                 <RichTextEditor
                   content={formData.hookHtml || formData.hook}
                   onChange={(html) => {
-                    setFormData((p) => ({ ...p, hookHtml: html }))
-                    const tempDiv = document.createElement('div')
-                    tempDiv.innerHTML = html
-                    const plainText = tempDiv.textContent || tempDiv.innerText || ''
-                    setFormData((p) => ({ ...p, hook: plainText }))
+                    setFormData((p) => ({ ...p, hookHtml: html }));
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+                    const plainText =
+                      tempDiv.textContent || tempDiv.innerText || '';
+                    setFormData((p) => ({ ...p, hook: plainText }));
                   }}
-                  placeholder="Unesite udicu ovde (0-3 sekunde)"
+                  placeholder="Unesite hook ovde (0-3 sekunde)"
                   minHeight="80px"
+                  aiButton={{
+                    fieldType: 'hook' as const,
+                    taskContext: {
+                      title: formData.title,
+                      niche: formData.niche,
+                      format: formData.format,
+                      hook: formData.hook,
+                      body: formData.body,
+                      cta: formData.cta,
+                    },
+                  }}
                 />
               </div>
 
               <div>
-                <label className="text-blue-400 text-xs font-bold block mb-1">02. BODY (Vrednost)</label>
+                <label className="text-blue-400 text-sm font-bold block mb-2">
+                  02. BODY (Vrednost)
+                </label>
                 <RichTextEditor
                   content={formData.bodyHtml || formData.body}
                   onChange={(html) => {
-                    setFormData((p) => ({ ...p, bodyHtml: html }))
-                    const tempDiv = document.createElement('div')
-                    tempDiv.innerHTML = html
-                    const plainText = tempDiv.textContent || tempDiv.innerText || ''
-                    setFormData((p) => ({ ...p, body: plainText }))
+                    setFormData((p) => ({ ...p, bodyHtml: html }));
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+                    const plainText =
+                      tempDiv.textContent || tempDiv.innerText || '';
+                    setFormData((p) => ({ ...p, body: plainText }));
                   }}
                   placeholder="Unesite ključnu vrednost ovde (3-45 sekundi)"
                   minHeight="120px"
+                  aiButton={{
+                    fieldType: 'body' as const,
+                    taskContext: {
+                      title: formData.title,
+                      niche: formData.niche,
+                      format: formData.format,
+                      hook: formData.hook,
+                      body: formData.body,
+                      cta: formData.cta,
+                    },
+                  }}
                 />
               </div>
 
               <div>
-                <label className="text-emerald-400 text-xs font-bold block mb-1">03. CTA (Poziv na akciju)</label>
+                <label className="text-emerald-400 text-sm font-bold block mb-2">
+                  03. CTA (Poziv na akciju)
+                </label>
                 <RichTextEditor
                   content={formData.ctaHtml || formData.cta}
                   onChange={(html) => {
-                    setFormData((p) => ({ ...p, ctaHtml: html }))
-                    const tempDiv = document.createElement('div')
-                    tempDiv.innerHTML = html
-                    const plainText = tempDiv.textContent || tempDiv.innerText || ''
-                    setFormData((p) => ({ ...p, cta: plainText }))
+                    setFormData((p) => ({ ...p, ctaHtml: html }));
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+                    const plainText =
+                      tempDiv.textContent || tempDiv.innerText || '';
+                    setFormData((p) => ({ ...p, cta: plainText }));
                   }}
                   placeholder="Unesite poziv na akciju ovde"
                   minHeight="60px"
+                  aiButton={{
+                    fieldType: 'cta' as const,
+                    taskContext: {
+                      title: formData.title,
+                      niche: formData.niche,
+                      format: formData.format,
+                      hook: formData.hook,
+                      body: formData.body,
+                      cta: formData.cta,
+                    },
+                  }}
                 />
               </div>
 
               <div className="text-xs text-slate-500 flex justify-between items-center">
                 <span>
-                  Procena Trajanja: {getDurationEstimate(`${formData.hook} ${formData.body} ${formData.cta}`)}
+                  Procena trajanja:{' '}
+                  {getDurationEstimate(
+                    `${formData.hook} ${formData.body} ${formData.cta}`
+                  )}
                 </span>
-                <span className="text-slate-400 font-mono">{getTotalWordCount()} reči</span>
+                <span className="text-slate-400">
+                  {getTotalWordCount()} reči
+                </span>
               </div>
             </div>
           )}
 
           {/* Inspiration Links Section */}
-          <div className="border-t border-slate-800 pt-4 space-y-4">
-            <h4 className="text-sm font-bold text-slate-400 uppercase flex items-center gap-2">
+          <div className="border-t border-slate-800 pt-4 space-y-2">
+            <h4 className="text-md font-bold text-slate-200 uppercase flex items-center gap-2">
               <Link size={14} className="text-yellow-400" /> Inspiracija
             </h4>
             <div className="flex gap-2">
@@ -606,17 +799,17 @@ ZAKLJUČAK: ${template.structure.cta}`
                 onChange={(e) => setLinkInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    e.preventDefault()
-                    handleAddInspirationLink()
+                    e.preventDefault();
+                    handleAddInspirationLink();
                   }
                 }}
                 placeholder="Paste link (YouTube, Instagram, TikTok...)"
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-md"
               />
               <button
                 onClick={handleAddInspirationLink}
                 disabled={!linkInput.trim() || isAddingLink}
-                className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500 flex items-center gap-2"
+                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500 flex items-center gap-2"
               >
                 {isAddingLink ? (
                   <>
@@ -634,7 +827,10 @@ ZAKLJUČAK: ${template.structure.cta}`
             {inspirationLinks.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
                 {inspirationLinks.map((item, index) => (
-                  <div key={index} className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700 relative group">
+                  <div
+                    key={index}
+                    className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700 relative group"
+                  >
                     {item.displayUrl && item.type === 'youtube' ? (
                       <div className="relative">
                         <img
@@ -642,10 +838,16 @@ ZAKLJUČAK: ${template.structure.cta}`
                           alt="YouTube Thumbnail"
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            ; (e.target as HTMLImageElement).style.display = 'none'
+                            (e.target as HTMLImageElement).style.display =
+                              'none';
                           }}
                         />
-                        <Youtube size={24} fill="red" className="text-white absolute inset-0 m-auto opacity-70" />
+                        <Youtube
+                          size={52}
+                          fill="red"
+                          strokeWidth={1}
+                          className="absolute inset-0 m-auto opacity-90"
+                        />
                       </div>
                     ) : (
                       <div className="p-2 text-xs text-slate-400 bg-slate-700/50 flex items-center gap-2">
@@ -660,7 +862,9 @@ ZAKLJUČAK: ${template.structure.cta}`
                         rel="noopener noreferrer"
                         className="text-xs text-blue-400 hover:underline truncate max-w-[70%]"
                       >
-                        {item.link.replace(/^https?:\/\//, '').replace(/^www\./, '')}
+                        {item.link
+                          .replace(/^https?:\/\//, '')
+                          .replace(/^www\./, '')}
                       </a>
                       <button
                         onClick={() => handleRemoveInspirationLink(index)}
@@ -677,31 +881,30 @@ ZAKLJUČAK: ${template.structure.cta}`
           </div>
 
           {/* Publish Date Section */}
-          <div className="border-t border-slate-800 pt-4 space-y-4">
-            <h4 className="text-sm font-bold text-slate-400 uppercase flex items-center gap-2">
+          <div className="border-t border-slate-800 pt-4 space-y-2">
+            <h4 className="text-md font-bold text-slate-200 uppercase flex items-center gap-2">
               <Calendar size={14} className="text-purple-400" /> Raspored
             </h4>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Planirani Datum Objavljivanja</label>
-              <input
-                type="date"
-                value={formData.publish_date ? formData.publish_date.substring(0, 10) : ''}
-                onChange={(e) =>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Planirani datum objavljivanja
+              </label>
+              <DatePicker
+                value={
+                  formData.publish_date
+                    ? formData.publish_date.substring(0, 10)
+                    : null
+                }
+                onChange={(date) =>
                   setFormData((p) => ({
                     ...p,
-                    publish_date: e.target.value ? new Date(e.target.value).toISOString() : null,
+                    publish_date: date ? new Date(date).toISOString() : null,
                   }))
                 }
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                placeholder="Izaberi datum objavljivanja"
+                className="w-full"
+                disablePast={true}
               />
-              {formData.publish_date && (
-                <button
-                  onClick={() => setFormData((p) => ({ ...p, publish_date: null }))}
-                  className="text-red-400 text-sm hover:text-red-300 flex items-center gap-1 mt-2"
-                >
-                  <Trash2 size={14} /> Ukloni Datum
-                </button>
-              )}
             </div>
           </div>
 
@@ -717,33 +920,33 @@ ZAKLJUČAK: ${template.structure.cta}`
               }}
               onGenerateComplete={(field, content) => {
                 if (field === 'title') {
-                  setFormData((p) => ({ ...p, title: content.trim() }))
+                  setFormData((p) => ({ ...p, title: content.trim() }));
                 } else if (field === 'hook') {
                   if (isLongForm) {
                     setFormData((p) => ({
                       ...p,
                       fullScript: content.trim(),
                       fullScriptHtml: content.trim(),
-                    }))
+                    }));
                   } else {
                     setFormData((p) => ({
                       ...p,
                       hook: content.trim(),
                       hookHtml: content.trim(),
-                    }))
+                    }));
                   }
                 } else if (field === 'body') {
                   setFormData((p) => ({
                     ...p,
                     body: content.trim(),
                     bodyHtml: content.trim(),
-                  }))
+                  }));
                 } else if (field === 'cta') {
                   setFormData((p) => ({
                     ...p,
                     cta: content.trim(),
                     ctaHtml: content.trim(),
-                  }))
+                  }));
                 } else if (field === 'all') {
                   // Parse structured content
                   if (isLongForm) {
@@ -751,15 +954,24 @@ ZAKLJUČAK: ${template.structure.cta}`
                       ...p,
                       fullScript: content.trim(),
                       fullScriptHtml: content.trim(),
-                    }))
+                    }));
                   } else {
-                    const hookMatch = content.match(/HOOK:?\s*([\s\S]+?)(?:\n\n|BODY:|CTA:|$)/i)
-                    const bodyMatch = content.match(/BODY:?\s*([\s\S]+?)(?:\n\n|CTA:|$)/i)
-                    const ctaMatch = content.match(/CTA:?\s*([\s\S]+?)$/i)
-                    const titleMatch = content.match(/NASLOV:?\s*([\s\S]+?)(?:\n|$)/i) || content.match(/^([\s\S]+?)(?:\n|HOOK:|BODY:|CTA:)/i)
+                    const hookMatch = content.match(
+                      /HOOK:?\s*([\s\S]+?)(?:\n\n|BODY:|CTA:|$)/i
+                    );
+                    const bodyMatch = content.match(
+                      /BODY:?\s*([\s\S]+?)(?:\n\n|CTA:|$)/i
+                    );
+                    const ctaMatch = content.match(/CTA:?\s*([\s\S]+?)$/i);
+                    const titleMatch =
+                      content.match(/NASLOV:?\s*([\s\S]+?)(?:\n|$)/i) ||
+                      content.match(/^([\s\S]+?)(?:\n|HOOK:|BODY:|CTA:)/i);
 
                     if (titleMatch?.[1]) {
-                      setFormData((p) => ({ ...p, title: titleMatch[1].trim() }))
+                      setFormData((p) => ({
+                        ...p,
+                        title: titleMatch[1].trim(),
+                      }));
                     }
 
                     if (hookMatch?.[1]) {
@@ -767,21 +979,21 @@ ZAKLJUČAK: ${template.structure.cta}`
                         ...p,
                         hook: hookMatch[1].trim(),
                         hookHtml: hookMatch[1].trim(),
-                      }))
+                      }));
                     }
                     if (bodyMatch?.[1]) {
                       setFormData((p) => ({
                         ...p,
                         body: bodyMatch[1].trim(),
                         bodyHtml: bodyMatch[1].trim(),
-                      }))
+                      }));
                     }
                     if (ctaMatch?.[1]) {
                       setFormData((p) => ({
                         ...p,
                         cta: ctaMatch[1].trim(),
                         ctaHtml: ctaMatch[1].trim(),
-                      }))
+                      }));
                     }
                   }
                 }
@@ -795,41 +1007,55 @@ ZAKLJUČAK: ${template.structure.cta}`
               disabled={
                 isSaving ||
                 !formData.title.trim() ||
-                (formData.format === 'Kratka Forma' && !formData.hook.trim() && !formData.body.trim() && !formData.cta.trim()) ||
-                (formData.format === 'Duga Forma' && !formData.fullScript.trim())
+                !selectedCategoryId ||
+                (formData.format === 'Kratka Forma' &&
+                  !formData.hook.trim() &&
+                  !formData.body.trim() &&
+                  !formData.cta.trim()) ||
+                (formData.format === 'Duga Forma' &&
+                  !formData.fullScript.trim())
               }
-              className={`w-full py-3 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${isSaving ||
+              className={`w-full py-3 rounded-lg font-bold text-lg flex items-center justify-center gap-2 transition-all ${
+                isSaving ||
                 !formData.title.trim() ||
-                (formData.format === 'Kratka Forma' && !formData.hook.trim() && !formData.body.trim() && !formData.cta.trim()) ||
-                (formData.format === 'Duga Forma' && !formData.fullScript.trim())
-                ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20'
-                }`}
+                !selectedCategoryId ||
+                (formData.format === 'Kratka Forma' &&
+                  !formData.hook.trim() &&
+                  !formData.body.trim() &&
+                  !formData.cta.trim()) ||
+                (formData.format === 'Duga Forma' &&
+                  !formData.fullScript.trim())
+                  ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20'
+              }`}
             >
-              <Calendar size={20} /> {isSaving ? 'Čuvanje...' : 'Sačuvaj u Planer Sadržaja'}
+              <Calendar size={16} />{' '}
+              {isSaving ? 'Čuvanje skripte...' : 'Sačuvaj skriptu'}
             </button>
           </div>
         </div>
-      )
+      );
     }
-  }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[95vh] h-full md:h-auto">
-        <div className="flex items-center justify-between p-6 border-b border-slate-800 shrink-0">
-          <h3 className="text-xl font-bold text-white flex items-center gap-2">
-            <Plus className="text-emerald-400 w-5 h-5" />
-            Nova Ideja (Čarobnjak)
+      <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl rounded-lg shadow-2xl flex flex-col max-h-[95vh] h-auto">
+        <div className="flex items-center justify-between p-4 border-b border-slate-800 shrink-0">
+          <h3 className="text-md font-bold text-white flex items-center gap-2">
+            <Plus className="text-emerald-400 w-4 h-4" />
+            Nova ideja
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
-            <X size={24} />
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white transition-colors"
+          >
+            <X size={20} />
           </button>
         </div>
 
         <div className="overflow-y-auto flex-1">{renderContent()}</div>
       </div>
     </div>
-  )
+  );
 }
-
