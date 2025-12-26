@@ -60,6 +60,7 @@ export const metadata: Metadata = {
     initialScale: 1,
     maximumScale: 1,
     userScalable: false,
+    themeColor: "#2563eb",
   },
   openGraph: {
     type: 'website',
@@ -118,6 +119,10 @@ export default function RootLayout({
         <meta name="application-name" content="Viralio" />
         <meta name="msapplication-TileColor" content="#2563eb" />
         <meta name="msapplication-TileImage" content="/viralio-icon-192.png" />
+        {/* Preload critical resources for faster PWA startup */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="preload" href="/viralio-icon-192.png" as="image" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -164,31 +169,26 @@ export default function RootLayout({
               const isSecureContext = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
               
               if (isSecureContext) {
-                window.addEventListener('load', () => {
-                  // Small delay to ensure page is fully loaded
-                  setTimeout(() => {
-                    navigator.serviceWorker.register('/sw.js', { scope: '/' })
-                      .then((registration) => {
-                        console.log('SW registered: ', registration.scope);
-                        // Check for updates
-                        registration.addEventListener('updatefound', () => {
-                          const newWorker = registration.installing;
-                          if (newWorker) {
-                            newWorker.addEventListener('statechange', () => {
-                              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                // New service worker available, but don't auto-reload on mobile
-                                console.log('New service worker available');
-                              }
-                            });
+                // Register immediately without delay for faster PWA startup
+                navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                  .then((registration) => {
+                    // Check for updates
+                    registration.addEventListener('updatefound', () => {
+                      const newWorker = registration.installing;
+                      if (newWorker) {
+                        newWorker.addEventListener('statechange', () => {
+                          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New service worker available, but don't auto-reload on mobile
+                            console.log('New service worker available');
                           }
                         });
-                      })
-                      .catch((registrationError) => {
-                        // Silently fail - app should work without service worker
-                        console.warn('SW registration failed (app will work normally): ', registrationError);
-                      });
-                  }, 1000);
-                });
+                      }
+                    });
+                  })
+                  .catch((registrationError) => {
+                    // Silently fail - app should work without service worker
+                    console.warn('SW registration failed (app will work normally): ', registrationError);
+                  });
               }
             }
           `}

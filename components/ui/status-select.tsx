@@ -1,16 +1,16 @@
-'use client'
+'use client';
 
-import { ChevronDown } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import { KANBAN_COLUMNS } from '@/lib/constants'
+import { KANBAN_COLUMNS } from '@/lib/constants';
+import { ChevronDown } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
-export type TaskStatus = 'idea' | 'ready' | 'scheduled' | 'published'
+export type TaskStatus = 'idea' | 'ready' | 'scheduled' | 'published';
 
 interface StatusSelectProps {
-  value: TaskStatus
-  onChange: (status: TaskStatus) => void
-  className?: string
-  disabled?: boolean
+  value: TaskStatus;
+  onChange: (status: TaskStatus) => void;
+  className?: string;
+  disabled?: boolean;
 }
 
 export default function StatusSelect({
@@ -19,73 +19,84 @@ export default function StatusSelect({
   className = '',
   disabled = false,
 }: StatusSelectProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [highlightedIndex, setHighlightedIndex] = useState(-1)
-  const selectRef = useRef<HTMLDivElement>(null)
-  const listRef = useRef<HTMLUListElement>(null)
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const selectRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
-  const selectedStatus = KANBAN_COLUMNS.find((col) => col.id === value)
+  const selectedStatus = KANBAN_COLUMNS.find((col) => col.id === value);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+      if (
+        selectRef.current &&
+        !selectRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
       }
-    }
+    };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isOpen])
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && highlightedIndex >= 0 && listRef.current) {
-      const highlightedElement = listRef.current.children[highlightedIndex] as HTMLElement
+      const highlightedElement = listRef.current.children[
+        highlightedIndex
+      ] as HTMLElement;
       if (highlightedElement) {
-        highlightedElement.scrollIntoView({ block: 'nearest' })
+        highlightedElement.scrollIntoView({ block: 'nearest' });
       }
     }
-  }, [highlightedIndex, isOpen])
+  }, [highlightedIndex, isOpen]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (disabled) return
+    if (disabled) return;
 
     switch (e.key) {
       case 'Enter':
       case ' ':
-        e.preventDefault()
-        if (isOpen && highlightedIndex >= 0 && highlightedIndex < KANBAN_COLUMNS.length) {
-          onChange(KANBAN_COLUMNS[highlightedIndex].id as TaskStatus)
-          setIsOpen(false)
-          setHighlightedIndex(-1)
+        e.preventDefault();
+        if (
+          isOpen &&
+          highlightedIndex >= 0 &&
+          highlightedIndex < KANBAN_COLUMNS.length
+        ) {
+          onChange(KANBAN_COLUMNS[highlightedIndex].id as TaskStatus);
+          setIsOpen(false);
+          setHighlightedIndex(-1);
         } else if (!isOpen) {
-          setIsOpen(true)
+          setIsOpen(true);
         }
-        break
+        break;
       case 'ArrowDown':
-        e.preventDefault()
+        e.preventDefault();
         if (!isOpen) {
-          setIsOpen(true)
+          setIsOpen(true);
         } else {
-          setHighlightedIndex((prev) => (prev < KANBAN_COLUMNS.length - 1 ? prev + 1 : prev))
+          setHighlightedIndex((prev) =>
+            prev < KANBAN_COLUMNS.length - 1 ? prev + 1 : prev
+          );
         }
-        break
+        break;
       case 'ArrowUp':
-        e.preventDefault()
+        e.preventDefault();
         if (isOpen) {
-          setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : 0))
+          setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : 0));
         }
-        break
+        break;
       case 'Escape':
-        setIsOpen(false)
-        setHighlightedIndex(-1)
-        break
+        setIsOpen(false);
+        setHighlightedIndex(-1);
+        break;
     }
-  }
+  };
 
   return (
     <div ref={selectRef} className={`relative ${className}`}>
@@ -94,7 +105,7 @@ export default function StatusSelect({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
         disabled={disabled}
-        className={`w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-left flex items-center justify-between transition-colors ${
+        className={`w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-left flex items-center justify-between transition-colors ${
           disabled
             ? 'opacity-50 cursor-not-allowed'
             : 'hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer'
@@ -103,7 +114,9 @@ export default function StatusSelect({
         aria-expanded={isOpen}
       >
         {selectedStatus ? (
-          <span className={`text-xs font-bold px-2 py-1 rounded border ${selectedStatus.color}`}>
+          <span
+            className={`text-sm font-bold rounded border ${selectedStatus.color}`}
+          >
             {selectedStatus.title}
           </span>
         ) : (
@@ -111,7 +124,9 @@ export default function StatusSelect({
         )}
         <ChevronDown
           size={18}
-          className={`text-slate-400 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
+          className={`text-slate-400 transition-transform ${
+            isOpen ? 'transform rotate-180' : ''
+          }`}
         />
       </button>
 
@@ -119,7 +134,7 @@ export default function StatusSelect({
         <ul
           ref={listRef}
           role="listbox"
-          className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-auto"
+          className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-auto divide-y-[0.5px] divide-slate-700 p-2"
         >
           {KANBAN_COLUMNS.map((column, index) => (
             <li
@@ -127,20 +142,20 @@ export default function StatusSelect({
               role="option"
               aria-selected={value === column.id}
               onClick={() => {
-                onChange(column.id as TaskStatus)
-                setIsOpen(false)
-                setHighlightedIndex(-1)
+                onChange(column.id as TaskStatus);
+                setIsOpen(false);
+                setHighlightedIndex(-1);
               }}
               onMouseEnter={() => setHighlightedIndex(index)}
               className={`px-3 py-2 cursor-pointer transition-colors flex items-center gap-2 ${
                 value === column.id
                   ? 'bg-blue-600/20'
                   : highlightedIndex === index
-                    ? 'bg-slate-700 text-white'
-                    : 'text-slate-300 hover:bg-slate-700'
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-300 hover:bg-slate-700'
               }`}
             >
-              <span className={`text-xs font-bold px-2 py-1 rounded border ${column.color}`}>
+              <span className={`text-sm font-boldrounded ${column.color}`}>
                 {column.title}
               </span>
             </li>
@@ -148,6 +163,5 @@ export default function StatusSelect({
         </ul>
       )}
     </div>
-  )
+  );
 }
-

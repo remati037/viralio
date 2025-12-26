@@ -2,6 +2,7 @@
 
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface DatePickerProps {
   value?: string | null; // ISO date string or null
@@ -42,7 +43,14 @@ export default function DatePicker({
   const [isOpen, setIsOpen] = useState(false);
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(new Date().getMonth());
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
   const pickerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
 
   // Parse value to Date object (treat YYYY-MM-DD as local date, not UTC)
   const selectedDate = value
@@ -51,6 +59,11 @@ export default function DatePicker({
         return new Date(year, month - 1, day);
       })()
     : null;
+
+  // Set mounted state for portal
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Set initial view to selected date or current date
   useEffect(() => {
@@ -68,14 +81,110 @@ export default function DatePicker({
     const handleClickOutside = (event: MouseEvent) => {
       if (
         pickerRef.current &&
-        !pickerRef.current.contains(event.target as Node)
+        !pickerRef.current.contains(event.target as Node) &&
+        !(event.target as HTMLElement).closest('.date-picker-dropdown')
       ) {
         setIsOpen(false);
       }
     };
 
-    if (isOpen) {
+    const calculatePosition = () => {
+      if (!isOpen || !pickerRef.current) return;
+
+      const rect = pickerRef.current.getBoundingClientRect();
+      const dropdownHeight = 350;
+      const gap = 8;
+      const viewportPadding = 16;
+      const isMobile = window.innerWidth < 640; // sm breakpoint
+
+      // Responsive width: smaller on mobile, match input width or min 320px on desktop
+      const dropdownWidth = isMobile
+        ? Math.min(window.innerWidth - viewportPadding * 2, 320)
+        : Math.max(rect.width, 320);
+
+      // Calculate space above and below
+      const spaceAbove = rect.top - viewportPadding;
+      const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+
+      let top: number;
+      let left: number;
+
+      // Determine if we should position above or below
+      // Prefer below if there's more space, or if space above is insufficient
+      if (
+        spaceBelow >= dropdownHeight ||
+        (spaceBelow >= spaceAbove && spaceBelow >= dropdownHeight * 0.6)
+      ) {
+        // Position below the input
+        top = rect.bottom + gap;
+      } else if (spaceAbove >= dropdownHeight) {
+        // Position above the input
+        top = rect.top - dropdownHeight - gap;
+      } else {
+        // Not enough space either way - position where there's more space
+        if (spaceBelow > spaceAbove) {
+          top = rect.bottom + gap;
+        } else {
+          top = viewportPadding;
+        }
+      }
+
+      // Ensure top doesn't go above viewport
+      if (top < viewportPadding) {
+        top = viewportPadding;
+      }
+
+      // Ensure dropdown doesn't go below viewport
+      if (top + dropdownHeight > window.innerHeight - viewportPadding) {
+        top = window.innerHeight - dropdownHeight - viewportPadding;
+      }
+
+      // Calculate left position - center on mobile, align with input on desktop
+      if (isMobile) {
+        // Center on mobile
+        left = (window.innerWidth - dropdownWidth) / 2;
+      } else {
+        // Align with input on desktop
+        left = rect.left;
+
+        // Adjust if dropdown would go off-screen to the right
+        if (left + dropdownWidth > window.innerWidth - viewportPadding) {
+          left = window.innerWidth - dropdownWidth - viewportPadding;
+        }
+
+        // Adjust if dropdown would go off-screen to the left
+        if (left < viewportPadding) {
+          left = viewportPadding;
+        }
+      }
+
+      setDropdownPosition({
+        top,
+        left,
+        width: dropdownWidth,
+      });
+    };
+
+    if (isOpen && pickerRef.current) {
       document.addEventListener('mousedown', handleClickOutside);
+
+      // Calculate initial position
+      calculatePosition();
+
+      // Recalculate on scroll, resize, or orientation change
+      const handleResize = () => calculatePosition();
+      const handleScroll = () => calculatePosition();
+
+      window.addEventListener('resize', handleResize);
+      window.addEventListener('scroll', handleScroll, true);
+      window.addEventListener('orientationchange', handleResize);
+
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        window.removeEventListener('resize', handleResize);
+        window.removeEventListener('scroll', handleScroll, true);
+        window.removeEventListener('orientationchange', handleResize);
+      };
     }
 
     return () => {
@@ -214,7 +323,9 @@ export default function DatePicker({
         {selectedDate ? (
           <div className="flex items-center gap-2">
             <Calendar size={16} className="text-blue-400" />
-            <span className="text-white">{formatDisplayDate(selectedDate)}</span>
+            <span className="text-white">
+              {formatDisplayDate(selectedDate)}
+            </span>
           </div>
         ) : (
           <span className="text-slate-500">{placeholder}</span>
@@ -243,95 +354,105 @@ export default function DatePicker({
           )}
           <Calendar
             size={18}
-            className={`text-slate-400 transition-transform ${
-              isOpen ? 'transform rotate-180' : ''
-            }`}
+            className={`text-slate-400 transition-transform`}
           />
         </div>
       </button>
 
-      {isOpen && (
-        <div className="absolute z-50 bottom-full mb-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4 w-80">
-          {/* Calendar Header */}
-          <div className="flex items-center justify-between mb-4">
-            <button
-              type="button"
-              onClick={goToPreviousMonth}
-              className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-              aria-label="Prethodni mesec"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <div className="flex items-center gap-2">
-              <span className="text-white font-semibold">
-                {MONTHS[viewMonth]} {viewYear}
-              </span>
+      {isOpen &&
+        mounted &&
+        createPortal(
+          <div
+            className="date-picker-dropdown fixed z-[9999] bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4"
+            style={{
+              top: `${dropdownPosition.top}px`,
+              left: `${dropdownPosition.left}px`,
+              width: `${dropdownPosition.width}px`,
+              maxWidth: 'calc(100vw - 32px)',
+            }}
+          >
+            {/* Calendar Header */}
+            <div className="flex items-center justify-between mb-4">
               <button
                 type="button"
-                onClick={goToToday}
-                className="px-2 py-1 text-xs text-blue-400 hover:text-blue-300 hover:bg-slate-700 rounded transition-colors"
+                onClick={goToPreviousMonth}
+                className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                aria-label="Prethodni mesec"
               >
-                Danas
+                <ChevronLeft size={18} />
+              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-white font-semibold">
+                  {MONTHS[viewMonth]} {viewYear}
+                </span>
+                <button
+                  type="button"
+                  onClick={goToToday}
+                  className="px-2 py-1 text-xs text-blue-400 hover:text-blue-300 hover:bg-slate-700 rounded transition-colors"
+                >
+                  Danas
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={goToNextMonth}
+                className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                aria-label="Sledeći mesec"
+              >
+                <ChevronRight size={18} />
               </button>
             </div>
-            <button
-              type="button"
-              onClick={goToNextMonth}
-              className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-              aria-label="Sledeći mesec"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
 
-          {/* Weekday Headers */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {WEEKDAYS.map((day) => (
-              <div
-                key={day}
-                className="text-center text-xs font-semibold text-slate-400 py-1"
-              >
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Days */}
-          <div className="grid grid-cols-7 gap-1">
-            {days.map((day, index) => {
-              if (day === null) {
-                return <div key={`empty-${index}`} className="aspect-square" />;
-              }
-
-              const date = new Date(viewYear, viewMonth, day);
-              const disabled = isDateDisabled(date);
-              const isSelectedDay = isSelected(date);
-              const isTodayDay = isToday(date);
-
-              return (
-                <button
+            {/* Weekday Headers */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {WEEKDAYS.map((day) => (
+                <div
                   key={day}
-                  type="button"
-                  onClick={() => handleDateSelect(day)}
-                  disabled={disabled}
-                  className={`aspect-square flex items-center justify-center text-sm rounded transition-colors ${
-                    disabled
-                      ? 'text-slate-600 cursor-not-allowed'
-                      : isSelectedDay
-                      ? 'bg-blue-600 text-white font-semibold'
-                      : isTodayDay
-                      ? 'bg-blue-600/20 text-blue-400 font-semibold border border-blue-500'
-                      : 'text-slate-300 hover:bg-slate-700 hover:text-white'
-                  }`}
+                  className="text-center text-xs font-semibold text-slate-400 py-1"
                 >
                   {day}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar Days */}
+            <div className="grid grid-cols-7 gap-1">
+              {days.map((day, index) => {
+                if (day === null) {
+                  return (
+                    <div key={`empty-${index}`} className="aspect-square" />
+                  );
+                }
+
+                const date = new Date(viewYear, viewMonth, day);
+                const disabled = isDateDisabled(date);
+                const isSelectedDay = isSelected(date);
+                const isTodayDay = isToday(date);
+
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => handleDateSelect(day)}
+                    disabled={disabled}
+                    className={`aspect-square flex items-center justify-center text-sm rounded transition-colors ${
+                      disabled
+                        ? 'text-slate-600 cursor-not-allowed'
+                        : isSelectedDay
+                        ? 'bg-blue-600 text-white font-semibold'
+                        : isTodayDay
+                        ? 'bg-blue-600/20 text-blue-400 font-semibold border border-blue-500'
+                        : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
-

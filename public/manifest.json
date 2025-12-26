@@ -7,6 +7,8 @@
   "background_color": "#0f172a",
   "theme_color": "#2563eb",
   "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "scope": "/",
   "icons": [
     {
       "src": "/viralio-icon-192.png",

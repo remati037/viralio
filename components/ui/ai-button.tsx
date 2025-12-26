@@ -177,7 +177,7 @@ export default function AIButton({
     <button
       onClick={handleGenerate}
       disabled={isLoading}
-      className={`flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:from-purple-700 disabled:to-blue-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-all shadow-lg ${className}`}
+      className={`flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:from-purple-700 disabled:to-blue-700 disabled:cursor-not-allowed text-white rounded-md text-sm font-medium transition-all shadow-lg ${className}`}
       title={`Generiši ${fieldLabels[fieldType]} pomoću AI`}
     >
       {isLoading ? (

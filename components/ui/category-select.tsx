@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, X } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 export interface TaskCategory {
@@ -113,7 +113,7 @@ export default function CategorySelect({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
         disabled={disabled}
-        className={`w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-left flex items-center justify-between transition-colors ${
+        className={`w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-left flex items-center justify-between transition-colors ${
           disabled
             ? 'opacity-50 cursor-not-allowed'
             : 'hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer'
@@ -124,16 +124,18 @@ export default function CategorySelect({
         {selectedCategory ? (
           <div className="flex items-center gap-2">
             <div
-              className="w-3 h-3 rounded-full"
+              className="w-2 h-2 rounded-full"
               style={{ backgroundColor: selectedCategory.color }}
             />
-            <span className="text-white">{selectedCategory.name}</span>
+            <span className="text-white first-letter:uppercase text-sm">
+              {selectedCategory.name}
+            </span>
           </div>
         ) : (
           <span className="text-slate-500">{placeholder}</span>
         )}
         <div className="flex items-center gap-2">
-          {selectedCategory && (
+          {/* {selectedCategory && (
             <div
               onClick={(e) => {
                 e.stopPropagation();
@@ -153,7 +155,7 @@ export default function CategorySelect({
             >
               <X size={14} />
             </div>
-          )}
+          )} */}
           <ChevronDown
             size={18}
             className={`text-slate-400 transition-transform ${
@@ -167,7 +169,7 @@ export default function CategorySelect({
         <ul
           ref={listRef}
           role="listbox"
-          className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-auto"
+          className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-auto divide-y-[0.5px] divide-slate-700 p-2"
         >
           <li
             role="option"
@@ -180,9 +182,9 @@ export default function CategorySelect({
             onMouseEnter={() => setHighlightedIndex(-1)}
             className={`px-3 py-2 cursor-pointer transition-colors ${
               value === null
-                ? 'bg-blue-600 text-white'
+                ? 'bg-blue-600/20 text-white'
                 : highlightedIndex === -1
-                ? 'bg-slate-700 text-white'
+                ? 'text-white'
                 : 'text-slate-300 hover:bg-slate-700'
             }`}
           >
@@ -201,17 +203,19 @@ export default function CategorySelect({
               onMouseEnter={() => setHighlightedIndex(index)}
               className={`px-3 py-2 cursor-pointer transition-colors flex items-center gap-2 ${
                 value === category.id
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-blue-600/20 text-white'
                   : highlightedIndex === index
                   ? 'bg-slate-700 text-white'
                   : 'text-slate-300 hover:bg-slate-700'
               }`}
             >
               <div
-                className="w-3 h-3 rounded-full shrink-0"
+                className="w-2 h-2 rounded-full shrink-0"
                 style={{ backgroundColor: category.color }}
               />
-              <span>{category.name}</span>
+              <span className="text-sm first-letter:uppercase">
+                {category.name}
+              </span>
             </li>
           ))}
         </ul>

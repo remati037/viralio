@@ -189,12 +189,14 @@ export default function CalendarView({
           const hasTasks = dayTasks.length > 0;
 
           const handleDayClick = () => {
+            // Only handle day click on mobile (desktop shows task previews that handle clicks individually)
+            // Task previews use stopPropagation, so they won't trigger this handler
             if (hasTasks) {
               if (dayTasks.length === 1) {
                 // Single task - open directly
                 onTaskClick(dayTasks[0]);
               } else {
-                // Multiple tasks - show modal
+                // Multiple tasks - show modal (only on mobile where previews are hidden)
                 setSelectedDayTasks(dayTasks);
                 setSelectedDate(day);
               }
@@ -212,7 +214,9 @@ export default function CalendarView({
               : isOtherMonth
               ? 'bg-slate-800/10 border-slate-800/30 opacity-40'
               : 'bg-slate-800/20 border-slate-800/50 hover:bg-slate-700/20'
-          } ${hasTasks && !isOtherMonth ? 'cursor-pointer' : ''}`;
+          } ${
+            hasTasks && !isOtherMonth ? 'cursor-pointer md:cursor-default' : ''
+          }`;
 
           return (
             <div key={index} className={dayClasses} onClick={handleDayClick}>
@@ -228,9 +232,9 @@ export default function CalendarView({
                 {day.getDate()}
               </div>
 
-              {/* Task indicator - show dot/badge if there are tasks */}
+              {/* Mobile: Task indicator - show dot/badge */}
               {hasTasks && !isOtherMonth && (
-                <div className="absolute bottom-1.5 left-1/2 transform -translate-x-1/2">
+                <div className="absolute bottom-1.5 left-1/2 transform -translate-x-1/2 md:hidden">
                   <div
                     className={`flex items-center justify-center rounded-full cursor-pointer transition-transform hover:scale-110 ${
                       isPast(day)
@@ -249,6 +253,30 @@ export default function CalendarView({
                   >
                     {dayTasks.length > 1 ? dayTasks.length : ''}
                   </div>
+                </div>
+              )}
+
+              {/* Desktop: Task previews with full titles */}
+              {hasTasks && !isOtherMonth && (
+                <div className="hidden md:block task-preview-container space-y-1 mt-6 px-1">
+                  {dayTasks.map((task) => {
+                    const pastTask = isPast(day);
+                    return (
+                      <div
+                        key={task.id}
+                        onClick={(e) => handleTaskClick(e, task)}
+                        className={`task-preview px-2 py-1 rounded-md text-xs font-medium truncate cursor-pointer shadow-md border transition-opacity ${
+                          pastTask
+                            ? 'bg-slate-700 text-slate-400 opacity-50 border-slate-600'
+                            : 'bg-blue-600/80 text-white hover:bg-blue-500 border-blue-700'
+                        }`}
+                        title={task.title}
+                      >
+                        {task.format === 'Kratka Forma' ? '🎥' : '📺'}{' '}
+                        {task.title}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

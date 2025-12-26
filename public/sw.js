@@ -1,6 +1,7 @@
 // Service Worker for Viralio PWA
 const CACHE_NAME = 'viralio-v1';
 const STATIC_CACHE_NAME = 'viralio-static-v1';
+const RUNTIME_CACHE_NAME = 'viralio-runtime-v1';
 
 // Install event - cache static resources only
 self.addEventListener('install', (event) => {
@@ -9,13 +10,16 @@ self.addEventListener('install', (event) => {
       // Only cache truly static assets
       return cache.addAll([
         '/manifest.json',
+        '/viralio-icon-192.png',
+        '/viralio-icon-512.png',
       ]).catch((err) => {
         console.log('Cache addAll failed:', err);
         // Don't fail installation if caching fails
       });
     })
   );
-  // Force the waiting service worker to become the active service worker
+  // Force the waiting service worker to become the active service worker immediately
+  // This speeds up PWA startup
   self.skipWaiting();
 });
 
@@ -52,33 +56,36 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For static assets, try cache first, then network
+  // For static assets, try cache first, then network (stale-while-revalidate)
   if (
     url.pathname.endsWith('.js') ||
     url.pathname.endsWith('.css') ||
     url.pathname.endsWith('.png') ||
     url.pathname.endsWith('.jpg') ||
+    url.pathname.endsWith('.jpeg') ||
+    url.pathname.endsWith('.webp') ||
     url.pathname.endsWith('.svg') ||
     url.pathname.endsWith('.ico') ||
+    url.pathname.endsWith('.woff2') ||
     url.pathname === '/manifest.json'
   ) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        return fetch(request).then((response) => {
+        // Return cached version immediately for faster loading
+        const fetchPromise = fetch(request).then((response) => {
           // Don't cache if not a valid response
           if (!response || response.status !== 200 || response.type !== 'basic') {
             return response;
           }
-          // Clone the response
+          // Clone the response and update cache in background
           const responseToCache = response.clone();
           caches.open(STATIC_CACHE_NAME).then((cache) => {
             cache.put(request, responseToCache);
           });
           return response;
         });
+        // Return cached version immediately, update in background
+        return cachedResponse || fetchPromise;
       })
     );
     return;

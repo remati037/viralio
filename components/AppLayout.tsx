@@ -21,14 +21,20 @@ import {
   User,
   X,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import NewIdeaWizard from './NewIdeaWizard';
 import Loader from './ui/loader';
 import { UserProvider } from './UserContext';
+
+// Lazy load NewIdeaWizard for faster initial load
+const NewIdeaWizard = dynamic(() => import('./NewIdeaWizard'), {
+  loading: () => <Loader text="Učitavanje..." />,
+  ssr: false,
+});
 
 export default function AppLayout({
   userId,

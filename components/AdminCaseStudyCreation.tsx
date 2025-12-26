@@ -2,12 +2,13 @@
 
 import { NICHES } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
-import type { TaskInsert } from '@/types'
+import type { TaskInsert, TaskCategory } from '@/types'
 import { Plus, Save, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import CategorySelect from './ui/category-select'
 import { Input } from './ui/input'
 import RichTextEditor from './ui/rich-text-editor'
 import Loader from './ui/loader'
@@ -20,6 +21,9 @@ interface AdminCaseStudyCreationProps {
 export default function AdminCaseStudyCreation({ userId, onCaseStudyCreated }: AdminCaseStudyCreationProps) {
   const supabase = createClient()
   const [isCreating, setIsCreating] = useState(false)
+  const [categories, setCategories] = useState<TaskCategory[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(true)
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: '',
     niche: NICHES[0].name,
@@ -35,10 +39,49 @@ export default function AdminCaseStudyCreation({ userId, onCaseStudyCreated }: A
     original_template: '',
   })
 
+  useEffect(() => {
+    if (userId) {
+      fetchCategories()
+    }
+  }, [userId])
+
+  const fetchCategories = async () => {
+    if (!userId) {
+      setLoadingCategories(false)
+      return
+    }
+
+    setLoadingCategories(true)
+    try {
+      const { data, error } = await supabase
+        .from('task_categories')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+      setCategories((data || []) as TaskCategory[])
+    } catch (error: any) {
+      console.error('Error fetching categories:', error)
+      toast.error('Greška pri učitavanju kategorija', {
+        description: error?.message || 'Pokušajte ponovo',
+      })
+    } finally {
+      setLoadingCategories(false)
+    }
+  }
+
   const handleSave = async () => {
     if (!formData.title.trim() || !formData.analysis.trim()) {
       toast.error('Nedostaju podaci', {
         description: 'Molimo unesite naslov i analizu.',
+      })
+      return
+    }
+
+    if (!selectedCategoryId) {
+      toast.error('Kategorija je obavezna', {
+        description: 'Molimo izaberite kategoriju pre čuvanja skripte.',
       })
       return
     }
@@ -63,6 +106,7 @@ export default function AdminCaseStudyCreation({ userId, onCaseStudyCreated }: A
         analysis: formData.analysis,
         created_by: userId,
         is_admin_case_study: true,
+        category_id: selectedCategoryId,
       }
 
       const { error } = await supabase.from('tasks').insert(caseStudy)
@@ -83,6 +127,7 @@ export default function AdminCaseStudyCreation({ userId, onCaseStudyCreated }: A
 
   const resetForm = () => {
     setIsCreating(false)
+    setSelectedCategoryId(null)
     setFormData({
       title: '',
       niche: NICHES[0].name,
@@ -164,6 +209,25 @@ export default function AdminCaseStudyCreation({ userId, onCaseStudyCreated }: A
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Kategorija <span className="text-red-400">*</span>
+              </label>
+              {loadingCategories ? (
+                <div className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-slate-400">
+                  Učitavanje kategorija...
+                </div>
+              ) : (
+                <CategorySelect
+                  categories={categories}
+                  value={selectedCategoryId}
+                  onChange={setSelectedCategoryId}
+                  placeholder="Izaberite kategoriju"
+                  className="w-full"
+                />
+              )}
             </div>
 
             <div>
@@ -277,7 +341,11 @@ export default function AdminCaseStudyCreation({ userId, onCaseStudyCreated }: A
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={handleSave} disabled={isCreating} className="flex items-center gap-2">
+              <Button 
+                onClick={handleSave} 
+                disabled={isCreating || !selectedCategoryId} 
+                className="flex items-center gap-2"
+              >
                 {isCreating ? (
                   <>
                     <Loader size="sm" />
