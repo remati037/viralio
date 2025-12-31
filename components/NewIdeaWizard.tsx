@@ -610,16 +610,20 @@ ZAKLJUČAK: ${template.structure.cta}`;
               {NETWORKS.map((net) => {
                 const Icon = net.icon;
                 // Determine if this network matches the current format
-                const isLongFormNetwork = net.id === 'youtube' || net.id === 'facebook';
-                const isShortFormNetwork = net.id === 'instagram' || net.id === 'tiktok';
+                const isLongFormNetwork =
+                  net.id === 'youtube' || net.id === 'facebook';
+                const isShortFormNetwork =
+                  net.id === 'instagram' || net.id === 'tiktok';
                 const matchesFormat =
                   (formData.format === 'Duga Forma' && isLongFormNetwork) ||
                   (formData.format === 'Kratka Forma' && isShortFormNetwork);
-                
+
                 // Disable if template is selected and network doesn't match format
-                const isDisabled = formData.originalTemplate && 
-                  formData.originalTemplate !== 'Ručni Unos' && 
-                  !matchesFormat;
+                const isDisabled = !!(
+                  formData.originalTemplate &&
+                  formData.originalTemplate !== 'Ručni Unos' &&
+                  !matchesFormat
+                );
 
                 return (
                   <button
@@ -640,8 +644,8 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       formData.network === net.name
                         ? 'bg-blue-600 text-white border-blue-500'
                         : isDisabled
-                        ? 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
-                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+                          ? 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
+                          : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
                     } flex items-center gap-2`}
                   >
                     <Icon
