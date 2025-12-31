@@ -1,10 +1,11 @@
 'use client';
 
-import { NETWORKS, NICHES, VIRAL_TEMPLATES } from '@/lib/constants';
+import { NETWORKS, NICHES } from '@/lib/constants';
+import { fetchWithCacheBust } from '@/lib/sanity/client-client';
+import { getPublishedTemplatesByNicheQuery } from '@/lib/sanity/template-query';
 import { createClient } from '@/lib/supabase/client';
 import { getYoutubeThumbnail } from '@/lib/utils/helpers';
-import { getTierLimits } from '@/lib/utils/tierRestrictions';
-import type { TaskInsert, Template, UserTier } from '@/types';
+import type { TaskInsert, UserTier } from '@/types';
 import {
   Calendar,
   ChevronLeft,
@@ -17,7 +18,7 @@ import {
   Youtube,
   Zap,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import AIAssistant from './AIAssistant';
 import CategorySelect, { type TaskCategory } from './ui/category-select';
@@ -53,7 +54,7 @@ export default function NewIdeaWizard({
     'start'
   );
   const [selectedNiche, setSelectedNiche] = useState('marketing');
-  const [dbTemplates, setDbTemplates] = useState<Template[]>([]);
+  const [sanityTemplates, setSanityTemplates] = useState<any[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [categories, setCategories] = useState<TaskCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -124,65 +125,86 @@ export default function NewIdeaWizard({
   const fetchTemplates = async () => {
     setLoadingTemplates(true);
     try {
-      const { data, error } = await supabase
-        .from('templates')
-        .select('*')
-        .eq('is_published', true)
-        .eq(
-          'niche',
-          NICHES.find((n) => n.id === selectedNiche)?.name || 'Marketing'
-        );
+      const nicheName =
+        NICHES.find((n) => n.id === selectedNiche)?.name || 'Marketing';
 
-      if (error) throw error;
+      // Map niche names from app format to Sanity format
+      const sanityNicheMap: Record<string, string> = {
+        'Marketing & Biznis': 'Marketing',
+        Nekretnine: 'Nekretnine',
+        'Fitness & Zdravlje': 'Fitness',
+        'E-commerce': 'E-commerce',
+      };
+      const sanityNiche = sanityNicheMap[nicheName] || nicheName;
 
-      // Get all published templates
-      const allTemplates = (data || []) as Template[];
+      console.log(
+        '🔍 Fetching templates for niche:',
+        nicheName,
+        '(selectedNiche:',
+        selectedNiche + ')'
+      );
+      console.log('🔍 Using Sanity niche:', sanityNiche);
 
-      // Apply tier-based random selection
-      if (!userTier) {
-        setDbTemplates([]);
-        return;
-      }
+      // Fetch templates from Sanity only
+      // Use fetchWithCacheBust to ensure fresh data in development
+      const templates = await fetchWithCacheBust<any[]>(
+        getPublishedTemplatesByNicheQuery,
+        { niche: sanityNiche },
+        { forceFresh: true } // Always force fresh to see latest edits
+      );
 
-      const limits = getTierLimits(userTier);
-
-      let filtered: Template[];
-      if (limits.maxTemplates === null) {
-        // Pro tier: show all templates
-        filtered = allTemplates;
-      } else {
-        // Limited tier: show random templates
-        const shuffled = [...allTemplates].sort(() => Math.random() - 0.5);
-        filtered = shuffled.slice(0, limits.maxTemplates);
-      }
-
-      setDbTemplates(filtered);
+      console.log(
+        '✅ Sanity templates fetched:',
+        templates?.length || 0,
+        'templates for niche:',
+        nicheName
+      );
+      console.log('Sanity templates data:', templates);
+      setSanityTemplates(templates || []);
     } catch (error: any) {
       console.error('Error fetching templates:', error);
+      setSanityTemplates([]);
     } finally {
       setLoadingTemplates(false);
     }
   };
 
-  // Combine DB templates with static templates (for backward compatibility)
-  const activeTemplates = [
-    ...dbTemplates.map((t) => ({
-      id: t.id,
-      title: t.title,
-      format: t.format,
-      difficulty: t.difficulty || 'Srednje',
-      views_potential: t.views_potential || 'N/A',
-      why_it_works: t.why_it_works || '',
-      structure: t.structure as { hook: string; body: string; cta: string },
-      vlads_tip: t.vlads_tip || '',
-    })),
-    ...(VIRAL_TEMPLATES[selectedNiche] || []),
-  ];
+  // Only use Sanity templates
+  const activeTemplates = useMemo(
+    () =>
+      sanityTemplates.map((t) => ({
+        id: t._id,
+        title: t.title,
+        format: t.format,
+        concept: t.concept || '',
+        structure: {
+          hook: t.structure?.hook || '',
+          body: t.structure?.body || '',
+          cta: t.structure?.cta || '',
+        },
+        vlads_tip: t.vladsTip || '',
+        source: 'sanity' as const,
+      })),
+    [sanityTemplates]
+  );
+
+  // Debug: Log templates
+  useEffect(() => {
+    if (activeTemplates.length > 0) {
+      console.log('📋 Sanity templates:', activeTemplates.length);
+    }
+  }, [activeTemplates.length, sanityTemplates.length]);
 
   const activeNicheInfo = NICHES.find((n) => n.id === selectedNiche);
 
   const handleSelectTemplate = (template: (typeof activeTemplates)[0]) => {
     const topic = formData.title || 'Moja Tema';
+
+    // Determine network based on format
+    const networkForFormat =
+      template.format === 'Duga Forma'
+        ? NETWORKS.find((n) => n.id === 'youtube')?.name || NETWORKS[1].name
+        : NETWORKS.find((n) => n.id === 'instagram')?.name || NETWORKS[0].name;
 
     if (template.format === 'Duga Forma') {
       const generatedScript = `UVOD: U prve 3 sekunde kaži zašto bi trebalo da ostanu do kraja.
@@ -196,6 +218,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
         ...prev,
         title: prev.title || template.title,
         format: template.format as 'Kratka Forma' | 'Duga Forma',
+        network: networkForFormat,
         originalTemplate: template.title,
         fullScript: generatedScript,
         fullScriptHtml: generatedScript,
@@ -215,6 +238,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
         ...prev,
         title: prev.title || template.title,
         format: template.format as 'Kratka Forma' | 'Duga Forma',
+        network: networkForFormat,
         originalTemplate: template.title,
         hook: hookText,
         hookHtml: hookText,
@@ -399,9 +423,6 @@ ZAKLJUČAK: ${template.structure.cta}`;
         >
           {template.format}
         </span>
-        <span className="text-xs font-bold text-slate-500">
-          {template.difficulty}
-        </span>
       </div>
 
       <h3 className="text-md font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">
@@ -409,7 +430,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
       </h3>
 
       <p className="text-slate-400 text-xs mb-4 flex-grow line-clamp-2">
-        {template.why_it_works}
+        {template.concept}
       </p>
 
       <div className="mt-auto">
@@ -505,7 +526,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto pr-2">
               {activeTemplates.length === 0 ? (
                 <div className="col-span-full text-center py-8 text-slate-500">
-                  Nema dostupnih šablona za ovu nišu.
+                  Trenutno nema sablona za ovu kategoriju
                 </div>
               ) : (
                 activeTemplates.map((template) => (
@@ -588,10 +609,23 @@ ZAKLJUČAK: ${template.structure.cta}`;
             <div className="flex gap-2 flex-wrap">
               {NETWORKS.map((net) => {
                 const Icon = net.icon;
+                // Determine if this network matches the current format
+                const isLongFormNetwork = net.id === 'youtube' || net.id === 'facebook';
+                const isShortFormNetwork = net.id === 'instagram' || net.id === 'tiktok';
+                const matchesFormat =
+                  (formData.format === 'Duga Forma' && isLongFormNetwork) ||
+                  (formData.format === 'Kratka Forma' && isShortFormNetwork);
+                
+                // Disable if template is selected and network doesn't match format
+                const isDisabled = formData.originalTemplate && 
+                  formData.originalTemplate !== 'Ručni Unos' && 
+                  !matchesFormat;
+
                 return (
                   <button
                     key={net.id}
-                    onClick={() =>
+                    onClick={() => {
+                      if (isDisabled) return;
                       setFormData((p) => ({
                         ...p,
                         network: net.name,
@@ -599,11 +633,14 @@ ZAKLJUČAK: ${template.structure.cta}`;
                           net.id === 'youtube' || net.id === 'facebook'
                             ? 'Duga Forma'
                             : 'Kratka Forma',
-                      }))
-                    }
+                      }));
+                    }}
+                    disabled={isDisabled}
                     className={`py-2 px-4 rounded-lg text-sm font-medium transition-colors border ${
                       formData.network === net.name
                         ? 'bg-blue-600 text-white border-blue-500'
+                        : isDisabled
+                        ? 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
                         : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
                     } flex items-center gap-2`}
                   >

@@ -1,0 +1,20 @@
+{
+  "version": 3,
+  "createdAt": "2025-12-31T09:39:06.282Z",
+  "workspaces": [
+    {
+      "name": "viralio",
+      "title": "Viralio CMS",
+      "basePath": "/",
+      "projectId": "7d9ft76t",
+      "dataset": "production",
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\"><rect width=\"32\" height=\"32\" rx=\"2\" fill=\"#024950\"></rect><text x=\"50%\" y=\"50%\" text-anchor=\"middle\" alignment-baseline=\"middle\" fill=\"hsla(185, 95%, 56%, 1)\" style=\"font-family:Inter, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, &quot;Helvetica Neue&quot;, &quot;Liberation Sans&quot;, Helvetica, Arial, system-ui, sans-serif;font-weight:500;font-size:13px;transform:translateY(1px)\">VC</text></svg>",
+      "mediaLibrary": {
+        "enabled": false
+      },
+      "schema": "10ce43ae.create-schema.json",
+      "tools": "ba47da56.create-tools.json"
+    }
+  ],
+  "studioVersion": "5.1.0"
+}

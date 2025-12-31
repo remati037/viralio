@@ -234,9 +234,8 @@ export interface Database {
           created_by: string
           title: string
           format: 'Kratka Forma' | 'Duga Forma'
-          difficulty: string | null
           views_potential: string | null
-          why_it_works: string | null
+          concept: string | null
           structure: Json
           vlads_tip: string | null
           niche: string
@@ -249,9 +248,8 @@ export interface Database {
           created_by: string
           title: string
           format: 'Kratka Forma' | 'Duga Forma'
-          difficulty?: string | null
           views_potential?: string | null
-          why_it_works?: string | null
+          concept?: string | null
           structure: Json
           vlads_tip?: string | null
           niche: string
@@ -264,9 +262,8 @@ export interface Database {
           created_by?: string
           title?: string
           format?: 'Kratka Forma' | 'Duga Forma'
-          difficulty?: string | null
           views_potential?: string | null
-          why_it_works?: string | null
+          concept?: string | null
           structure?: Json
           vlads_tip?: string | null
           niche?: string
@@ -373,6 +370,38 @@ export interface Database {
           total_engagement?: string
           total_conversions?: string
           last_active_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      ai_credits: {
+        Row: {
+          id: string
+          user_id: string
+          credits_used: number
+          month: number
+          year: number
+          reset_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          credits_used?: number
+          month: number
+          year: number
+          reset_at: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          credits_used?: number
+          month?: number
+          year?: number
+          reset_at?: string
           created_at?: string
           updated_at?: string
         }

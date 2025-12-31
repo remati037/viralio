@@ -3,6 +3,9 @@
 import { Copy, Loader2, Send, Sparkles, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { useAICredits } from '@/lib/hooks/useAICredits';
+import { useUserId } from '@/components/UserContext';
+import AICreditBadge from './ui/ai-credit-badge';
 import Skeleton from './ui/skeleton';
 
 interface AIMessage {
@@ -37,6 +40,8 @@ export default function AIAssistant({
   const [isExpanded, setIsExpanded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const userId = useUserId();
+  const { credits, refreshCredits, hasCredits } = useAICredits(userId);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -48,6 +53,15 @@ export default function AIAssistant({
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
+
+    // Check if user has credits
+    if (!hasCredits) {
+      toast.error('Nema AI kredita', {
+        description: `Iskorišćeni su svi mesečni AI krediti (${credits?.max_credits || 500}). Krediti se resetuju početkom sledećeg meseca.`,
+        duration: 5000,
+      });
+      return;
+    }
 
     const userMessage = input.trim();
     setInput('');
@@ -73,11 +87,26 @@ export default function AIAssistant({
 
       if (!response.ok) {
         const error = await response.json();
+        
+        // Handle insufficient credits error
+        if (error.error_code === 'INSUFFICIENT_CREDITS') {
+          refreshCredits();
+          setMessages((prev) => prev.slice(0, -1)); // Remove user message on error
+          throw new Error(
+            `Nedovoljno AI kredita. Preostalo: ${error.credits_remaining}/${error.max_credits}. Krediti se resetuju: ${new Date(error.reset_at).toLocaleDateString('sr-RS')}`
+          );
+        }
+        
         throw new Error(error.error || 'Failed to get AI response');
       }
 
       const data = await response.json();
       const aiMessage = data.message;
+
+      // Refresh credits after successful generation
+      if (data.credits) {
+        refreshCredits();
+      }
 
       setMessages((prev) => [
         ...prev,
@@ -181,12 +210,22 @@ export default function AIAssistant({
           <Sparkles size={18} className="text-purple-400" />
           <h3 className="text-white font-bold text-md">AI Asistent</h3>
         </div>
-        <button
-          onClick={() => setIsExpanded(false)}
-          className="text-slate-400 hover:text-white transition-colors"
-        >
-          <X size={18} />
-        </button>
+        <div className="flex items-center gap-3">
+          {credits && (
+            <AICreditBadge
+              creditsRemaining={credits.credits_remaining}
+              maxCredits={credits.max_credits}
+              compact={true}
+              showWarning={false}
+            />
+          )}
+          <button
+            onClick={() => setIsExpanded(false)}
+            className="text-slate-400 hover:text-white transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
       </div>
 
       {/* Quick Prompts */}
@@ -354,8 +393,9 @@ export default function AIAssistant({
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || isLoading}
+            disabled={!input.trim() || isLoading || !hasCredits}
             className="px-3 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 h-fit"
+            title={!hasCredits ? 'Nema AI kredita' : 'Pošalji poruku (1 kredit)'}
           >
             {isLoading ? (
               <Loader2 size={18} className="animate-spin" />
@@ -365,7 +405,7 @@ export default function AIAssistant({
           </button>
         </div>
         <p className="text-xs text-slate-500 mt-2">
-          Pritisnite Enter za slanje ili Shift+Enter za novi red.
+          Pritisnite Enter za slanje ili Shift+Enter za novi red. Svaka poruka koristi 1 AI kredit.
         </p>
       </div>
     </div>

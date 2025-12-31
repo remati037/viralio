@@ -12,7 +12,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table'
-import { ArrowDown, ArrowUp, ArrowUpDown, ClipboardList, Edit, FileText, Plus, Shield, Trash2, Users } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, ClipboardList, Edit, FileText, Plus, Shield, Trash2, Users, Database, RefreshCw } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import AdminCaseStudyCreation from './AdminCaseStudyCreation'
@@ -31,7 +31,9 @@ interface AdminDashboardProps {
 
 export default function AdminDashboard({ userId }: AdminDashboardProps) {
   const supabase = createClient()
-  const [activeTab, setActiveTab] = useState<'users' | 'templates' | 'case-studies'>('users')
+  const [activeTab, setActiveTab] = useState<'users' | 'templates' | 'case-studies' | 'sanity'>('users')
+  const [syncingTemplates, setSyncingTemplates] = useState(false)
+  const [syncingCaseStudies, setSyncingCaseStudies] = useState(false)
   const [users, setUsers] = useState<(Profile & { statistics?: UserStatistics; payments?: Payment[] })[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
@@ -486,10 +488,144 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
         >
           <ClipboardList size={16} /> Studije Slučaja
         </button>
+        <button
+          onClick={() => setActiveTab('sanity')}
+          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'sanity'
+            ? 'text-white border-b-2 border-blue-500'
+            : 'text-slate-400 hover:text-white'
+            }`}
+        >
+          <Database size={16} /> Sanity CMS
+        </button>
       </div>
 
       {activeTab === 'templates' && <AdminTemplateManagement userId={userId} />}
       {activeTab === 'case-studies' && <AdminCaseStudyCreation userId={userId} />}
+
+      {activeTab === 'sanity' && (
+        <div className="space-y-6">
+          <Card className="bg-slate-900 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Database size={20} /> Sanity CMS Integracija
+              </CardTitle>
+              <CardDescription className="text-slate-400">
+                Upravljajte šablonima i studijama slučaja kroz Sanity CMS
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-4">
+                <div className="bg-slate-800 p-4 rounded-lg">
+                  <h3 className="text-white font-medium mb-2">Sanity Studio</h3>
+                  <p className="text-slate-400 text-sm mb-4">
+                    Prijavite se na Sanity.io da biste kreirali i uređivali šablone i studije slučaja.
+                  </p>
+                  <Button
+                    onClick={() => window.open('https://www.sanity.io/manage', '_blank')}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Database size={16} className="mr-2" /> Otvori Sanity Studio
+                  </Button>
+                  <p className="text-slate-500 text-xs mt-2">
+                    Ili direktno: <a href="https://www.sanity.io/manage" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">sanity.io/manage</a>
+                  </p>
+                </div>
+
+                <div className="bg-slate-800 p-4 rounded-lg">
+                  <h3 className="text-white font-medium mb-2">Sinhronizacija sa Supabase</h3>
+                  <p className="text-slate-400 text-sm mb-4">
+                    Sinhronizujte sadržaj iz Sanity CMS-a u Supabase bazu podataka.
+                  </p>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={async () => {
+                        setSyncingTemplates(true)
+                        try {
+                          const response = await fetch('/api/sanity/sync-templates', {
+                            method: 'POST',
+                          })
+                          const data = await response.json()
+                          if (response.ok) {
+                            toast.success('Šabloni uspešno sinhronizovani', {
+                              description: `Sinhronizovano ${data.synced} šablona.`,
+                            })
+                            if (data.errors && data.errors.length > 0) {
+                              console.error('Sync errors:', data.errors)
+                            }
+                          } else {
+                            throw new Error(data.error || 'Greška pri sinhronizaciji')
+                          }
+                        } catch (error: any) {
+                          toast.error('Greška pri sinhronizaciji šablona', {
+                            description: error.message,
+                          })
+                        } finally {
+                          setSyncingTemplates(false)
+                        }
+                      }}
+                      disabled={syncingTemplates}
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      <RefreshCw
+                        size={16}
+                        className={`mr-2 ${syncingTemplates ? 'animate-spin' : ''}`}
+                      />
+                      {syncingTemplates ? 'Sinhronizacija...' : 'Sinhronizuj Šablone'}
+                    </Button>
+                    <Button
+                      onClick={async () => {
+                        setSyncingCaseStudies(true)
+                        try {
+                          const response = await fetch('/api/sanity/sync-case-studies', {
+                            method: 'POST',
+                          })
+                          const data = await response.json()
+                          if (response.ok) {
+                            toast.success('Studije slučaja uspešno sinhronizovane', {
+                              description: `Sinhronizovano ${data.synced} studija slučaja.`,
+                            })
+                            if (data.errors && data.errors.length > 0) {
+                              console.error('Sync errors:', data.errors)
+                            }
+                          } else {
+                            throw new Error(data.error || 'Greška pri sinhronizaciji')
+                          }
+                        } catch (error: any) {
+                          toast.error('Greška pri sinhronizaciji studija slučaja', {
+                            description: error.message,
+                          })
+                        } finally {
+                          setSyncingCaseStudies(false)
+                        }
+                      }}
+                      disabled={syncingCaseStudies}
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      <RefreshCw
+                        size={16}
+                        className={`mr-2 ${syncingCaseStudies ? 'animate-spin' : ''}`}
+                      />
+                      {syncingCaseStudies ? 'Sinhronizacija...' : 'Sinhronizuj Studije Slučaja'}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800 p-4 rounded-lg">
+                  <h3 className="text-white font-medium mb-2">Uputstvo</h3>
+                  <ol className="text-slate-400 text-sm space-y-2 list-decimal list-inside">
+                    <li>Kliknite na "Otvori Sanity Studio" ili idite na <a href="https://www.sanity.io/manage" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">sanity.io/manage</a></li>
+                    <li>Prijavite se sa vašim Sanity nalogom</li>
+                    <li>Izaberite vaš projekat iz liste projekata</li>
+                    <li>Kreirajte ili uredite šablone i studije slučaja u Sanity Studio-u</li>
+                    <li>Kliknite na dugme za sinhronizaciju ovde da biste preneli izmene u Supabase</li>
+                    <li>Izmene će biti dostupne u aplikaciji nakon sinhronizacije</li>
+                  </ol>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {activeTab === 'users' && (
         <>

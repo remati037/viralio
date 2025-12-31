@@ -3,6 +3,9 @@
 import { Loader2, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { useAICredits } from '@/lib/hooks/useAICredits';
+import { useUserId } from '@/components/UserContext';
+import AICreditBadge from './ai-credit-badge';
 
 interface AIButtonProps {
   fieldType: 'hook' | 'body' | 'cta' | 'title' | 'fullScript';
@@ -89,9 +92,20 @@ export default function AIButton({
   className = '',
 }: AIButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const userId = useUserId();
+  const { credits, refreshCredits, hasCredits } = useAICredits(userId);
 
   const handleGenerate = async () => {
     if (isLoading) return;
+
+    // Check if user has credits
+    if (!hasCredits) {
+      toast.error('Nema AI kredita', {
+        description: `Iskorišćeni su svi mesečni AI krediti (${credits?.max_credits || 500}). Krediti se resetuju početkom sledećeg meseca.`,
+        duration: 5000,
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -115,6 +129,15 @@ export default function AIButton({
 
       if (!response.ok) {
         const error = await response.json();
+        
+        // Handle insufficient credits error
+        if (error.error_code === 'INSUFFICIENT_CREDITS') {
+          refreshCredits();
+          throw new Error(
+            `Nedovoljno AI kredita. Preostalo: ${error.credits_remaining}/${error.max_credits}. Krediti se resetuju: ${new Date(error.reset_at).toLocaleDateString('sr-RS')}`
+          );
+        }
+        
         throw new Error(error.error || 'Failed to generate content');
       }
 
@@ -153,9 +176,18 @@ export default function AIButton({
       }
 
       onGenerate(cleanedContent);
-      toast.success('AI sadržaj generisan', {
-        description: `Sadržaj za ${fieldType} je uspešno generisan.`,
-      });
+      
+      // Refresh credits after successful generation
+      if (data.credits) {
+        refreshCredits();
+        toast.success('AI sadržaj generisan', {
+          description: `Sadržaj za ${fieldType} je uspešno generisan. Preostalo kredita: ${data.credits.remaining}/${data.credits.max}`,
+        });
+      } else {
+        toast.success('AI sadržaj generisan', {
+          description: `Sadržaj za ${fieldType} je uspešno generisan.`,
+        });
+      }
     } catch (error: any) {
       toast.error('Greška pri generisanju', {
         description: error.message || 'Neuspešno generisanje AI sadržaja',
@@ -173,24 +205,43 @@ export default function AIButton({
     fullScript: 'Scenario',
   };
 
+  const isDisabled = isLoading || !hasCredits;
+
   return (
-    <button
-      onClick={handleGenerate}
-      disabled={isLoading}
-      className={`flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:from-purple-700 disabled:to-blue-700 disabled:cursor-not-allowed text-white rounded-md text-sm font-medium transition-all shadow-lg ${className}`}
-      title={`Generiši ${fieldLabels[fieldType]} pomoću AI`}
-    >
-      {isLoading ? (
-        <>
-          <Loader2 size={16} className="animate-spin" />
-          <span>Generisanje...</span>
-        </>
-      ) : (
-        <>
-          <Sparkles size={16} />
-          <span>Generiši {fieldLabels[fieldType]} uz pomoć AI</span>
-        </>
+    <div className={`flex flex-col gap-2 ${className}`}>
+      <button
+        onClick={handleGenerate}
+        disabled={isDisabled}
+        className={`flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:from-purple-700 disabled:to-blue-700 disabled:cursor-not-allowed text-white rounded-md text-sm font-medium transition-all shadow-lg ${isDisabled ? 'opacity-60' : ''}`}
+        title={
+          !hasCredits
+            ? `Nema AI kredita. Preostalo: ${credits?.credits_remaining || 0}/${credits?.max_credits || 500}`
+            : `Generiši ${fieldLabels[fieldType]} pomoću AI (1 kredit)`
+        }
+      >
+        {isLoading ? (
+          <>
+            <Loader2 size={16} className="animate-spin" />
+            <span>Generisanje...</span>
+          </>
+        ) : (
+          <>
+            <Sparkles size={16} />
+            <span>Generiši {fieldLabels[fieldType]} uz pomoć AI</span>
+            {credits && (
+              <span className="text-xs opacity-75">({credits.credits_remaining} kredita)</span>
+            )}
+          </>
+        )}
+      </button>
+      {credits && (
+        <AICreditBadge
+          creditsRemaining={credits.credits_remaining}
+          maxCredits={credits.max_credits}
+          compact={true}
+          showWarning={true}
+        />
       )}
-    </button>
+    </div>
   );
 }

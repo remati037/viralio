@@ -11,6 +11,7 @@ A Next.js 15.1.9 application with Supabase integration for planning and managing
 - 👥 **Competitor Analysis** - Track and analyze competitors
 - 📊 **Case Studies** - Analyze successful content
 - 🎨 **Modern UI** - Built with Tailwind CSS and Lucide icons
+- 📝 **Sanity CMS** - Manage templates and case studies through Sanity CMS
 
 ## Tech Stack
 
@@ -19,6 +20,7 @@ A Next.js 15.1.9 application with Supabase integration for planning and managing
 - **TypeScript**
 - **Supabase** (Auth + Database)
 - **OpenAI** (AI Content Generation)
+- **Sanity CMS** (Content Management)
 - **Tailwind CSS**
 - **Lucide React** (Icons)
 
@@ -53,6 +55,11 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 OPENAI_API_KEY=your_openai_api_key
 STRIPE_SECRET_KEY=your_stripe_secret_key (optional, for payments)
 STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret (optional, for payments)
+
+# Sanity CMS (optional - see SANITY_SETUP.md)
+NEXT_PUBLIC_SANITY_PROJECT_ID=your_sanity_project_id
+NEXT_PUBLIC_SANITY_DATASET=production
+SANITY_API_TOKEN=your_sanity_api_token
 ```
 
 **Where to find the Service Role Key:**
@@ -94,6 +101,10 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### 7. Set Up Sanity CMS (Optional)
+
+If you want to use Sanity CMS for managing templates and case studies, see [SANITY_SETUP.md](./SANITY_SETUP.md) for detailed setup instructions.
 
 ## Database Schema
 

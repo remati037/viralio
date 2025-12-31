@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS templates (
   format TEXT NOT NULL CHECK (format IN ('Kratka Forma', 'Duga Forma')),
   difficulty TEXT,
   views_potential TEXT,
-  why_it_works TEXT,
+  concept TEXT,
   structure JSONB NOT NULL, -- { hook: string, body: string, cta: string }
   vlads_tip TEXT,
   niche TEXT NOT NULL,

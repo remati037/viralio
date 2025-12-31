@@ -50,9 +50,8 @@ export type ViralTemplate = {
   id: string
   title: string
   format: string
-  difficulty: string
   views_potential: string
-  why_it_works: string
+  concept: string
   structure: {
     hook: string
     body: string

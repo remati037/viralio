@@ -1,0 +1,26 @@
+{
+  "name": "Viralio",
+  "short_name": "Viralio",
+  "description": "Planirajte svoj kontent i postanite viralni.",
+  "start_url": "/planner",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/viralio-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/viralio-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
