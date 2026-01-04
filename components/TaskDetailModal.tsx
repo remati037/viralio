@@ -19,12 +19,14 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { useAICredits } from '@/lib/hooks/useAICredits';
 import AIAssistant from './AIAssistant';
 import CategorySelect, { type TaskCategory } from './ui/category-select';
 import DatePicker from './ui/date-picker';
 import Loader from './ui/loader';
 import RichTextEditor from './ui/rich-text-editor';
 import StatusSelect from './ui/status-select';
+import AICreditBadge from './ui/ai-credit-badge';
 
 interface TaskDetailModalProps {
   task: Task;
@@ -66,6 +68,7 @@ export default function TaskDetailModal({
   const [loadingCategories, setLoadingCategories] = useState(true);
   const pendingLinksRef = useRef<Map<string, any>>(new Map());
   const isManagingLinksRef = useRef<boolean>(false);
+  const { credits } = useAICredits(task.user_id);
 
   const isLongForm = editedTask.format === 'Duga Forma';
 
@@ -483,17 +486,27 @@ export default function TaskDetailModal({
                 editedTask.category ? 'justify-between' : 'justify-end'
               } items-center w-full`}
             >
-              {editedTask.category && (
-                <span
-                  className="text-xs font-bold uppercase tracking-wider bg-slate-800 px-2 py-1 rounded border w-fit"
-                  style={{
-                    color: editedTask.category.color,
-                    borderColor: `${editedTask.category.color}40`,
-                  }}
-                >
-                  {editedTask.category.name}
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {editedTask.category && (
+                  <span
+                    className="text-xs font-bold uppercase tracking-wider bg-slate-800 px-2 py-1 rounded border w-fit"
+                    style={{
+                      color: editedTask.category.color,
+                      borderColor: `${editedTask.category.color}40`,
+                    }}
+                  >
+                    {editedTask.category.name}
+                  </span>
+                )}
+                {credits && (
+                  <AICreditBadge
+                    creditsRemaining={credits.credits_remaining}
+                    maxCredits={credits.max_credits}
+                    compact={true}
+                    showWarning={true}
+                  />
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 {!task.is_admin_case_study && (
                   <button
@@ -652,6 +665,8 @@ export default function TaskDetailModal({
                         hook: editedTask.hook || undefined,
                         body: editedTask.body || undefined,
                         cta: editedTask.cta || undefined,
+                        categoryId: editedTask.category_id,
+                        categoryName: editedTask.category?.name,
                       },
                     }}
                   />
@@ -686,6 +701,8 @@ export default function TaskDetailModal({
                           hook: editedTask.hook || undefined,
                           body: editedTask.body || undefined,
                           cta: editedTask.cta || undefined,
+                          categoryId: editedTask.category_id,
+                          categoryName: editedTask.category?.name,
                         },
                       }}
                     />
@@ -711,6 +728,8 @@ export default function TaskDetailModal({
                           hook: editedTask.hook || undefined,
                           body: editedTask.body || undefined,
                           cta: editedTask.cta || undefined,
+                          categoryId: editedTask.category_id,
+                          categoryName: editedTask.category?.name,
                         },
                       }}
                     />
@@ -736,6 +755,8 @@ export default function TaskDetailModal({
                           hook: editedTask.hook || undefined,
                           body: editedTask.body || undefined,
                           cta: editedTask.cta || undefined,
+                          categoryId: editedTask.category_id,
+                          categoryName: editedTask.category?.name,
                         },
                       }}
                     />
@@ -752,6 +773,8 @@ export default function TaskDetailModal({
                     hook: editedTask.hook || undefined,
                     body: editedTask.body || undefined,
                     cta: editedTask.cta || undefined,
+                    categoryId: editedTask.category_id,
+                    categoryName: editedTask.category?.name,
                   }}
                   onGenerateComplete={(field, content) => {
                     if (field === 'title') {

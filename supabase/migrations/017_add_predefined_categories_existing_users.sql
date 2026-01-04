@@ -12,7 +12,6 @@ CROSS JOIN (
     ('Fitness', '#ef4444'),
     ('E-commerce', '#f59e0b'),
     ('Nekretnine', '#10b981'),
-    ('Kočing', '#ec4899'),
     ('Tehnologija', '#06b6d4'),
     ('Zabava', '#f97316')
 ) AS category_data(name, color)

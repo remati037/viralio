@@ -1,10 +1,10 @@
 'use client';
 
+import { useUserId } from '@/components/UserContext';
+import { useAICredits } from '@/lib/hooks/useAICredits';
 import { Copy, Loader2, Send, Sparkles, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { useAICredits } from '@/lib/hooks/useAICredits';
-import { useUserId } from '@/components/UserContext';
 import AICreditBadge from './ui/ai-credit-badge';
 import Skeleton from './ui/skeleton';
 
@@ -21,6 +21,8 @@ interface AIAssistantProps {
     hook?: string;
     body?: string;
     cta?: string;
+    categoryId?: string | null;
+    categoryName?: string;
   };
   onGenerateComplete?: (
     field: 'title' | 'hook' | 'body' | 'cta' | 'all',
@@ -41,7 +43,8 @@ export default function AIAssistant({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const userId = useUserId();
-  const { credits, refreshCredits, hasCredits } = useAICredits(userId);
+  const { credits, refreshCredits, updateCreditsFromResponse, hasCredits } =
+    useAICredits(userId);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -53,6 +56,16 @@ export default function AIAssistant({
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
+
+    // Check if category is selected
+    if (!taskContext?.categoryId) {
+      toast.error('Kategorija je obavezna', {
+        description:
+          'Molimo izaberite kategoriju pre korišćenja AI generatora.',
+        duration: 5000,
+      });
+      return;
+    }
 
     // Check if user has credits
     if (!hasCredits) {
@@ -87,7 +100,7 @@ export default function AIAssistant({
 
       if (!response.ok) {
         const error = await response.json();
-        
+
         // Handle insufficient credits error
         if (error.error_code === 'INSUFFICIENT_CREDITS') {
           refreshCredits();
@@ -96,15 +109,25 @@ export default function AIAssistant({
             `Nedovoljno AI kredita. Preostalo: ${error.credits_remaining}/${error.max_credits}. Krediti se resetuju: ${new Date(error.reset_at).toLocaleDateString('sr-RS')}`
           );
         }
-        
+
         throw new Error(error.error || 'Failed to get AI response');
       }
 
       const data = await response.json();
       const aiMessage = data.message;
 
-      // Refresh credits after successful generation
+      // Update credits directly from API response to avoid race conditions
       if (data.credits) {
+        console.log(
+          'AIAssistant: Updating credits from API response:',
+          data.credits
+        );
+        updateCreditsFromResponse(data.credits);
+      } else {
+        console.warn(
+          'AIAssistant: No credits in API response, falling back to refresh'
+        );
+        // Fallback to refresh if API didn't return credits
         refreshCredits();
       }
 
@@ -152,6 +175,9 @@ export default function AIAssistant({
     }
   };
 
+  const categoryInfo = taskContext?.categoryName
+    ? ` Kategorija: ${taskContext.categoryName}.`
+    : '';
   const quickPrompts = [
     {
       label: 'Generiši naslov',
@@ -159,23 +185,23 @@ export default function AIAssistant({
         taskContext?.format || 'video'
       } u niši ${
         taskContext?.niche || 'marketing'
-      }. Naslov treba da bude kratak, jasan i privlačan.`,
+      }. Naslov treba da bude kratak, jasan i privlačan.${categoryInfo}`,
     },
     {
       label: 'Generiši Hook',
-      prompt: `Kreiraj moćan hook (udicu) za ${
+      prompt: `Kreiraj moćan hook za ${
         taskContext?.format || 'video'
-      } koji će privući pažnju u prve 3 sekunde. Neka bude intrigantan i izazove radoznalost.`,
+      } koji će privući pažnju u prve 3 sekunde. Neka bude intrigantan i izazove radoznalost.${categoryInfo}`,
     },
     {
       label: 'Generiši Body',
       prompt: `Napiši vrednosni deo (body) za ${
         taskContext?.format || 'video'
-      } koji će zadržati gledaoce i pružiti korisne informacije.`,
+      } koji će zadržati gledaoce i pružiti korisne informacije.${categoryInfo}`,
     },
     {
       label: 'Generiši CTA',
-      prompt: `Kreiraj jasan i akcijski poziv na akciju (CTA) koji će motivisati gledaoce da reaguju.`,
+      prompt: `Kreiraj jasan i akcijski poziv na akciju (CTA) koji će motivisati gledaoce da reaguju.${categoryInfo}`,
     },
     {
       label: 'Generiši kompletan sadržaj',
@@ -183,7 +209,7 @@ export default function AIAssistant({
         taskContext?.format || 'video'
       } u niši ${
         taskContext?.niche || 'marketing'
-      }. Uključi naslov, hook, body i CTA. Formatiraj jasno sa oznakama HOOK:, BODY:, CTA:`,
+      }. Uključi naslov, hook, body i CTA. Formatiraj jasno sa oznakama HOOK:, BODY:, CTA:${categoryInfo}`,
     },
   ];
 
@@ -237,12 +263,23 @@ export default function AIAssistant({
               <button
                 key={idx}
                 onClick={() => handleQuickPrompt(qp.prompt)}
-                className="px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors"
+                disabled={!taskContext?.categoryId}
+                className="px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={
+                  !taskContext?.categoryId
+                    ? 'Izaberite kategoriju pre korišćenja'
+                    : undefined
+                }
               >
                 {qp.label}
               </button>
             ))}
           </div>
+          {!taskContext?.categoryId && (
+            <p className="text-xs text-red-400 mt-2">
+              ⚠️ Izaberite kategoriju pre korišćenja AI generatora
+            </p>
+          )}
         </div>
       )}
 
@@ -393,9 +430,20 @@ export default function AIAssistant({
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || isLoading || !hasCredits}
+            disabled={
+              !input.trim() ||
+              isLoading ||
+              !hasCredits ||
+              !taskContext?.categoryId
+            }
             className="px-3 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 h-fit"
-            title={!hasCredits ? 'Nema AI kredita' : 'Pošalji poruku (1 kredit)'}
+            title={
+              !taskContext?.categoryId
+                ? 'Izaberite kategoriju pre korišćenja AI generatora'
+                : !hasCredits
+                  ? 'Nema AI kredita'
+                  : 'Pošalji poruku (1 kredit)'
+            }
           >
             {isLoading ? (
               <Loader2 size={18} className="animate-spin" />
@@ -405,7 +453,8 @@ export default function AIAssistant({
           </button>
         </div>
         <p className="text-xs text-slate-500 mt-2">
-          Pritisnite Enter za slanje ili Shift+Enter za novi red. Svaka poruka koristi 1 AI kredit.
+          Pritisnite Enter za slanje ili Shift+Enter za novi red. Svaka poruka
+          koristi 1 AI kredit.
         </p>
       </div>
     </div>

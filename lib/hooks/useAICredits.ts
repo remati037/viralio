@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState } from 'react'
 
 export interface AICredits {
   credits_used: number
@@ -12,13 +12,65 @@ export interface AICredits {
   year: number
 }
 
+export interface UseAICreditsReturn {
+  credits: AICredits | null
+  loading: boolean
+  error: string | null
+  refreshCredits: () => void
+  updateCreditsFromResponse: (apiCredits: {
+    used: number
+    remaining: number
+    max: number
+    reset_at?: string
+  }) => void
+  hasCredits: boolean
+}
+
 const MAX_CREDITS = 500
 
-export function useAICredits(userId: string | null) {
+export function useAICredits(userId: string | null): UseAICreditsReturn {
   const [credits, setCredits] = useState<AICredits | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
+
+  // Update credits from API response
+  const updateCreditsFromResponse = (apiCredits: {
+    used: number
+    remaining: number
+    max: number
+    reset_at?: string
+  }): void => {
+    if (!userId) {
+      console.warn('updateCreditsFromResponse called without userId');
+      return;
+    }
+
+    console.log('updateCreditsFromResponse called with:', apiCredits);
+    console.log('Current credits state before update:', credits);
+
+    const currentMonth = new Date().getMonth() + 1
+    const currentYear = new Date().getFullYear()
+
+    // Use reset_at from API if provided, otherwise calculate it
+    const resetAt = apiCredits.reset_at || new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString()
+
+    const newCredits: AICredits = {
+      credits_used: apiCredits.used,
+      credits_remaining: apiCredits.remaining,
+      max_credits: apiCredits.max,
+      reset_at: resetAt,
+      month: currentMonth,
+      year: currentYear,
+    };
+
+    console.log('Setting credits to:', newCredits);
+    // Use functional update to ensure we're working with latest state
+    setCredits((prev) => {
+      console.log('setCredits callback - prev:', prev, 'new:', newCredits);
+      return newCredits;
+    });
+  }
 
   const fetchCredits = async () => {
     if (!userId) {
@@ -102,6 +154,7 @@ export function useAICredits(userId: string | null) {
     loading,
     error,
     refreshCredits,
+    updateCreditsFromResponse,
     hasCredits: credits ? credits.credits_remaining > 0 : false,
   }
 }

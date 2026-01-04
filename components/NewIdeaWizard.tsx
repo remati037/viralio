@@ -1,6 +1,7 @@
 'use client';
 
 import { NETWORKS, NICHES } from '@/lib/constants';
+import { useAICredits } from '@/lib/hooks/useAICredits';
 import { fetchWithCacheBust } from '@/lib/sanity/client-client';
 import { getPublishedTemplatesByNicheQuery } from '@/lib/sanity/template-query';
 import { createClient } from '@/lib/supabase/client';
@@ -21,6 +22,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import AIAssistant from './AIAssistant';
+import AICreditBadge from './ui/ai-credit-badge';
 import CategorySelect, { type TaskCategory } from './ui/category-select';
 import DatePicker from './ui/date-picker';
 import Loader from './ui/loader';
@@ -83,6 +85,7 @@ export default function NewIdeaWizard({
   >([]);
   const [linkInput, setLinkInput] = useState('');
   const [isAddingLink, setIsAddingLink] = useState(false);
+  const { credits } = useAICredits(userId);
 
   useEffect(() => {
     if (userId) {
@@ -702,6 +705,8 @@ ZAKLJUČAK: ${template.structure.cta}`;
                     hook: formData.hook,
                     body: formData.body,
                     cta: formData.cta,
+                    categoryId: selectedCategoryId,
+                    categoryName: categories.find(c => c.id === selectedCategoryId)?.name,
                   },
                 }}
               />
@@ -749,6 +754,8 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       hook: formData.hook,
                       body: formData.body,
                       cta: formData.cta,
+                      categoryId: selectedCategoryId,
+                      categoryName: categories.find(c => c.id === selectedCategoryId)?.name,
                     },
                   }}
                 />
@@ -779,6 +786,8 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       hook: formData.hook,
                       body: formData.body,
                       cta: formData.cta,
+                      categoryId: selectedCategoryId,
+                      categoryName: categories.find(c => c.id === selectedCategoryId)?.name,
                     },
                   }}
                 />
@@ -809,6 +818,8 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       hook: formData.hook,
                       body: formData.body,
                       cta: formData.cta,
+                      categoryId: selectedCategoryId,
+                      categoryName: categories.find(c => c.id === selectedCategoryId)?.name,
                     },
                   }}
                 />
@@ -958,6 +969,8 @@ ZAKLJUČAK: ${template.structure.cta}`;
                 hook: formData.hook || undefined,
                 body: formData.body || undefined,
                 cta: formData.cta || undefined,
+                categoryId: selectedCategoryId,
+                categoryName: categories.find(c => c.id === selectedCategoryId)?.name,
               }}
               onGenerateComplete={(field, content) => {
                 if (field === 'title') {
@@ -1083,10 +1096,20 @@ ZAKLJUČAK: ${template.structure.cta}`;
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl rounded-lg shadow-2xl flex flex-col max-h-[95vh] h-auto">
         <div className="flex items-center justify-between p-4 border-b border-slate-800 shrink-0">
-          <h3 className="text-md font-bold text-white flex items-center gap-2">
-            <Plus className="text-emerald-400 w-4 h-4" />
-            Nova ideja
-          </h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-md font-bold text-white flex items-center gap-2">
+              <Plus className="text-emerald-400 w-4 h-4" />
+              Nova ideja
+            </h3>
+            {credits && (
+              <AICreditBadge
+                creditsRemaining={credits.credits_remaining}
+                maxCredits={credits.max_credits}
+                compact={true}
+                showWarning={true}
+              />
+            )}
+          </div>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-white transition-colors"

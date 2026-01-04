@@ -31,6 +31,8 @@ export interface RichTextEditorProps {
       hook?: string;
       body?: string;
       cta?: string;
+      categoryId?: string | null;
+      categoryName?: string;
     };
   };
 }

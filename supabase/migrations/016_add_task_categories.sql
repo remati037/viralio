@@ -59,7 +59,6 @@ BEGIN
     (NEW.id, 'Fitness', '#ef4444'),
     (NEW.id, 'E-commerce', '#f59e0b'),
     (NEW.id, 'Nekretnine', '#10b981'),
-    (NEW.id, 'Kočing', '#ec4899'),
     (NEW.id, 'Tehnologija', '#06b6d4'),
     (NEW.id, 'Zabava', '#f97316')
   ON CONFLICT (user_id, name) DO NOTHING;
