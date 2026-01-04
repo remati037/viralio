@@ -1,7 +1,7 @@
+import { formatHooksForAI, getAllHooks } from '@/lib/data/viral-hooks'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
-import { getAllHooks, formatHooksForAI } from '@/lib/data/viral-hooks'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -83,10 +83,10 @@ export async function POST(request: NextRequest) {
 
     // Check if user is asking for hook generation
     // Check all messages to be more comprehensive
-    const allMessagesText = messages.map(m => m.content?.toLowerCase() || '').join(' ')
-    const isGeneratingHook = 
-      allMessagesText.includes('hook') || 
-      allMessagesText.includes('udica') || 
+    const allMessagesText = messages.map((m: { content?: string }) => m.content?.toLowerCase() || '').join(' ')
+    const isGeneratingHook =
+      allMessagesText.includes('hook') ||
+      allMessagesText.includes('udica') ||
       allMessagesText.includes('udicu') ||
       allMessagesText.includes('generiši hook') ||
       allMessagesText.includes('kreiraj hook') ||
