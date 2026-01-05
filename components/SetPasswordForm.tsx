@@ -18,19 +18,24 @@ export default function SetPasswordForm() {
   useEffect(() => {
     setMounted(true);
     
-    // Check if user is already authenticated (from hash tokens)
-    // If so, they just need to set password
+    // Check if user is already authenticated but shouldn't be on this page
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session && !searchParams.get('code') && !searchParams.get('token')) {
-        // User is already authenticated, they just need to set password
-        // This happens when they come from hash-based token redirect
-        console.log('User already authenticated, ready to set password');
+      const code = searchParams.get('code');
+      const token = searchParams.get('token');
+      const accessToken = searchParams.get('access_token');
+      const type = searchParams.get('type');
+      
+      // If user is logged in but has no invitation tokens, redirect them
+      // (they shouldn't be setting password if they're already set up)
+      if (session && !code && !token && !accessToken && type !== 'invite') {
+        // User is logged in but not via invitation - redirect to home
+        router.push('/');
       }
     };
     
     checkSession();
-  }, [supabase, searchParams]);
+  }, [supabase, searchParams, router]);
 
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,15 +60,52 @@ export default function SetPasswordForm() {
       const token = searchParams.get('token');
       const tokenHash = searchParams.get('token_hash');
       const type = searchParams.get('type');
+      const accessToken = searchParams.get('access_token');
+      const refreshToken = searchParams.get('refresh_token');
 
       // Use token or token_hash (Supabase uses both)
       const authToken = token || tokenHash;
 
-      // Check if user is already authenticated (from hash tokens)
+      // Check if user is already authenticated
       const { data: { session: existingSession } } = await supabase.auth.getSession();
-      
+
+      // If we have access_token from hash redirect (invitation flow)
+      // Set the session first, then update password
+      if (accessToken && refreshToken && type === 'invite' && !existingSession) {
+        // Set session from the tokens
+        const { data: { session }, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (sessionError) {
+          throw new Error('Neispravan token. Molimo koristite link iz emaila.');
+        }
+
+        if (!session) {
+          throw new Error('Neuspešno kreiranje sesije. Pokušajte ponovo.');
+        }
+
+        // Now update the password
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: password,
+        });
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        toast.success('Lozinka uspešno postavljena!', {
+          description: 'Preusmeravanje...',
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        window.location.href = '/';
+        return;
+      }
+
       // If user is already authenticated and no code/token, they just need to set password
-      if (existingSession && !code && !authToken) {
+      if (existingSession && !code && !authToken && !accessToken) {
         // User is already authenticated, just update password
         const { error: updateError } = await supabase.auth.updateUser({
           password: password,
@@ -82,7 +124,7 @@ export default function SetPasswordForm() {
         return;
       }
 
-      if (!code && !authToken && !existingSession) {
+      if (!code && !authToken && !existingSession && !accessToken) {
         throw new Error('Nedostaje token za potvrdu. Molimo koristite link iz emaila.');
       }
 

@@ -1,7 +1,5 @@
 import SetPasswordForm from '@/components/SetPasswordForm';
-import { getUser } from '@/lib/utils/auth';
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
   title: 'Postavite lozinku',
@@ -13,13 +11,8 @@ export const metadata: Metadata = {
 };
 
 export default async function SetPasswordPage() {
-  const user = await getUser();
-
-  // If user is already logged in and has a password, redirect to home
-  // (they shouldn't be on this page if they're already set up)
-  if (user) {
-    redirect('/');
-  }
+  // Don't redirect authenticated users - they might be here to set password via invitation
+  // The SetPasswordForm component will handle the logic
 
   return (
     <div className="h-screen bg-slate-950 flex items-center justify-center p-4">

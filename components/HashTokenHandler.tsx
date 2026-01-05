@@ -32,7 +32,18 @@ export default function HashTokenHandler() {
       const token = hashParams.get('token');
       const tokenHash = hashParams.get('token_hash');
 
-      // If we have an access_token, Supabase already authenticated the user
+      // If this is an invitation, don't set session yet - user needs to set password first
+      if (type === 'invite' && accessToken) {
+        // For invitations, pass tokens to set-password without setting session
+        // Store tokens temporarily so set-password can use them
+        const redirectUrl = `/auth/set-password?access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(hashParams.get('refresh_token') || '')}&type=invite`;
+        window.history.replaceState(null, '', window.location.pathname);
+        router.push(redirectUrl);
+        setHandled(true);
+        return;
+      }
+
+      // If we have an access_token (and it's not an invite), Supabase already authenticated the user
       if (accessToken) {
         try {
           // Set the session from the hash tokens
@@ -49,18 +60,7 @@ export default function HashTokenHandler() {
             return;
           }
 
-          // If this is an invitation and user needs to set password
-          if (type === 'invite' && session) {
-            // Check if user has a password set by trying to get user
-            // If they don't have a password, redirect to set-password
-            // For now, if type is invite, always redirect to set-password
-            window.history.replaceState(null, '', window.location.pathname);
-            router.push('/auth/set-password');
-            setHandled(true);
-            return;
-          }
-
-          // If session was set successfully and it's not an invite, redirect to home
+          // If session was set successfully, redirect to home
           if (session) {
             window.history.replaceState(null, '', window.location.pathname);
             router.push('/');
