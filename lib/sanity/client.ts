@@ -6,10 +6,12 @@ import imageUrlBuilder from '@sanity/image-url'
 const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
 const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || 'production'
 const apiToken = process.env.SANITY_API_TOKEN
+const nodeEnv = process.env.NODE_ENV as string | undefined
+const isProduction = nodeEnv === 'production'
 
 if (!projectId) {
   const errorMessage = 'NEXT_PUBLIC_SANITY_PROJECT_ID is not set. Please add it to your environment variables.'
-  if (process.env.NODE_ENV === 'production') {
+  if (isProduction) {
     console.error('❌ Sanity Configuration Error:', errorMessage)
   } else {
     throw new Error(errorMessage)
@@ -19,7 +21,7 @@ if (!projectId) {
 export const sanityClient = createClient({
   projectId: projectId || '',
   dataset,
-  useCdn: process.env.NODE_ENV === 'production',
+  useCdn: isProduction,
   apiVersion: '2024-01-01',
   token: apiToken,
   // Add request timeout and retry configuration
@@ -28,12 +30,12 @@ export const sanityClient = createClient({
 })
 
 // Log configuration in development
-if (process.env.NODE_ENV === 'development') {
+if (nodeEnv === 'development') {
   console.log('🔧 Sanity Server Client Config:', {
     projectId,
     dataset,
     hasToken: !!apiToken,
-    useCdn: process.env.NODE_ENV === 'production',
+    useCdn: isProduction,
   })
 }
 
