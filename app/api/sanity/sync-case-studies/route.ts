@@ -49,7 +49,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch case studies from Sanity
-    const sanityCaseStudies = await sanityClient.fetch(caseStudyQuery)
+    let sanityCaseStudies
+    try {
+      sanityCaseStudies = await sanityClient.fetch(caseStudyQuery)
+    } catch (error: any) {
+      console.error('Sanity fetch error:', error)
+      return NextResponse.json(
+        { 
+          error: 'Failed to fetch case studies from Sanity', 
+          details: error.message,
+          hint: 'Check that NEXT_PUBLIC_SANITY_PROJECT_ID and SANITY_API_TOKEN are set in Vercel environment variables'
+        },
+        { status: 500 }
+      )
+    }
 
     if (!sanityCaseStudies || sanityCaseStudies.length === 0) {
       return NextResponse.json({

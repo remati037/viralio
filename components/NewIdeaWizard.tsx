@@ -166,6 +166,17 @@ export default function NewIdeaWizard({
       setSanityTemplates(templates || []);
     } catch (error: any) {
       console.error('Error fetching templates:', error);
+      
+      // Show user-friendly error message for CORS issues
+      if (error.name === 'SanityCORSError' || error.message?.includes('CORS')) {
+        toast.error(
+          'Sanity CORS Error: Your domain needs to be added to Sanity CORS origins. Check console for instructions.',
+          { duration: 10000 }
+        )
+      } else {
+        toast.error('Failed to fetch templates from Sanity. Please try again later.')
+      }
+      
       setSanityTemplates([]);
     } finally {
       setLoadingTemplates(false);

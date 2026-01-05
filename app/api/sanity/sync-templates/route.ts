@@ -26,7 +26,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch templates from Sanity
-    const sanityTemplates = await sanityClient.fetch(templateQuery)
+    let sanityTemplates
+    try {
+      sanityTemplates = await sanityClient.fetch(templateQuery)
+    } catch (error: any) {
+      console.error('Sanity fetch error:', error)
+      return NextResponse.json(
+        { 
+          error: 'Failed to fetch templates from Sanity', 
+          details: error.message,
+          hint: 'Check that NEXT_PUBLIC_SANITY_PROJECT_ID and SANITY_API_TOKEN are set in Vercel environment variables'
+        },
+        { status: 500 }
+      )
+    }
 
     if (!sanityTemplates || sanityTemplates.length === 0) {
       return NextResponse.json({
