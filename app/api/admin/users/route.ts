@@ -120,23 +120,21 @@ export async function POST(request: NextRequest) {
         authData = { user: inviteData.user }
         userId = inviteData.user.id
         
-        // inviteUserByEmail sends an invitation email automatically
-        // The user will set their password when they click the invitation link
-        // We can optionally set a temporary password here
-        if (password) {
-          try {
-            // Set password after invitation (user can change it when they confirm)
-            await adminClient.auth.admin.updateUserById(userId, {
-              password: password,
-            })
-            console.log('Password set for invited user, confirmation email should be sent automatically')
-          } catch (pwdError: any) {
-            console.error('Error setting password for invited user:', pwdError)
-            // Don't fail - password will be set when user confirms email via invitation link
-          }
+        // Verify user was created successfully
+        const { data: verifyUser, error: verifyError } = await adminClient.auth.admin.getUserById(userId)
+        if (verifyError || !verifyUser) {
+          console.error('User verification failed after creation:', verifyError)
+          return NextResponse.json(
+            { error: 'User was created but verification failed. Please try again.' },
+            { status: 500 }
+          )
         }
         
-        console.log('User invited successfully, confirmation email should be sent automatically')
+        // inviteUserByEmail sends an invitation email automatically
+        // The user will set their password when they click the invitation link
+        // For invitations, we should NOT set a password - let the user set it via the link
+        // Setting a password here can cause issues with the invitation flow
+        console.log('User invited successfully - they will set password when clicking invitation link')
       }
     } catch (inviteErr: any) {
       // Fallback: Use createUser if inviteUserByEmail fails
