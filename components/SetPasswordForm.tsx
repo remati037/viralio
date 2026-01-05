@@ -159,7 +159,7 @@ export default function SetPasswordForm() {
           // Try to refresh session
           const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
           
-          if (refreshedSession?.session) {
+          if (refreshedSession) {
             toast.success('Lozinka uspešno postavljena!', {
               description: 'Preusmeravanje...',
             });
