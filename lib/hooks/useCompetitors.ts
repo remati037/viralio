@@ -44,9 +44,11 @@ export function useCompetitors(userId: string | null) {
     if (!userId) return { data: null, error: 'User not authenticated' }
 
     try {
+      // Exclude 'feed' property as it's not a database column
+      const { feed, ...competitorData } = competitor
       const { data, error: insertError } = await supabase
         .from('competitors')
-        .insert({ ...competitor, user_id: userId })
+        .insert({ ...competitorData, user_id: userId })
         .select()
         .single()
 
@@ -62,9 +64,11 @@ export function useCompetitors(userId: string | null) {
 
   const updateCompetitor = async (competitorId: string, updates: Partial<Competitor>) => {
     try {
+      // Exclude 'feed' property as it's not a database column
+      const { feed, ...updateData } = updates
       const { data, error: updateError } = await supabase
         .from('competitors')
-        .update(updates)
+        .update(updateData)
         .eq('id', competitorId)
         .select()
         .single()
