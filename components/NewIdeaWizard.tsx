@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   Edit3,
   FileText,
+  Info,
   Link,
   Plus,
   Trash2,
@@ -561,6 +562,15 @@ ZAKLJUČAK: ${template.structure.cta}`;
     if (step === 'script_edit') {
       const isLongForm = formData.format === 'Duga Forma';
 
+      // Check which required fields are missing for AI generation
+      const missingFields = [];
+      if (!formData.title?.trim()) missingFields.push('Naslov');
+      if (!selectedCategoryId) missingFields.push('Kategorija');
+      if (!formData.tone) missingFields.push('Ton / Stil');
+      if (!formData.targetAudience?.trim())
+        missingFields.push('Ciljna Publika');
+      const hasAllRequiredFields = missingFields.length === 0;
+
       return (
         <div className="p-4 space-y-4 flex-1 flex flex-col">
           <div className="flex items-center justify-between mb-2">
@@ -586,6 +596,32 @@ ZAKLJUČAK: ${template.structure.cta}`;
                 : 'Izaberi drugi šablon'}
             </button>
           </div>
+
+          {/* AI Generator Requirements Notification */}
+          {!hasAllRequiredFields && (
+            <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-4 space-y-2">
+              <div className="flex items-start gap-3">
+                <Info className="text-amber-400 w-5 h-5 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold text-amber-300 mb-1">
+                    Potrebno za AI generator
+                  </h4>
+                  <p className="text-xs text-amber-200/80 mb-2">
+                    Da biste koristili AI generator, molimo popunite sledeća
+                    obavezna polja:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-xs text-amber-200/80">
+                    {missingFields.map((field) => (
+                      <li key={field} className="flex items-center gap-2">
+                        <span className="text-amber-400">•</span>
+                        <span>{field}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">

@@ -11,6 +11,7 @@ import {
   Edit3,
   Eye,
   FileText,
+  Info,
   Link,
   Trash2,
   Trello,
@@ -671,6 +672,43 @@ export default function TaskDetailModal({
                   className="w-full bg-slate-700 border border-slate-600 rounded-md py-2 px-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 />
               </div>
+
+              {/* AI Generator Requirements Notification */}
+              {(() => {
+                const missingFields = [];
+                if (!editedTask.title?.trim()) missingFields.push('Naslov');
+                if (!editedTask.category_id) missingFields.push('Kategorija');
+                if (!tone) missingFields.push('Ton / Stil');
+                if (!targetAudience?.trim()) missingFields.push('Ciljna Publika');
+                const hasAllRequiredFields = missingFields.length === 0;
+
+                if (!hasAllRequiredFields) {
+                  return (
+                    <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-4 space-y-2">
+                      <div className="flex items-start gap-3">
+                        <Info className="text-amber-400 w-5 h-5 mt-0.5 shrink-0" />
+                        <div className="flex-1">
+                          <h4 className="text-sm font-semibold text-amber-300 mb-1">
+                            Potrebno za AI generator
+                          </h4>
+                          <p className="text-xs text-amber-200/80 mb-2">
+                            Da biste koristili AI generator, molimo popunite sledeća obavezna polja:
+                          </p>
+                          <ul className="list-disc list-inside space-y-1 text-xs text-amber-200/80">
+                            {missingFields.map((field) => (
+                              <li key={field} className="flex items-center gap-2">
+                                <span className="text-amber-400">•</span>
+                                <span>{field}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
 
               {isLongForm ? (
                 <div className="flex-1 flex flex-col min-h-[300px]">
