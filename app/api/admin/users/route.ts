@@ -87,13 +87,11 @@ export async function POST(request: NextRequest) {
     // This is the recommended way to create users that need email confirmation
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 
                    process.env.NEXT_PUBLIC_APP_URL ||
-                   (process.env.NEXT_PUBLIC_SUPABASE_URL ? 
-                     `https://${process.env.NEXT_PUBLIC_SUPABASE_URL.split('//')[1]?.split('.')[0] || 'localhost'}` : 
-                     'http://localhost:3000')
+                   (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
     
-    // Redirect to login page - HashTokenHandler will detect hash tokens and redirect appropriately
-    // Supabase may redirect to /login with hash tokens instead of /auth/callback
-    const redirectTo = `${siteUrl}/login`
+    // Redirect to auth callback - this will handle the invite flow and redirect to set-password
+    // The callback route will exchange the code for a session and redirect to /auth/set-password
+    const redirectTo = `${siteUrl}/auth/callback`
 
     let authData
     let userId

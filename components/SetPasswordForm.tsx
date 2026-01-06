@@ -9,6 +9,7 @@ export default function SetPasswordForm() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
@@ -17,27 +18,200 @@ export default function SetPasswordForm() {
 
   useEffect(() => {
     setMounted(true);
+    initializeAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    // Check if user is already authenticated but shouldn't be on this page
-    const checkSession = async () => {
+  const initializeAuth = async () => {
+    try {
+      const code = searchParams.get('code');
+      const token = searchParams.get('token');
+      const tokenHash = searchParams.get('token_hash');
+      const accessToken = searchParams.get('access_token');
+      const refreshToken = searchParams.get('refresh_token');
+      const type = searchParams.get('type');
+      const errorParam = searchParams.get('error');
+
+      // Show error from URL if present
+      if (errorParam) {
+        setError(decodeURIComponent(errorParam));
+      }
+
+      // Check for hash tokens in URL (Supabase sometimes uses hash instead of query params)
+      if (typeof window !== 'undefined') {
+        const hash = window.location.hash;
+        if (hash && hash.length > 1) {
+          const hashParams = new URLSearchParams(hash.substring(1));
+          const hashAccessToken = hashParams.get('access_token');
+          const hashRefreshToken = hashParams.get('refresh_token');
+          const hashType = hashParams.get('type');
+
+          if (hashAccessToken && hashRefreshToken) {
+            // Set session from hash tokens
+            const {
+              data: { session },
+              error: sessionError,
+            } = await supabase.auth.setSession({
+              access_token: hashAccessToken,
+              refresh_token: hashRefreshToken,
+            });
+
+            if (sessionError) {
+              setError(`Neispravan token: ${sessionError.message}`);
+              setInitializing(false);
+              return;
+            }
+
+            if (session && (hashType === 'invite' || hashType === 'recovery')) {
+              // Clear hash and continue - user can now set password
+              window.history.replaceState(
+                null,
+                '',
+                window.location.pathname + window.location.search
+              );
+              setInitializing(false);
+              return;
+            } else if (session) {
+              // Already authenticated, redirect
+              window.history.replaceState(null, '', window.location.pathname);
+              router.push('/planner');
+              return;
+            }
+          }
+        }
+      }
+
+      // Handle PKCE code flow
+      if (code) {
+        const { data: sessionData, error: exchangeError } =
+          await supabase.auth.exchangeCodeForSession(code);
+
+        if (exchangeError) {
+          setError(`Neispravan ili istekao link: ${exchangeError.message}`);
+          setInitializing(false);
+          return;
+        }
+
+        // Verify session exists
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) {
+          setError('Neuspešno kreiranje sesije. Molimo zatražite novi link.');
+          setInitializing(false);
+          return;
+        }
+
+        // If type is invite/recovery, user needs to set password
+        if (type === 'invite' || type === 'recovery') {
+          setInitializing(false);
+          return;
+        }
+
+        // Otherwise, redirect to dashboard
+        router.push('/planner');
+        return;
+      }
+
+      // Handle token-based flow (legacy)
+      const authToken = token || tokenHash;
+      if (authToken) {
+        // Try to verify the token
+        const typesToTry: Array<'invite' | 'recovery' | 'signup' | 'email'> =
+          type
+            ? [type as 'invite' | 'recovery' | 'signup' | 'email']
+            : ['invite', 'recovery', 'signup', 'email'];
+
+        let verified = false;
+        let lastError: any = null;
+
+        for (const tryType of typesToTry) {
+          try {
+            const { error: verifyError } = await supabase.auth.verifyOtp({
+              token_hash: authToken,
+              type: tryType,
+            });
+
+            if (!verifyError) {
+              verified = true;
+              break;
+            } else {
+              lastError = verifyError;
+            }
+          } catch (err: any) {
+            lastError = err;
+          }
+        }
+
+        if (!verified) {
+          setError(
+            lastError?.message ||
+              'Neispravan ili istekao token. Molimo zatražite novi link.'
+          );
+          setInitializing(false);
+          return;
+        }
+
+        // Check if session exists after verification
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) {
+          setError('Neuspešno kreiranje sesije. Molimo zatražite novi link.');
+          setInitializing(false);
+          return;
+        }
+
+        setInitializing(false);
+        return;
+      }
+
+      // Handle access_token + refresh_token in query params (from hash redirect)
+      if (accessToken && refreshToken) {
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (sessionError || !session) {
+          setError('Neispravan token. Molimo koristite link iz emaila.');
+          setInitializing(false);
+          return;
+        }
+
+        setInitializing(false);
+        return;
+      }
+
+      // Check if user already has a session (might have been set elsewhere)
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      const code = searchParams.get('code');
-      const token = searchParams.get('token');
-      const accessToken = searchParams.get('access_token');
-      const type = searchParams.get('type');
+      if (session) {
+        // If no code/token but has session, check if they need to set password
+        // This is a fallback - normally they should have a code/token
+        if (type === 'invite' || type === 'recovery') {
+          setInitializing(false);
+          return;
+        }
 
-      // If user is logged in but has no invitation tokens, redirect them
-      // (they shouldn't be setting password if they're already set up)
-      if (session && !code && !token && !accessToken && type !== 'invite') {
-        // User is logged in but not via invitation - redirect to home
-        router.push('/');
+        // Otherwise redirect
+        router.push('/planner');
+        return;
       }
-    };
 
-    checkSession();
-  }, [supabase, searchParams, router]);
+      // No valid authentication method found
+      setError('Nedostaje token za potvrdu. Molimo koristite link iz emaila.');
+      setInitializing(false);
+    } catch (err: any) {
+      console.error('Error initializing auth:', err);
+      setError(err.message || 'Došlo je do greške. Pokušajte ponovo.');
+      setInitializing(false);
+    }
+  };
 
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,279 +232,52 @@ export default function SetPasswordForm() {
     }
 
     try {
-      const code = searchParams.get('code');
-      const token = searchParams.get('token');
-      const tokenHash = searchParams.get('token_hash');
-      const type = searchParams.get('type');
-      const accessToken = searchParams.get('access_token');
-      const refreshToken = searchParams.get('refresh_token');
-
-      // Use token or token_hash (Supabase uses both)
-      const authToken = token || tokenHash;
-
-      // Check if user is already authenticated
+      // Verify we have a valid session
       const {
-        data: { session: existingSession },
+        data: { session },
+        error: sessionError,
       } = await supabase.auth.getSession();
 
-      console.log('SetPasswordForm - Current state:', {
-        hasCode: !!code,
-        hasToken: !!token,
-        hasTokenHash: !!tokenHash,
-        hasAccessToken: !!accessToken,
-        hasRefreshToken: !!refreshToken,
-        type,
-        hasExistingSession: !!existingSession,
-        existingSessionUserId: existingSession?.user?.id,
+      if (sessionError || !session) {
+        throw new Error('Nedostaje sesija. Molimo koristite link iz emaila.');
+      }
+
+      // Update the password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: password,
       });
 
-      // For invitations with access_token, set session and update password
-      // When using inviteUserByEmail, Supabase creates the user immediately
-      // The access_token is valid only if the user exists, so we trust it
-      if (accessToken && refreshToken && type === 'invite') {
-        // If not already authenticated, set session from tokens
-        if (!existingSession) {
-          const {
-            data: { session },
-            error: sessionError,
-          } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-
-          if (sessionError) {
-            console.error('Session error:', sessionError);
-            throw new Error(
-              `Neispravan token: ${sessionError.message}. Molimo koristite link iz emaila.`
-            );
-          }
-
-          if (!session) {
-            throw new Error('Neuspešno kreiranje sesije. Pokušajte ponovo.');
-          }
-        }
-
-        // Update the password - user exists because inviteUserByEmail created them
-        const { error: updateError } = await supabase.auth.updateUser({
-          password: password,
-        });
-
-        if (updateError) {
-          console.error('Password update error:', updateError);
-          throw updateError;
-        }
-
-        toast.success('Lozinka uspešno postavljena!', {
-          description: 'Preusmeravanje...',
-        });
-
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        window.location.href = '/';
-        return;
+      if (updateError) {
+        throw updateError;
       }
 
-      // If user is already authenticated (from hash tokens), just update password
-      if (existingSession && type === 'invite') {
-        console.log(
-          'User already authenticated via invitation, updating password'
-        );
+      // Verify session is still valid after password update
+      const {
+        data: { session: updatedSession },
+      } = await supabase.auth.getSession();
 
-        const { error: updateError } = await supabase.auth.updateUser({
-          password: password,
-        });
+      if (!updatedSession) {
+        // Try to refresh session
+        const {
+          data: { session: refreshedSession },
+        } = await supabase.auth.refreshSession();
 
-        if (updateError) {
-          console.error('Password update error:', updateError);
-          throw updateError;
-        }
-
-        toast.success('Lozinka uspešno postavljena!', {
-          description: 'Preusmeravanje...',
-        });
-
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        window.location.href = '/';
-        return;
-      }
-
-      // If user is already authenticated and no code/token/accessToken, they just need to set password
-      // This handles cases where session was set from hash tokens before redirect
-      if (
-        existingSession &&
-        !code &&
-        !authToken &&
-        (!accessToken || type !== 'invite')
-      ) {
-        // User is already authenticated, just update password
-        const { error: updateError } = await supabase.auth.updateUser({
-          password: password,
-        });
-
-        if (updateError) {
-          console.error('Password update error:', updateError);
-          throw updateError;
-        }
-
-        toast.success('Lozinka uspešno postavljena!', {
-          description: 'Preusmeravanje...',
-        });
-
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        window.location.href = '/';
-        return;
-      }
-
-      if (!code && !authToken && !existingSession && !accessToken) {
-        throw new Error(
-          'Nedostaje token za potvrdu. Molimo koristite link iz emaila.'
-        );
-      }
-
-      // If we have a code, exchange it first to get a session
-      // Then update the password
-      if (code) {
-        // Exchange code for session (this verifies the invitation and creates a temporary session)
-        const { data: sessionData, error: exchangeError } =
-          await supabase.auth.exchangeCodeForSession(code);
-
-        if (exchangeError) {
-          // If exchange fails, try alternative approach
-          console.error('Error exchanging code:', exchangeError);
+        if (!refreshedSession) {
           throw new Error(
-            'Neispravan ili istekao link. Molimo zatražite novi link za postavljanje lozinke.'
+            'Neuspešno kreiranje sesije. Molimo pokušajte ponovo.'
           );
         }
-
-        // Now update the password (this also confirms the email)
-        const { error: updateError } = await supabase.auth.updateUser({
-          password: password,
-        });
-
-        if (updateError) {
-          throw updateError;
-        }
-
-        // Verify session was created and is still valid
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (session) {
-          toast.success('Lozinka uspešno postavljena!', {
-            description: 'Preusmeravanje...',
-          });
-
-          // Wait for cookies to be set
-          await new Promise((resolve) => setTimeout(resolve, 400));
-
-          // Redirect to home
-          window.location.href = '/';
-        } else {
-          // Session might have expired, try to refresh
-          const {
-            data: { session: refreshedSession },
-          } = await supabase.auth.refreshSession();
-
-          if (refreshedSession) {
-            toast.success('Lozinka uspešno postavljena!', {
-              description: 'Preusmeravanje...',
-            });
-            await new Promise((resolve) => setTimeout(resolve, 400));
-            window.location.href = '/';
-          } else {
-            throw new Error(
-              'Neuspešno kreiranje sesije. Molimo pokušajte ponovo sa novim linkom.'
-            );
-          }
-        }
-      } else if (authToken) {
-        // Token-based flow using verifyOtp
-        // Try different types if type is not provided
-        const typesToTry: Array<'invite' | 'recovery' | 'signup' | 'email'> =
-          type
-            ? [type as 'invite' | 'recovery' | 'signup' | 'email']
-            : ['invite', 'signup', 'email', 'recovery'];
-
-        let verified = false;
-        let lastError: any = null;
-
-        // Try each type until one works
-        for (const tryType of typesToTry) {
-          try {
-            const { error: verifyError } = await supabase.auth.verifyOtp({
-              token_hash: authToken,
-              type: tryType,
-            });
-
-            if (!verifyError) {
-              verified = true;
-              console.log(`Successfully verified token with type: ${tryType}`);
-              break;
-            } else {
-              lastError = verifyError;
-              console.log(
-                `Failed to verify with type ${tryType}:`,
-                verifyError.message
-              );
-            }
-          } catch (err: any) {
-            lastError = err;
-            console.log(`Error verifying with type ${tryType}:`, err.message);
-          }
-        }
-
-        if (!verified) {
-          throw (
-            lastError ||
-            new Error(
-              'Neispravan ili istekao token. Molimo zatražite novi link.'
-            )
-          );
-        }
-
-        // Update password
-        const { error: updateError } = await supabase.auth.updateUser({
-          password: password,
-        });
-
-        if (updateError) {
-          throw updateError;
-        }
-
-        // Verify we have a session
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (session) {
-          toast.success('Lozinka uspešno postavljena!', {
-            description: 'Preusmeravanje...',
-          });
-
-          // Wait for cookies to be set
-          await new Promise((resolve) => setTimeout(resolve, 400));
-
-          // Redirect to home
-          window.location.href = '/';
-        } else {
-          // Try to refresh session
-          const {
-            data: { session: refreshedSession },
-          } = await supabase.auth.refreshSession();
-
-          if (refreshedSession) {
-            toast.success('Lozinka uspešno postavljena!', {
-              description: 'Preusmeravanje...',
-            });
-            await new Promise((resolve) => setTimeout(resolve, 400));
-            window.location.href = '/';
-          } else {
-            throw new Error('Neuspešno kreiranje sesije. Pokušajte ponovo.');
-          }
-        }
-      } else {
-        throw new Error('Neispravan token. Molimo koristite link iz emaila.');
       }
+
+      toast.success('Lozinka uspešno postavljena!', {
+        description: 'Preusmeravanje...',
+      });
+
+      // Wait a moment for cookies to be set
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Redirect to dashboard
+      window.location.href = '/planner';
     } catch (err: any) {
       setError(err.message || 'Došlo je do greške. Pokušajte ponovo.');
       toast.error('Greška', {
@@ -341,7 +288,7 @@ export default function SetPasswordForm() {
     }
   };
 
-  if (!mounted) {
+  if (!mounted || initializing) {
     return (
       <>
         <div className="mb-8 text-center">
@@ -353,6 +300,29 @@ export default function SetPasswordForm() {
           <div className="h-12 bg-slate-800 rounded-lg animate-pulse"></div>
           <div className="h-12 bg-slate-800 rounded-lg animate-pulse"></div>
         </div>
+      </>
+    );
+  }
+
+  // If there's an error and no way to authenticate, show error state
+  if (
+    error &&
+    !searchParams.get('code') &&
+    !searchParams.get('token') &&
+    !searchParams.get('access_token')
+  ) {
+    return (
+      <>
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-white mb-2">Viralio</h1>
+          <p className="text-slate-400">Postavite lozinku</p>
+        </div>
+        <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-lg text-sm">
+          {error}
+        </div>
+        <p className="text-center text-slate-400 text-sm mt-4">
+          Molimo koristite link iz emaila za postavljanje lozinke.
+        </p>
       </>
     );
   }

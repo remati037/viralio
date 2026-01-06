@@ -7,65 +7,24 @@ export async function GET(request: Request) {
   const type = requestUrl.searchParams.get('type')
   const token = requestUrl.searchParams.get('token')
   const tokenHash = requestUrl.searchParams.get('token_hash')
-  const next = requestUrl.searchParams.get('next') || '/'
+  const next = requestUrl.searchParams.get('next') || '/planner'
   const origin = requestUrl.origin
 
-  // Log all parameters for debugging
-  console.log('Auth callback received:', {
-    code: code ? 'present' : 'missing',
-    type,
-    token: token ? 'present' : 'missing',
-    tokenHash: tokenHash ? 'present' : 'missing',
-    allParams: Object.fromEntries(requestUrl.searchParams.entries())
-  })
-
-  // Handle token-based flows (Supabase sometimes uses token instead of code)
-  const authToken = token || tokenHash
-
-  // Check if this is an invitation (user needs to set password)
-  // Supabase invitation emails include type=invite or we can check if user has no password
-  if (code && (type === 'invite' || type === 'recovery')) {
-    // Redirect to set-password page with the code
-    return NextResponse.redirect(
-      new URL(`/auth/set-password?code=${code}&type=${type}`, origin)
-    )
-  }
-
-  // Handle token-based invitations (common for email confirmations/invitations)
-  if (authToken && (type === 'invite' || type === 'recovery' || type === 'signup')) {
-    return NextResponse.redirect(
-      new URL(`/auth/set-password?token=${authToken}&type=${type}`, origin)
-    )
-  }
-
-  // If we have a token but no type, it might still be an invitation
-  // Redirect to set-password to let it handle the verification
-  if (authToken && !code) {
-    // Try to verify the token first to determine the type
-    const supabase = await createClient()
-
-    // For invitations, we'll redirect to set-password which will handle verification
-    // This is safer than trying to guess the type here
-    return NextResponse.redirect(
-      new URL(`/auth/set-password?token=${authToken}${type ? `&type=${type}` : ''}`, origin)
-    )
-  }
-
-  // Handle code-based flow (OAuth/PKCE flow)
+  // Handle PKCE code-based flow (most common for Supabase Auth)
   if (code) {
     const supabase = await createClient()
 
-    // Try to exchange code for session
+    // Exchange code for session
     const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (error) {
       console.error('Error exchanging code for session:', error)
 
-      // If error suggests user needs to set password (e.g., for invited users)
-      // Check if this might be an invitation that needs password setup
-      if (error.message?.includes('password') || error.message?.includes('invite')) {
+      // If this is an invite/recovery flow, redirect to set-password even on error
+      // The set-password page will handle the error appropriately
+      if (type === 'invite' || type === 'recovery') {
         return NextResponse.redirect(
-          new URL(`/auth/set-password?code=${code}`, origin)
+          new URL(`/auth/set-password?code=${code}&type=${type}&error=${encodeURIComponent(error.message)}`, origin)
         )
       }
 
@@ -77,35 +36,59 @@ export async function GET(request: Request) {
     // Verify session was created
     const { data: { session } } = await supabase.auth.getSession()
 
-    if (session) {
-      // Ensure business_name is set in profile (from user metadata if available)
-      if (session.user) {
-        const businessName = session.user.user_metadata?.business_name
-        if (businessName) {
-          // Check current profile and update if business_name is missing or empty
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('business_name')
-            .eq('id', session.user.id)
-            .single()
-
-          if (profile && (!profile.business_name || profile.business_name.trim() === '')) {
-            await supabase
-              .from('profiles')
-              .update({ business_name: businessName })
-              .eq('id', session.user.id)
-          }
-        }
+    if (!session) {
+      // Session not created - might need password setup
+      if (type === 'invite' || type === 'recovery') {
+        return NextResponse.redirect(
+          new URL(`/auth/set-password?code=${code}&type=${type}`, origin)
+        )
       }
 
-      // Redirect to the next URL or home
-      return NextResponse.redirect(new URL(next, origin))
-    } else {
-      // Session not created - might need password setup
       return NextResponse.redirect(
-        new URL(`/auth/set-password?code=${code}`, origin)
+        new URL(`/login?error=${encodeURIComponent('Session creation failed')}`, origin)
       )
     }
+
+    // If this is an invite or recovery flow, user needs to set password
+    if (type === 'invite' || type === 'recovery') {
+      return NextResponse.redirect(
+        new URL(`/auth/set-password?code=${code}&type=${type}`, origin)
+      )
+    }
+
+    // For regular OAuth/signup flows, ensure profile is set up
+    if (session.user) {
+      const businessName = session.user.user_metadata?.business_name
+      if (businessName) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('business_name')
+          .eq('id', session.user.id)
+          .single()
+
+        if (profile && (!profile.business_name || profile.business_name.trim() === '')) {
+          await supabase
+            .from('profiles')
+            .update({ business_name: businessName })
+            .eq('id', session.user.id)
+        }
+      }
+    }
+
+    // Redirect to the next URL or dashboard
+    return NextResponse.redirect(new URL(next, origin))
+  }
+
+  // Handle token-based flows (legacy/alternative Supabase flows)
+  const authToken = token || tokenHash
+  if (authToken) {
+    // Redirect to set-password which will handle token verification
+    const redirectUrl = new URL('/auth/set-password', origin)
+    redirectUrl.searchParams.set('token', authToken)
+    if (type) {
+      redirectUrl.searchParams.set('type', type)
+    }
+    return NextResponse.redirect(redirectUrl)
   }
 
   // If no code or token, redirect to login with error

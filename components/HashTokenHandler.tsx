@@ -32,11 +32,23 @@ export default function HashTokenHandler() {
       const token = hashParams.get('token');
       const tokenHash = hashParams.get('token_hash');
 
-      // If this is an invitation, don't set session yet - user needs to set password first
-      if (type === 'invite' && accessToken) {
-        // For invitations, pass tokens to set-password without setting session
-        // Store tokens temporarily so set-password can use them
-        const redirectUrl = `/auth/set-password?access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(hashParams.get('refresh_token') || '')}&type=invite`;
+      // If this is an invitation or recovery, redirect to set-password
+      // User needs to set password first before we can use the session
+      if ((type === 'invite' || type === 'recovery') && accessToken) {
+        // If we're already on set-password page, just update the URL with tokens
+        if (window.location.pathname === '/auth/set-password') {
+          const refreshToken = hashParams.get('refresh_token') || '';
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('access_token', accessToken);
+          newUrl.searchParams.set('refresh_token', refreshToken);
+          newUrl.searchParams.set('type', type);
+          window.history.replaceState(null, '', newUrl.toString());
+          setHandled(true);
+          return;
+        }
+        
+        // Otherwise redirect to set-password with tokens
+        const redirectUrl = `/auth/set-password?access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(hashParams.get('refresh_token') || '')}&type=${type}`;
         window.history.replaceState(null, '', window.location.pathname);
         router.push(redirectUrl);
         setHandled(true);
@@ -75,8 +87,27 @@ export default function HashTokenHandler() {
       } 
       // If we have a token but no access_token, it might be a verification token
       else if (token || tokenHash) {
-        // Redirect to set-password with the token
+        // Get the actual token value (we know at least one exists due to the condition above)
         const authToken = token || tokenHash;
+        if (!authToken) {
+          // This shouldn't happen due to the condition, but TypeScript needs this check
+          setHandled(true);
+          return;
+        }
+
+        // If we're already on set-password page, just update the URL with token
+        if (window.location.pathname === '/auth/set-password') {
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('token', authToken);
+          if (type) {
+            newUrl.searchParams.set('type', type);
+          }
+          window.history.replaceState(null, '', newUrl.toString());
+          setHandled(true);
+          return;
+        }
+        
+        // Otherwise redirect to set-password with the token
         window.history.replaceState(null, '', window.location.pathname);
         router.push(`/auth/set-password?token=${authToken}${type ? `&type=${type}` : ''}`);
         setHandled(true);

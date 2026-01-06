@@ -1,4 +1,5 @@
 import SetPasswordForm from '@/components/SetPasswordForm';
+import HashTokenHandler from '@/components/HashTokenHandler';
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 
@@ -30,9 +31,11 @@ function SetPasswordFormSkeleton() {
 export default async function SetPasswordPage() {
   // Don't redirect authenticated users - they might be here to set password via invitation
   // The SetPasswordForm component will handle the logic
+  // HashTokenHandler will catch any hash tokens that Supabase might send
 
   return (
     <div className="h-screen bg-slate-950 flex items-center justify-center p-4">
+      <HashTokenHandler />
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl">
         <Suspense fallback={<SetPasswordFormSkeleton />}>
           <SetPasswordForm />
