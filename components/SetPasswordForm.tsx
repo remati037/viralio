@@ -84,83 +84,39 @@ export default function SetPasswordForm() {
         existingSessionUserId: existingSession?.user?.id,
       });
 
-      // For invitations with access_token, we need to verify the user exists first
-      // The access_token might reference a user that doesn't exist
+      // For invitations with access_token, set session and update password
+      // When using inviteUserByEmail, Supabase creates the user immediately
+      // The access_token is valid only if the user exists, so we trust it
       if (accessToken && refreshToken && type === 'invite') {
-        // Try to set session, but handle the case where user doesn't exist
+        // If not already authenticated, set session from tokens
         if (!existingSession) {
-          try {
-            const {
-              data: { session },
-              error: sessionError,
-            } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
+          const {
+            data: { session },
+            error: sessionError,
+          } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
 
-            if (sessionError) {
-              console.error('Session error:', sessionError);
+          if (sessionError) {
+            console.error('Session error:', sessionError);
+            throw new Error(
+              `Neispravan token: ${sessionError.message}. Molimo koristite link iz emaila.`
+            );
+          }
 
-              // If user doesn't exist, we can't proceed
-              if (
-                sessionError.message?.includes('does not exist') ||
-                sessionError.message?.includes('user_not_found')
-              ) {
-                throw new Error(
-                  'Korisnik ne postoji. Molimo kontaktirajte administratora ili zatražite novi link za pozivnicu.'
-                );
-              }
-
-              throw new Error(
-                `Neispravan token: ${sessionError.message}. Molimo koristite link iz emaila.`
-              );
-            }
-
-            // Verify session was created and user exists
-            const {
-              data: { session: verifySession },
-              error: verifyError,
-            } = await supabase.auth.getSession();
-
-            if (verifyError || !verifySession) {
-              throw new Error('Neuspešno kreiranje sesije. Pokušajte ponovo.');
-            }
-
-            // Verify user exists by trying to get user info
-            const {
-              data: { user: verifyUser },
-              error: userError,
-            } = await supabase.auth.getUser();
-
-            if (userError || !verifyUser) {
-              throw new Error(
-                'Korisnik ne postoji u sistemu. Molimo kontaktirajte administratora.'
-              );
-            }
-          } catch (err: any) {
-            console.error('Error setting up session:', err);
-            throw err;
+          if (!session) {
+            throw new Error('Neuspešno kreiranje sesije. Pokušajte ponovo.');
           }
         }
 
-        // Now update the password (user is authenticated and exists at this point)
+        // Update the password - user exists because inviteUserByEmail created them
         const { error: updateError } = await supabase.auth.updateUser({
           password: password,
         });
 
         if (updateError) {
           console.error('Password update error:', updateError);
-
-          // If user doesn't exist error, provide helpful message
-          if (
-            updateError.message?.includes('does not exist') ||
-            updateError.message?.includes('user_not_found')
-          ) {
-            throw new Error(
-              'Korisnik ne postoji u sistemu. Molimo kontaktirajte administratora za pomoć.'
-            );
-          }
-
           throw updateError;
         }
 
@@ -179,34 +135,12 @@ export default function SetPasswordForm() {
           'User already authenticated via invitation, updating password'
         );
 
-        // Verify user exists before updating password
-        const {
-          data: { user: verifyUser },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (userError || !verifyUser) {
-          throw new Error(
-            'Korisnik ne postoji u sistemu. Molimo kontaktirajte administratora.'
-          );
-        }
-
         const { error: updateError } = await supabase.auth.updateUser({
           password: password,
         });
 
         if (updateError) {
           console.error('Password update error:', updateError);
-
-          if (
-            updateError.message?.includes('does not exist') ||
-            updateError.message?.includes('user_not_found')
-          ) {
-            throw new Error(
-              'Korisnik ne postoji u sistemu. Molimo kontaktirajte administratora za pomoć.'
-            );
-          }
-
           throw updateError;
         }
 
