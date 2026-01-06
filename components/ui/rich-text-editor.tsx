@@ -33,6 +33,8 @@ export interface RichTextEditorProps {
       cta?: string;
       categoryId?: string | null;
       categoryName?: string;
+      tone?: string | null;
+      targetAudience?: string | null;
     };
   };
 }

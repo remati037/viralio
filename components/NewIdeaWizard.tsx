@@ -28,6 +28,7 @@ import DatePicker from './ui/date-picker';
 import Loader from './ui/loader';
 import RichTextEditor from './ui/rich-text-editor';
 import Skeleton from './ui/skeleton';
+import ToneSelect, { type Tone } from './ui/tone-select';
 
 interface NewIdeaWizardProps {
   onClose: () => void;
@@ -78,6 +79,8 @@ export default function NewIdeaWizard({
     fullScriptHtml: '',
     originalTemplate: null as string | null,
     publish_date: null as string | null,
+    tone: null as Tone | null,
+    targetAudience: '',
   });
   const [isSaving, setIsSaving] = useState(false);
   const [inspirationLinks, setInspirationLinks] = useState<
@@ -166,17 +169,19 @@ export default function NewIdeaWizard({
       setSanityTemplates(templates || []);
     } catch (error: any) {
       console.error('Error fetching templates:', error);
-      
+
       // Show user-friendly error message for CORS issues
       if (error.name === 'SanityCORSError' || error.message?.includes('CORS')) {
         toast.error(
           'Sanity CORS Error: Your domain needs to be added to Sanity CORS origins. Check console for instructions.',
           { duration: 10000 }
-        )
+        );
       } else {
-        toast.error('Failed to fetch templates from Sanity. Please try again later.')
+        toast.error(
+          'Failed to fetch templates from Sanity. Please try again later.'
+        );
       }
-      
+
       setSanityTemplates([]);
     } finally {
       setLoadingTemplates(false);
@@ -618,6 +623,33 @@ ZAKLJUČAK: ${template.structure.cta}`;
 
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
+              Ton / Stil <span className="text-red-400">*</span>
+            </label>
+            <ToneSelect
+              value={formData.tone}
+              onChange={(tone) => setFormData((p) => ({ ...p, tone }))}
+              placeholder="Izaberite ton"
+              className="w-full"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Ciljna Publika <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.targetAudience}
+              onChange={(e) =>
+                setFormData((p) => ({ ...p, targetAudience: e.target.value }))
+              }
+              placeholder="npr. Preduzetnici 25-40 godina, Marketinški stručnjaci..."
+              className="w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
               Mreža za objavljivanje
             </label>
             <div className="flex gap-2 flex-wrap">
@@ -717,7 +749,11 @@ ZAKLJUČAK: ${template.structure.cta}`;
                     body: formData.body,
                     cta: formData.cta,
                     categoryId: selectedCategoryId,
-                    categoryName: categories.find(c => c.id === selectedCategoryId)?.name,
+                    categoryName: categories.find(
+                      (c) => c.id === selectedCategoryId
+                    )?.name,
+                    tone: formData.tone,
+                    targetAudience: formData.targetAudience || undefined,
                   },
                 }}
               />
@@ -766,7 +802,11 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       body: formData.body,
                       cta: formData.cta,
                       categoryId: selectedCategoryId,
-                      categoryName: categories.find(c => c.id === selectedCategoryId)?.name,
+                      categoryName: categories.find(
+                        (c) => c.id === selectedCategoryId
+                      )?.name,
+                      tone: formData.tone,
+                      targetAudience: formData.targetAudience || undefined,
                     },
                   }}
                 />
@@ -798,7 +838,11 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       body: formData.body,
                       cta: formData.cta,
                       categoryId: selectedCategoryId,
-                      categoryName: categories.find(c => c.id === selectedCategoryId)?.name,
+                      categoryName: categories.find(
+                        (c) => c.id === selectedCategoryId
+                      )?.name,
+                      tone: formData.tone,
+                      targetAudience: formData.targetAudience || undefined,
                     },
                   }}
                 />
@@ -830,7 +874,11 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       body: formData.body,
                       cta: formData.cta,
                       categoryId: selectedCategoryId,
-                      categoryName: categories.find(c => c.id === selectedCategoryId)?.name,
+                      categoryName: categories.find(
+                        (c) => c.id === selectedCategoryId
+                      )?.name,
+                      tone: formData.tone,
+                      targetAudience: formData.targetAudience || undefined,
                     },
                   }}
                 />
@@ -981,7 +1029,11 @@ ZAKLJUČAK: ${template.structure.cta}`;
                 body: formData.body || undefined,
                 cta: formData.cta || undefined,
                 categoryId: selectedCategoryId,
-                categoryName: categories.find(c => c.id === selectedCategoryId)?.name,
+                categoryName: categories.find(
+                  (c) => c.id === selectedCategoryId
+                )?.name,
+                tone: formData.tone,
+                targetAudience: formData.targetAudience || undefined,
               }}
               onGenerateComplete={(field, content) => {
                 if (field === 'title') {

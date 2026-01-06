@@ -23,6 +23,8 @@ interface AIAssistantProps {
     cta?: string;
     categoryId?: string | null;
     categoryName?: string;
+    tone?: string | null;
+    targetAudience?: string | null;
   };
   onGenerateComplete?: (
     field: 'title' | 'hook' | 'body' | 'cta' | 'all',
@@ -57,11 +59,45 @@ export default function AIAssistant({
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
+    // Check if title is provided
+    if (!taskContext?.title || !taskContext.title.trim()) {
+      toast.error('Naslov je obavezan', {
+        description: 'Molimo unesite naslov pre korišćenja AI generatora.',
+        duration: 5000,
+      });
+      return;
+    }
+
     // Check if category is selected
     if (!taskContext?.categoryId) {
       toast.error('Kategorija je obavezna', {
         description:
           'Molimo izaberite kategoriju pre korišćenja AI generatora.',
+        duration: 5000,
+      });
+      return;
+    }
+
+    // Check if tone is selected
+    // Tone can be a string (valid tone value) or null/undefined
+    const toneValue = taskContext?.tone;
+    const hasValidTone =
+      toneValue && typeof toneValue === 'string' && toneValue.trim() !== '';
+    console.log(taskContext);
+
+    if (!hasValidTone) {
+      toast.error('Ton je obavezan', {
+        description: 'Molimo izaberite ton pre korišćenja AI generatora.',
+        duration: 5000,
+      });
+      return;
+    }
+
+    // Check if target audience is provided
+    if (!taskContext?.targetAudience || !taskContext.targetAudience.trim()) {
+      toast.error('Ciljna publika je obavezna', {
+        description:
+          'Molimo unesite ciljnu publiku pre korišćenja AI generatora.',
         duration: 5000,
       });
       return;
@@ -178,6 +214,61 @@ export default function AIAssistant({
   const categoryInfo = taskContext?.categoryName
     ? ` Kategorija: ${taskContext.categoryName}.`
     : '';
+  const toneInfo = taskContext?.tone
+    ? (() => {
+        const toneOptions = [
+          {
+            value: 'friendly',
+            label: 'Friendly',
+            description: 'Warm, approachable',
+          },
+          {
+            value: 'contrarian',
+            label: 'Contrarian',
+            description: 'Bold, challenging',
+          },
+          {
+            value: 'expert',
+            label: 'Expert',
+            description: 'Authoritative, credible',
+          },
+          {
+            value: 'playful',
+            label: 'Playful',
+            description: 'Fun, lighthearted',
+          },
+          {
+            value: 'cinematic',
+            label: 'Cinematic',
+            description: 'Dramatic, visual',
+          },
+          {
+            value: 'educational',
+            label: 'Educational',
+            description: 'Informative, teaching',
+          },
+          {
+            value: 'entertaining',
+            label: 'Entertaining',
+            description: 'Engaging, amusing',
+          },
+          {
+            value: 'inspirational',
+            label: 'Inspirational',
+            description: 'Motivating, uplifting',
+          },
+        ];
+        const toneOption = toneOptions.find(
+          (t) => t.value === taskContext?.tone
+        );
+        return toneOption
+          ? ` Ton: ${toneOption.label} (${toneOption.description}).`
+          : '';
+      })()
+    : '';
+  const audienceInfo = taskContext?.targetAudience
+    ? ` Ciljna publika: ${taskContext.targetAudience}.`
+    : '';
   const quickPrompts = [
     {
       label: 'Generiši naslov',
@@ -185,23 +276,23 @@ export default function AIAssistant({
         taskContext?.format || 'video'
       } u niši ${
         taskContext?.niche || 'marketing'
-      }. Naslov treba da bude kratak, jasan i privlačan.${categoryInfo}`,
+      }. Naslov treba da bude kratak, jasan i privlačan.${categoryInfo}${toneInfo}${audienceInfo}`,
     },
     {
       label: 'Generiši Hook',
       prompt: `Kreiraj moćan hook za ${
         taskContext?.format || 'video'
-      } koji će privući pažnju u prve 3 sekunde. Neka bude intrigantan i izazove radoznalost.${categoryInfo}`,
+      } koji će privući pažnju u prve 3 sekunde. Neka bude intrigantan i izazove radoznalost.${categoryInfo}${toneInfo}${audienceInfo}`,
     },
     {
       label: 'Generiši Body',
       prompt: `Napiši vrednosni deo (body) za ${
         taskContext?.format || 'video'
-      } koji će zadržati gledaoce i pružiti korisne informacije.${categoryInfo}`,
+      } koji će zadržati gledaoce i pružiti korisne informacije.${categoryInfo}${toneInfo}${audienceInfo}`,
     },
     {
       label: 'Generiši CTA',
-      prompt: `Kreiraj jasan i akcijski poziv na akciju (CTA) koji će motivisati gledaoce da reaguju.${categoryInfo}`,
+      prompt: `Kreiraj jasan i akcijski poziv na akciju (CTA) koji će motivisati gledaoce da reaguju.${categoryInfo}${toneInfo}${audienceInfo}`,
     },
     {
       label: 'Generiši kompletan sadržaj',
@@ -209,7 +300,7 @@ export default function AIAssistant({
         taskContext?.format || 'video'
       } u niši ${
         taskContext?.niche || 'marketing'
-      }. Uključi naslov, hook, body i CTA. Formatiraj jasno sa oznakama HOOK:, BODY:, CTA:${categoryInfo}`,
+      }. Uključi naslov, hook, body i CTA. Formatiraj jasno sa oznakama HOOK:, BODY:, CTA:${categoryInfo}${toneInfo}${audienceInfo}`,
     },
   ];
 
@@ -224,6 +315,8 @@ export default function AIAssistant({
       </button>
     );
   }
+
+  console.log(taskContext);
 
   return (
     <div
@@ -259,27 +352,64 @@ export default function AIAssistant({
         <div className="p-2 border-b border-slate-700 bg-slate-900/50">
           <p className="text-xs text-slate-400 mb-2">Brzi promptovi:</p>
           <div className="flex flex-wrap gap-2">
-            {quickPrompts.map((qp, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleQuickPrompt(qp.prompt)}
-                disabled={!taskContext?.categoryId}
-                className="px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title={
-                  !taskContext?.categoryId
-                    ? 'Izaberite kategoriju pre korišćenja'
-                    : undefined
-                }
-              >
-                {qp.label}
-              </button>
-            ))}
+            {quickPrompts.map((qp, idx) => {
+              const hasValidTone =
+                taskContext?.tone &&
+                typeof taskContext.tone === 'string' &&
+                taskContext.tone.trim() !== '';
+              const isDisabled =
+                !taskContext?.title?.trim() ||
+                !taskContext?.categoryId ||
+                !hasValidTone ||
+                !taskContext?.targetAudience?.trim();
+              const tooltipText = !taskContext?.title?.trim()
+                ? 'Unesite naslov pre korišćenja'
+                : !taskContext?.categoryId
+                  ? 'Izaberite kategoriju pre korišćenja'
+                  : !hasValidTone
+                    ? 'Izaberite ton pre korišćenja'
+                    : !taskContext?.targetAudience?.trim()
+                      ? 'Unesite ciljnu publiku pre korišćenja'
+                      : undefined;
+              console.log(taskContext);
+
+              return (
+                <button
+                  key={idx}
+                  onClick={() => handleQuickPrompt(qp.prompt)}
+                  disabled={isDisabled}
+                  className="px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={tooltipText}
+                >
+                  {qp.label}
+                </button>
+              );
+            })}
           </div>
-          {!taskContext?.categoryId && (
-            <p className="text-xs text-red-400 mt-2">
-              ⚠️ Izaberite kategoriju pre korišćenja AI generatora
-            </p>
-          )}
+          {(() => {
+            const hasValidTone =
+              taskContext?.tone &&
+              typeof taskContext.tone === 'string' &&
+              taskContext.tone.trim() !== '';
+            console.log(taskContext);
+            return (
+              (!taskContext?.title?.trim() ||
+                !taskContext?.categoryId ||
+                !hasValidTone ||
+                !taskContext?.targetAudience?.trim()) && (
+                <p className="text-xs text-red-400 mt-2">
+                  ⚠️{' '}
+                  {!taskContext?.title?.trim()
+                    ? 'Unesite naslov pre korišćenja AI generatora'
+                    : !taskContext?.categoryId
+                      ? 'Izaberite kategoriju pre korišćenja AI generatora'
+                      : !hasValidTone
+                        ? 'Izaberite ton pre korišćenja AI generatora'
+                        : 'Unesite ciljnu publiku pre korišćenja AI generatora'}
+                </p>
+              )
+            );
+          })()}
         </div>
       )}
 
@@ -434,15 +564,32 @@ export default function AIAssistant({
               !input.trim() ||
               isLoading ||
               !hasCredits ||
-              !taskContext?.categoryId
+              !taskContext?.title?.trim() ||
+              !taskContext?.categoryId ||
+              !(
+                taskContext?.tone &&
+                typeof taskContext.tone === 'string' &&
+                taskContext.tone.trim() !== ''
+              ) ||
+              !taskContext?.targetAudience?.trim()
             }
             className="px-3 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 h-fit"
             title={
-              !taskContext?.categoryId
-                ? 'Izaberite kategoriju pre korišćenja AI generatora'
-                : !hasCredits
-                  ? 'Nema AI kredita'
-                  : 'Pošalji poruku (1 kredit)'
+              !taskContext?.title?.trim()
+                ? 'Unesite naslov pre korišćenja AI generatora'
+                : !taskContext?.categoryId
+                  ? 'Izaberite kategoriju pre korišćenja AI generatora'
+                  : !(
+                        taskContext?.tone &&
+                        typeof taskContext.tone === 'string' &&
+                        taskContext.tone.trim() !== ''
+                      )
+                    ? 'Izaberite ton pre korišćenja AI generatora'
+                    : !taskContext?.targetAudience?.trim()
+                      ? 'Unesite ciljnu publiku pre korišćenja AI generatora'
+                      : !hasCredits
+                        ? 'Nema AI kredita'
+                        : 'Pošalji poruku (1 kredit)'
             }
           >
             {isLoading ? (

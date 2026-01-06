@@ -1,5 +1,6 @@
 'use client';
 
+import { TONE_OPTIONS } from '@/components/ui/tone-select';
 import { useUserId } from '@/components/UserContext';
 import { useAICredits } from '@/lib/hooks/useAICredits';
 import { Loader2, Sparkles } from 'lucide-react';
@@ -18,10 +19,19 @@ interface AIButtonProps {
     cta?: string;
     categoryId?: string | null;
     categoryName?: string;
+    tone?: string | null;
+    targetAudience?: string | null;
   };
   onGenerate: (content: string) => void;
   className?: string;
 }
+
+const getToneInfo = (tone?: string | null): string => {
+  if (!tone) return '';
+  const toneOption = TONE_OPTIONS.find((t) => t.value === tone);
+  if (!toneOption) return '';
+  return ` Ton: ${toneOption.label} (${toneOption.description}).`;
+};
 
 const fieldPrompts: Record<
   AIButtonProps['fieldType'],
@@ -32,11 +42,15 @@ const fieldPrompts: Record<
     const categoryInfo = context?.categoryName
       ? ` Kategorija: ${context.categoryName}.`
       : '';
+    const toneInfo = getToneInfo(context?.tone);
+    const audienceInfo = context?.targetAudience
+      ? ` Ciljna publika: ${context.targetAudience}.`
+      : '';
     return `Kreiraj moćan hook (udicu) za ${
       context?.format || 'video'
     } koji će privući pažnju u prve 3 sekunde. Neka bude intrigantan, izazove radoznalost i zadrži gledaoce. Format: ${
       context?.format || 'Kratka Forma'
-    }. Niša: ${context?.niche || 'marketing'}.${categoryInfo}
+    }. Niša: ${context?.niche || 'marketing'}.${categoryInfo}${toneInfo}${audienceInfo}
 
 VAŽNO: Vrati SAMO tekst hooka, bez objašnjenja, bez dodatnog teksta, bez labela. Samo hook.`;
   },
@@ -44,6 +58,10 @@ VAŽNO: Vrati SAMO tekst hooka, bez objašnjenja, bez dodatnog teksta, bez label
     const hasContent = currentContent.trim().length > 0;
     const categoryInfo = context?.categoryName
       ? ` Kategorija: ${context.categoryName}.`
+      : '';
+    const toneInfo = getToneInfo(context?.tone);
+    const audienceInfo = context?.targetAudience
+      ? ` Ciljna publika: ${context.targetAudience}.`
       : '';
     return `Napiši vrednosni deo (body) za ${
       context?.format || 'video'
@@ -53,12 +71,16 @@ VAŽNO: Vrati SAMO tekst hooka, bez objašnjenja, bez dodatnog teksta, bez label
         : ''
     }Format: ${context?.format || 'Kratka Forma'}. Niša: ${
       context?.niche || 'marketing'
-    }. Naslov: ${context?.title || 'N/A'}.${categoryInfo}`;
+    }. Naslov: ${context?.title || 'N/A'}.${categoryInfo}${toneInfo}${audienceInfo}`;
   },
   cta: (context, currentContent) => {
     const hasContent = currentContent.trim().length > 0;
     const categoryInfo = context?.categoryName
       ? ` Kategorija: ${context.categoryName}.`
+      : '';
+    const toneInfo = getToneInfo(context?.tone);
+    const audienceInfo = context?.targetAudience
+      ? ` Ciljna publika: ${context.targetAudience}.`
       : '';
     return `Kreiraj jasan i akcijski poziv na akciju (CTA) koji će motivisati gledaoce da reaguju. ${
       hasContent
@@ -66,12 +88,16 @@ VAŽNO: Vrati SAMO tekst hooka, bez objašnjenja, bez dodatnog teksta, bez label
         : ''
     }Format: ${context?.format || 'Kratka Forma'}. Niša: ${
       context?.niche || 'marketing'
-    }.${categoryInfo}`;
+    }.${categoryInfo}${toneInfo}${audienceInfo}`;
   },
   title: (context, currentContent) => {
     const hasContent = currentContent.trim().length > 0;
     const categoryInfo = context?.categoryName
       ? ` Kategorija: ${context.categoryName}.`
+      : '';
+    const toneInfo = getToneInfo(context?.tone);
+    const audienceInfo = context?.targetAudience
+      ? ` Ciljna publika: ${context.targetAudience}.`
       : '';
     return `Generiši kreativan i privlačan naslov za ${
       context?.format || 'video'
@@ -79,12 +105,16 @@ VAŽNO: Vrati SAMO tekst hooka, bez objašnjenja, bez dodatnog teksta, bez label
       hasContent
         ? `Trenutni sadržaj: ${currentContent.substring(0, 200)}. `
         : ''
-    }Naslov treba da bude kratak, jasan i privlačan.${categoryInfo}`;
+    }Naslov treba da bude kratak, jasan i privlačan.${categoryInfo}${toneInfo}${audienceInfo}`;
   },
   fullScript: (context, currentContent) => {
     const hasContent = currentContent.trim().length > 0;
     const categoryInfo = context?.categoryName
       ? ` Kategorija: ${context.categoryName}.`
+      : '';
+    const toneInfo = getToneInfo(context?.tone);
+    const audienceInfo = context?.targetAudience
+      ? ` Ciljna publika: ${context.targetAudience}.`
       : '';
     return `Kreiraj kompletan scenario/tekst za ${
       context?.format || 'Duga Forma'
@@ -94,7 +124,7 @@ VAŽNO: Vrati SAMO tekst hooka, bez objašnjenja, bez dodatnog teksta, bez label
         : ''
     }Uključi ceo tekst bez razdvajanja na delove. Format: ${
       context?.format || 'Duga Forma'
-    }.${categoryInfo}`;
+    }.${categoryInfo}${toneInfo}${audienceInfo}`;
   },
 };
 
@@ -113,11 +143,40 @@ export default function AIButton({
   const handleGenerate = async () => {
     if (isLoading) return;
 
+    // Check if title is provided
+    if (!taskContext?.title || !taskContext.title.trim()) {
+      toast.error('Naslov je obavezan', {
+        description: 'Molimo unesite naslov pre korišćenja AI generatora.',
+        duration: 5000,
+      });
+      return;
+    }
+
     // Check if category is selected
     if (!taskContext?.categoryId) {
       toast.error('Kategorija je obavezna', {
         description:
           'Molimo izaberite kategoriju pre korišćenja AI generatora.',
+        duration: 5000,
+      });
+      return;
+    }
+
+    // Check if tone is selected
+    if (!taskContext?.tone) {
+      toast.error('Ton je obavezan', {
+        description: 'Molimo izaberite ton pre korišćenja AI generatora.',
+        duration: 5000,
+      });
+      return;
+    }
+    console.log(taskContext);
+
+    // Check if target audience is provided
+    if (!taskContext?.targetAudience || !taskContext.targetAudience.trim()) {
+      toast.error('Ciljna publika je obavezna', {
+        description:
+          'Molimo unesite ciljnu publiku pre korišćenja AI generatora.',
         duration: 5000,
       });
       return;
@@ -306,7 +365,33 @@ export default function AIButton({
     fullScript: 'Scenario',
   };
 
-  const isDisabled = isLoading || !hasCredits || !taskContext?.categoryId;
+  const isDisabled =
+    isLoading ||
+    !hasCredits ||
+    !taskContext?.title?.trim() ||
+    !taskContext?.categoryId ||
+    !taskContext?.tone ||
+    !taskContext?.targetAudience?.trim();
+  console.log(taskContext);
+
+  const getTooltipText = () => {
+    if (!taskContext?.title?.trim()) {
+      return 'Unesite naslov pre korišćenja AI generatora';
+    }
+    if (!taskContext?.categoryId) {
+      return 'Izaberite kategoriju pre korišćenja AI generatora';
+    }
+    if (!taskContext?.tone) {
+      return 'Izaberite ton pre korišćenja AI generatora';
+    }
+    if (!taskContext?.targetAudience?.trim()) {
+      return 'Unesite ciljnu publiku pre korišćenja AI generatora';
+    }
+    if (!hasCredits) {
+      return `Nema AI kredita. Preostalo: ${credits?.credits_remaining || 0}/${credits?.max_credits || 500}`;
+    }
+    return `Generiši ${fieldLabels[fieldType]} pomoću AI (1 kredit)`;
+  };
 
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
@@ -314,13 +399,7 @@ export default function AIButton({
         onClick={handleGenerate}
         disabled={isDisabled}
         className={`flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:from-purple-700 disabled:to-blue-700 disabled:cursor-not-allowed text-white rounded-md text-sm font-medium transition-all shadow-lg ${isDisabled ? 'opacity-60' : ''}`}
-        title={
-          !taskContext?.categoryId
-            ? 'Izaberite kategoriju pre korišćenja AI generatora'
-            : !hasCredits
-              ? `Nema AI kredita. Preostalo: ${credits?.credits_remaining || 0}/${credits?.max_credits || 500}`
-              : `Generiši ${fieldLabels[fieldType]} pomoću AI (1 kredit)`
-        }
+        title={getTooltipText()}
       >
         {isLoading ? (
           <>

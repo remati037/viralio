@@ -27,6 +27,7 @@ import Loader from './ui/loader';
 import RichTextEditor from './ui/rich-text-editor';
 import StatusSelect from './ui/status-select';
 import AICreditBadge from './ui/ai-credit-badge';
+import ToneSelect, { type Tone } from './ui/tone-select';
 
 interface TaskDetailModalProps {
   task: Task;
@@ -66,6 +67,8 @@ export default function TaskDetailModal({
   const [isDeleting, setIsDeleting] = useState(false);
   const [categories, setCategories] = useState<TaskCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [tone, setTone] = useState<Tone | null>(null);
+  const [targetAudience, setTargetAudience] = useState('');
   const pendingLinksRef = useRef<Map<string, any>>(new Map());
   const isManagingLinksRef = useRef<boolean>(false);
   const { credits } = useAICredits(task.user_id);
@@ -644,6 +647,31 @@ export default function TaskDetailModal({
                 )}
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Ton / Stil <span className="text-red-400">*</span>
+                </label>
+                <ToneSelect
+                  value={tone}
+                  onChange={setTone}
+                  placeholder="Izaberite ton"
+                  className="w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Ciljna Publika <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={targetAudience}
+                  onChange={(e) => setTargetAudience(e.target.value)}
+                  placeholder="npr. Preduzetnici 25-40 godina, Marketinški stručnjaci..."
+                  className="w-full bg-slate-700 border border-slate-600 rounded-md py-2 px-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                />
+              </div>
+
               {isLongForm ? (
                 <div className="flex-1 flex flex-col min-h-[300px]">
                   <label className="text-green-400 text-xs font-bold block mb-1">
@@ -667,6 +695,8 @@ export default function TaskDetailModal({
                         cta: editedTask.cta || undefined,
                         categoryId: editedTask.category_id,
                         categoryName: editedTask.category?.name,
+                        tone: tone || undefined,
+                        targetAudience: targetAudience || undefined,
                       },
                     }}
                   />
@@ -703,6 +733,8 @@ export default function TaskDetailModal({
                           cta: editedTask.cta || undefined,
                           categoryId: editedTask.category_id,
                           categoryName: editedTask.category?.name,
+                          tone: tone || undefined,
+                          targetAudience: targetAudience || undefined,
                         },
                       }}
                     />
@@ -730,6 +762,8 @@ export default function TaskDetailModal({
                           cta: editedTask.cta || undefined,
                           categoryId: editedTask.category_id,
                           categoryName: editedTask.category?.name,
+                          tone: tone || undefined,
+                          targetAudience: targetAudience || undefined,
                         },
                       }}
                     />
@@ -757,6 +791,8 @@ export default function TaskDetailModal({
                           cta: editedTask.cta || undefined,
                           categoryId: editedTask.category_id,
                           categoryName: editedTask.category?.name,
+                          tone: tone || undefined,
+                          targetAudience: targetAudience || undefined,
                         },
                       }}
                     />
@@ -775,6 +811,8 @@ export default function TaskDetailModal({
                     cta: editedTask.cta || undefined,
                     categoryId: editedTask.category_id,
                     categoryName: editedTask.category?.name,
+                    tone: tone || undefined,
+                    targetAudience: targetAudience || undefined,
                   }}
                   onGenerateComplete={(field, content) => {
                     if (field === 'title') {
