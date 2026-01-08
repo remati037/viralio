@@ -22,6 +22,7 @@ export interface RichTextEditorProps {
   placeholder?: string;
   className?: string;
   minHeight?: string;
+  disabled?: boolean;
   aiButton?: {
     fieldType: 'hook' | 'body' | 'cta' | 'title' | 'fullScript';
     taskContext?: {
@@ -45,11 +46,13 @@ export default function RichTextEditor({
   placeholder = 'Start typing...',
   className,
   minHeight = '200px',
+  disabled = false,
   aiButton,
 }: RichTextEditorProps) {
   const [mounted, setMounted] = useState(false);
 
   const editor = useEditor({
+    editable: !disabled,
     extensions: [
       StarterKit.configure({
         heading: {
@@ -116,6 +119,13 @@ export default function RichTextEditor({
     }
   }, [content, editor]);
 
+  // Update editor editable state when disabled prop changes
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(!disabled);
+    }
+  }, [editor, disabled]);
+
   // Ensure component only renders on client
   useEffect(() => {
     setMounted(true);
@@ -143,161 +153,163 @@ export default function RichTextEditor({
       )}
     >
       {/* Toolbar */}
-      <div className="flex items-center gap-1 p-2 border-b border-slate-700 bg-slate-900/50 flex-wrap">
-        {/* Heading and Paragraph Controls */}
-        <div className="flex items-center gap-0.5 border-r border-slate-700 pr-1 mr-1">
+      {!disabled && (
+        <div className="flex items-center gap-1 p-2 border-b border-slate-700 bg-slate-900/50 flex-wrap">
+          {/* Heading and Paragraph Controls */}
+          <div className="flex items-center gap-0.5 border-r border-slate-700 pr-1 mr-1">
+            <button
+              type="button"
+              onClick={() => editor.chain().focus().setParagraph().run()}
+              className={cn(
+                'px-2.5 py-1.5 rounded text-xs font-semibold transition-colors',
+                editor.isActive('paragraph')
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-400 hover:bg-slate-700/50'
+              )}
+              title="Paragraph"
+            >
+              P
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 1 }).run()
+              }
+              className={cn(
+                'px-2.5 py-1.5 rounded text-xs font-bold transition-colors',
+                editor.isActive('heading', { level: 1 })
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-400 hover:bg-slate-700/50'
+              )}
+              title="Heading 1"
+            >
+              H1
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 2 }).run()
+              }
+              className={cn(
+                'px-2.5 py-1.5 rounded text-xs font-bold transition-colors',
+                editor.isActive('heading', { level: 2 })
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-400 hover:bg-slate-700/50'
+              )}
+              title="Heading 2"
+            >
+              H2
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 3 }).run()
+              }
+              className={cn(
+                'px-2.5 py-1.5 rounded text-xs font-bold transition-colors',
+                editor.isActive('heading', { level: 3 })
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-400 hover:bg-slate-700/50'
+              )}
+              title="Heading 3"
+            >
+              H3
+            </button>
+          </div>
+          <div className="w-px h-6 bg-slate-700 mx-1" />
           <button
             type="button"
-            onClick={() => editor.chain().focus().setParagraph().run()}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            disabled={!editor.can().chain().focus().toggleBold().run()}
             className={cn(
-              'px-2.5 py-1.5 rounded text-xs font-semibold transition-colors',
-              editor.isActive('paragraph')
+              'p-2 rounded hover:bg-slate-700 transition-colors',
+              editor.isActive('bold')
                 ? 'bg-slate-700 text-white'
-                : 'text-slate-400 hover:bg-slate-700/50'
+                : 'text-slate-400'
             )}
-            title="Paragraph"
+            title="Bold"
           >
-            P
+            <Bold size={16} />
           </button>
           <button
             type="button"
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 1 }).run()
-            }
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            disabled={!editor.can().chain().focus().toggleItalic().run()}
             className={cn(
-              'px-2.5 py-1.5 rounded text-xs font-bold transition-colors',
-              editor.isActive('heading', { level: 1 })
+              'p-2 rounded hover:bg-slate-700 transition-colors',
+              editor.isActive('italic')
                 ? 'bg-slate-700 text-white'
-                : 'text-slate-400 hover:bg-slate-700/50'
+                : 'text-slate-400'
             )}
-            title="Heading 1"
+            title="Italic"
           >
-            H1
+            <Italic size={16} />
+          </button>
+          <div className="w-px h-6 bg-slate-700 mx-1" />
+          <button
+            type="button"
+            onClick={() => {
+              editor.chain().focus().toggleBulletList().run();
+            }}
+            className={cn(
+              'p-2 rounded hover:bg-slate-700 transition-colors',
+              editor.isActive('bulletList')
+                ? 'bg-slate-700 text-white'
+                : 'text-slate-400'
+            )}
+            title="Bullet List"
+          >
+            <List size={16} />
           </button>
           <button
             type="button"
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 2 }).run()
-            }
+            onClick={() => {
+              editor.chain().focus().toggleOrderedList().run();
+            }}
             className={cn(
-              'px-2.5 py-1.5 rounded text-xs font-bold transition-colors',
-              editor.isActive('heading', { level: 2 })
+              'p-2 rounded hover:bg-slate-700 transition-colors',
+              editor.isActive('orderedList')
                 ? 'bg-slate-700 text-white'
-                : 'text-slate-400 hover:bg-slate-700/50'
+                : 'text-slate-400'
             )}
-            title="Heading 2"
+            title="Numbered List"
           >
-            H2
+            <ListOrdered size={16} />
           </button>
           <button
             type="button"
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 3 }).run()
-            }
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}
             className={cn(
-              'px-2.5 py-1.5 rounded text-xs font-bold transition-colors',
-              editor.isActive('heading', { level: 3 })
+              'p-2 rounded hover:bg-slate-700 transition-colors',
+              editor.isActive('blockquote')
                 ? 'bg-slate-700 text-white'
-                : 'text-slate-400 hover:bg-slate-700/50'
+                : 'text-slate-400'
             )}
-            title="Heading 3"
+            title="Quote"
           >
-            H3
+            <Quote size={16} />
+          </button>
+          <div className="w-px h-6 bg-slate-700 mx-1" />
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().undo().run()}
+            disabled={!editor.can().chain().focus().undo().run()}
+            className="p-2 rounded hover:bg-slate-700 transition-colors text-slate-400 disabled:opacity-50"
+            title="Undo"
+          >
+            <Undo size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().redo().run()}
+            disabled={!editor.can().chain().focus().redo().run()}
+            className="p-2 rounded hover:bg-slate-700 transition-colors text-slate-400 disabled:opacity-50"
+            title="Redo"
+          >
+            <Redo size={16} />
           </button>
         </div>
-        <div className="w-px h-6 bg-slate-700 mx-1" />
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          disabled={!editor.can().chain().focus().toggleBold().run()}
-          className={cn(
-            'p-2 rounded hover:bg-slate-700 transition-colors',
-            editor.isActive('bold')
-              ? 'bg-slate-700 text-white'
-              : 'text-slate-400'
-          )}
-          title="Bold"
-        >
-          <Bold size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          disabled={!editor.can().chain().focus().toggleItalic().run()}
-          className={cn(
-            'p-2 rounded hover:bg-slate-700 transition-colors',
-            editor.isActive('italic')
-              ? 'bg-slate-700 text-white'
-              : 'text-slate-400'
-          )}
-          title="Italic"
-        >
-          <Italic size={16} />
-        </button>
-        <div className="w-px h-6 bg-slate-700 mx-1" />
-        <button
-          type="button"
-          onClick={() => {
-            editor.chain().focus().toggleBulletList().run();
-          }}
-          className={cn(
-            'p-2 rounded hover:bg-slate-700 transition-colors',
-            editor.isActive('bulletList')
-              ? 'bg-slate-700 text-white'
-              : 'text-slate-400'
-          )}
-          title="Bullet List"
-        >
-          <List size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            editor.chain().focus().toggleOrderedList().run();
-          }}
-          className={cn(
-            'p-2 rounded hover:bg-slate-700 transition-colors',
-            editor.isActive('orderedList')
-              ? 'bg-slate-700 text-white'
-              : 'text-slate-400'
-          )}
-          title="Numbered List"
-        >
-          <ListOrdered size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          className={cn(
-            'p-2 rounded hover:bg-slate-700 transition-colors',
-            editor.isActive('blockquote')
-              ? 'bg-slate-700 text-white'
-              : 'text-slate-400'
-          )}
-          title="Quote"
-        >
-          <Quote size={16} />
-        </button>
-        <div className="w-px h-6 bg-slate-700 mx-1" />
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().undo().run()}
-          disabled={!editor.can().chain().focus().undo().run()}
-          className="p-2 rounded hover:bg-slate-700 transition-colors text-slate-400 disabled:opacity-50"
-          title="Undo"
-        >
-          <Undo size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().redo().run()}
-          disabled={!editor.can().chain().focus().redo().run()}
-          className="p-2 rounded hover:bg-slate-700 transition-colors text-slate-400 disabled:opacity-50"
-          title="Redo"
-        >
-          <Redo size={16} />
-        </button>
-      </div>
+      )}
 
       {/* Editor */}
       <div style={{ minHeight }} className="overflow-y-auto">
@@ -305,7 +317,7 @@ export default function RichTextEditor({
       </div>
 
       {/* AI Button */}
-      {aiButton && (
+      {aiButton && !disabled && (
         <div className="p-3 border-t border-slate-700 bg-slate-900/50">
           <AIButton
             fieldType={aiButton.fieldType}

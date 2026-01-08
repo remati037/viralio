@@ -280,15 +280,85 @@ export default function AIAssistant({
     },
     {
       label: 'Generiši Hook',
-      prompt: `Kreiraj moćan hook za ${
-        taskContext?.format || 'video'
-      } koji će privući pažnju u prve 3 sekunde. Neka bude intrigantan i izazove radoznalost.${categoryInfo}${toneInfo}${audienceInfo}`,
+      // prompt: `Kreiraj moćan hook za ${
+      //   taskContext?.format || 'video'
+      // } koji će privući pažnju u prve 3 sekunde. Neka bude intrigantan i izazove radoznalost.${categoryInfo}${toneInfo}${audienceInfo}`,
+      prompt: `### ROLE & OBJECTIVE
+You are a Viral Hook Expert for Short-Form content (TikTok, Reels, Shorts).
+Your ONLY goal is to write opening lines that stop the scroll immediately.
+
+### INPUT DATA
+- *Topic:* ${taskContext?.title}
+- *Target Audience:* ${taskContext?.targetAudience} (default: General)
+
+### STRICT RULES FOR HOOKS
+1.  *NO GREETINGS:* NEVER start with "Hello everyone", "Hi guys", "Dobrodošli". Start instantly.
+2.  *LENGTH:* Maximum 10-15 words per hook. It must be spoken in under 3 seconds.
+3.  *LANGUAGE:* Serbian (Latin script). Use the informal "Ti" (You).
+4.  *TONE:* Urgent, specific, and bold.
+5.  *VISUAL CUE:* The text must imply visual movement or a strong statement.
+
+### TASK: GENERATE 3 DISTINCT VARIATIONS
+
+*Variation 1: The Negative/Warning Hook*
+* Logic: Focus on a mistake, a stop command, or a fear of missing out.
+* Template examples: "Prestani da radiš X...", "Ovo je razlog zašto ne uspevaš da...", "Najveća greška kod..."
+
+*Variation 2: The Direct Benefit Hook*
+* Logic: A massive promise delivered quickly. "How to" without boring words.
+* Template examples: "Kako da [Benefit] za manje od [Time]...", "Jedini trik koji ti treba za..."
+
+*Variation 3: The Curiosity/Secret Hook*
+* Logic: Start in the middle of a sentence or state something counter-intuitive.
+* Template examples: "Niko ti ovo neće reći o...", "Ovo zvuči ludo, ali..."
+
+### OUTPUT FORMAT
+Provide the output specifically formatted like this (just the text):
+
+[Warning]: [Insert Hook Text Here]
+[Benefit]: [Insert Hook Text Here]
+[Curiosity]: [Insert Hook Text Here]
+
+### GENERATE HOOKS NOW FOR TOPIC: ${taskContext?.title}
+`,
     },
     {
       label: 'Generiši Body',
-      prompt: `Napiši vrednosni deo (body) za ${
-        taskContext?.format || 'video'
-      } koji će zadržati gledaoce i pružiti korisne informacije.${categoryInfo}${toneInfo}${audienceInfo}`,
+      prompt: `
+      ### ROLE & OBJECTIVE
+You are an expert Short-Form Video Scriptwriter for the Balkan market (Serbia, Croatia, Bosnia, Montenegro). Your task is to write the *BODY* section of a viral Reel/TikTok script based on the User's Topic.
+
+### INPUT DATA
+- *Topic:* ${taskContext?.title}
+- *Tone:* ${taskContext?.tone} (default: Energetic, confident, informal)
+- *Target Audience:* ${taskContext?.targetAudience} (optional, default: General public)
+
+### STRICT WRITING RULES (CRITICAL)
+1.  *LANGUAGE:* Output must be in *SERBIAN* (Latin script).
+2.  *TONE & STYLE:*
+    - Use the informal "Ti" (You) to address the viewer directly. NEVER use the formal "Vi" unless explicitly requested.
+    - Write exactly how people speak in Belgrade/region (urban, modern, conversational).
+    - Avoid complex academic words. Use simple, punchy vocabulary (6th-grade level).
+    - NO generic fluff phrases like "U današnjem videu ću vam pokazati..." (In today's video I will show you...).
+3.  *PACING & STRUCTURE:*
+    - *Start immediately:* The Hook is already done. Jump straight into the value/story.
+    - *Sentence Length:* Keep sentences short. One breath per sentence.
+    - *Formatting:* Write each sentence on a new line for easier reading on a teleprompter.
+    - *Length:* Target 60-90 words total (approx. 20-30 seconds spoken).
+
+### CONTENT LOGIC (Dynamic Selection)
+Based on the Topic, choose the best structure automatically:
+- *If Educational:* Use "Step-by-Step" (Prvo uradi ovo... Zatim...).
+- *If Explanatory:* Use "The Insight" (Većina ljudi misli X, ali zapravo je Y...).
+- *If Tips:* Use "Rapid Fire" (Broj 1... Broj 2... Broj 3...).
+
+### OUTPUT FORMAT
+- Do NOT output the Hook or CTA. Only the BODY.
+- Do NOT use labels like "Body:" or "Tekst:". Just the raw script text.
+- Do NOT use markdown bolding (**) in the final text (it confuses some teleprompters).
+
+### GENERATE SCRIPT BODY NOW FOR TOPIC: ${taskContext?.title}
+`,
     },
     {
       label: 'Generiši CTA',

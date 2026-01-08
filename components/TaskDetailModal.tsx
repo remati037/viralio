@@ -1,6 +1,7 @@
 'use client';
 
 import { KANBAN_COLUMNS } from '@/lib/constants';
+import { useAICredits } from '@/lib/hooks/useAICredits';
 import { createClient } from '@/lib/supabase/client';
 import { getYoutubeThumbnail } from '@/lib/utils/helpers';
 import type { Task, TaskUpdate } from '@/types';
@@ -20,14 +21,13 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { useAICredits } from '@/lib/hooks/useAICredits';
 import AIAssistant from './AIAssistant';
+import AICreditBadge from './ui/ai-credit-badge';
 import CategorySelect, { type TaskCategory } from './ui/category-select';
 import DatePicker from './ui/date-picker';
 import Loader from './ui/loader';
 import RichTextEditor from './ui/rich-text-editor';
 import StatusSelect from './ui/status-select';
-import AICreditBadge from './ui/ai-credit-badge';
 import ToneSelect, { type Tone } from './ui/tone-select';
 
 interface TaskDetailModalProps {
@@ -75,6 +75,8 @@ export default function TaskDetailModal({
   const { credits } = useAICredits(task.user_id);
 
   const isLongForm = editedTask.format === 'Duga Forma';
+  const isPublished = editedTask.status === 'published';
+  const isEditingDisabled = isPublished && activeTab !== 'results';
 
   // Helper function to convert plain text to HTML if needed
   const textToHtml = (text: string | null | undefined): string => {
@@ -231,8 +233,8 @@ export default function TaskDetailModal({
       // Check if hostname is valid (not empty and has at least one dot for domain)
       const hasValidHost = Boolean(
         url.hostname &&
-          url.hostname.length > 0 &&
-          (url.hostname.includes('.') || url.hostname === 'localhost')
+        url.hostname.length > 0 &&
+        (url.hostname.includes('.') || url.hostname === 'localhost')
       );
 
       // Additional check: hostname should not be just numbers or random characters
@@ -644,6 +646,7 @@ export default function TaskDetailModal({
                     }}
                     placeholder="Izaberi kategoriju"
                     className="w-full"
+                    disabled={isEditingDisabled}
                   />
                 )}
               </div>
@@ -657,6 +660,7 @@ export default function TaskDetailModal({
                   onChange={setTone}
                   placeholder="Izaberite ton"
                   className="w-full"
+                  disabled={isEditingDisabled}
                 />
               </div>
 
@@ -669,9 +673,29 @@ export default function TaskDetailModal({
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
                   placeholder="npr. Preduzetnici 25-40 godina, Marketinški stručnjaci..."
-                  className="w-full bg-slate-700 border border-slate-600 rounded-md py-2 px-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  className="w-full bg-slate-700 border border-slate-600 rounded-md py-2 px-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isEditingDisabled}
                 />
               </div>
+
+              {/* Editing Disabled Notice for Published Tasks */}
+              {isEditingDisabled && (
+                <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Info className="text-blue-400 w-5 h-5 mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-blue-300 mb-1">
+                        Zadatak je objavljen
+                      </h4>
+                      <p className="text-xs text-blue-200/80">
+                        Ne možete menjati skriptu, inspiraciju ili raspored za
+                        objavljene zadatke. Možete samo urediti rezultate na
+                        kartici "Rezultati".
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* AI Generator Requirements Notification */}
               {(() => {
@@ -679,10 +703,11 @@ export default function TaskDetailModal({
                 if (!editedTask.title?.trim()) missingFields.push('Naslov');
                 if (!editedTask.category_id) missingFields.push('Kategorija');
                 if (!tone) missingFields.push('Ton / Stil');
-                if (!targetAudience?.trim()) missingFields.push('Ciljna Publika');
+                if (!targetAudience?.trim())
+                  missingFields.push('Ciljna Publika');
                 const hasAllRequiredFields = missingFields.length === 0;
 
-                if (!hasAllRequiredFields) {
+                if (!hasAllRequiredFields && !isEditingDisabled) {
                   return (
                     <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-4 space-y-2">
                       <div className="flex items-start gap-3">
@@ -692,11 +717,15 @@ export default function TaskDetailModal({
                             Potrebno za AI generator
                           </h4>
                           <p className="text-xs text-amber-200/80 mb-2">
-                            Da biste koristili AI generator, molimo popunite sledeća obavezna polja:
+                            Da biste koristili AI generator, molimo popunite
+                            sledeća obavezna polja:
                           </p>
                           <ul className="list-disc list-inside space-y-1 text-xs text-amber-200/80">
                             {missingFields.map((field) => (
-                              <li key={field} className="flex items-center gap-2">
+                              <li
+                                key={field}
+                                className="flex items-center gap-2"
+                              >
                                 <span className="text-amber-400">•</span>
                                 <span>{field}</span>
                               </li>
@@ -722,6 +751,7 @@ export default function TaskDetailModal({
                     }}
                     placeholder="Pišite ceo scenario bez razdvajanja na HOOK/BODY/CTA"
                     minHeight="350px"
+                    disabled={isEditingDisabled}
                     aiButton={{
                       fieldType: 'fullScript',
                       taskContext: {
@@ -760,6 +790,7 @@ export default function TaskDetailModal({
                       }}
                       placeholder="Unesite udicu ovde (0-3 sekunde)"
                       minHeight="80px"
+                      disabled={isEditingDisabled}
                       aiButton={{
                         fieldType: 'hook',
                         taskContext: {
@@ -789,6 +820,7 @@ export default function TaskDetailModal({
                       }}
                       placeholder="Unesite ključnu vrednost ovde (3-45 sekundi)"
                       minHeight="120px"
+                      disabled={isEditingDisabled}
                       aiButton={{
                         fieldType: 'body',
                         taskContext: {
@@ -818,6 +850,7 @@ export default function TaskDetailModal({
                       }}
                       placeholder="Unesite poziv na akciju ovde"
                       minHeight="60px"
+                      disabled={isEditingDisabled}
                       aiButton={{
                         fieldType: 'cta',
                         taskContext: {
@@ -838,66 +871,71 @@ export default function TaskDetailModal({
                 </>
               )}
 
-              <div className="mt-4">
-                <AIAssistant
-                  taskContext={{
-                    title: editedTask.title,
-                    niche: editedTask.niche,
-                    format: editedTask.format,
-                    hook: editedTask.hook || undefined,
-                    body: editedTask.body || undefined,
-                    cta: editedTask.cta || undefined,
-                    categoryId: editedTask.category_id,
-                    categoryName: editedTask.category?.name,
-                    tone: tone || undefined,
-                    targetAudience: targetAudience || undefined,
-                  }}
-                  onGenerateComplete={(field, content) => {
-                    if (field === 'title') {
-                      handleUpdate('title', content.trim());
-                    } else if (field === 'hook') {
-                      if (isLongForm) {
-                        handleUpdateFullScript(content.trim());
-                      } else {
-                        handleUpdate('hook', content.trim());
-                      }
-                    } else if (field === 'body') {
-                      handleUpdate('body', content.trim());
-                    } else if (field === 'cta') {
-                      handleUpdate('cta', content.trim());
-                    } else if (field === 'all') {
-                      // Parse structured content
-                      if (isLongForm) {
-                        handleUpdateFullScript(content.trim());
-                      } else {
-                        const hookMatch = content.match(
-                          /HOOK:?\s*([\s\S]+?)(?:\n\n|BODY:|CTA:|$)/i
-                        );
-                        const bodyMatch = content.match(
-                          /BODY:?\s*([\s\S]+?)(?:\n\n|CTA:|$)/i
-                        );
-                        const ctaMatch = content.match(/CTA:?\s*([\s\S]+?)$/i);
-                        const titleMatch =
-                          content.match(/NASLOV:?\s*([\s\S]+?)(?:\n|$)/i) ||
-                          content.match(/^([\s\S]+?)(?:\n|HOOK:|BODY:|CTA:)/i);
+              {!isEditingDisabled && (
+                <div className="mt-4">
+                  <AIAssistant
+                    taskContext={{
+                      title: editedTask.title,
+                      niche: editedTask.niche,
+                      format: editedTask.format,
+                      hook: editedTask.hook || undefined,
+                      body: editedTask.body || undefined,
+                      cta: editedTask.cta || undefined,
+                      categoryId: editedTask.category_id,
+                      categoryName: editedTask.category?.name,
+                      tone: tone || undefined,
+                      targetAudience: targetAudience || undefined,
+                    }}
+                    onGenerateComplete={(field, content) => {
+                      if (field === 'title') {
+                        handleUpdate('title', content.trim());
+                      } else if (field === 'hook') {
+                        if (isLongForm) {
+                          handleUpdateFullScript(content.trim());
+                        } else {
+                          handleUpdate('hook', content.trim());
+                        }
+                      } else if (field === 'body') {
+                        handleUpdate('body', content.trim());
+                      } else if (field === 'cta') {
+                        handleUpdate('cta', content.trim());
+                      } else if (field === 'all') {
+                        // Parse structured content
+                        if (isLongForm) {
+                          handleUpdateFullScript(content.trim());
+                        } else {
+                          const hookMatch = content.match(
+                            /HOOK:?\s*([\s\S]+?)(?:\n\n|BODY:|CTA:|$)/i
+                          );
+                          const bodyMatch = content.match(
+                            /BODY:?\s*([\s\S]+?)(?:\n\n|CTA:|$)/i
+                          );
+                          const ctaMatch =
+                            content.match(/CTA:?\s*([\s\S]+?)$/i);
+                          const titleMatch =
+                            content.match(/NASLOV:?\s*([\s\S]+?)(?:\n|$)/i) ||
+                            content.match(
+                              /^([\s\S]+?)(?:\n|HOOK:|BODY:|CTA:)/i
+                            );
 
-                        if (titleMatch?.[1]) {
-                          handleUpdate('title', titleMatch[1].trim());
-                        }
-                        if (hookMatch?.[1]) {
-                          handleUpdate('hook', hookMatch[1].trim());
-                        }
-                        if (bodyMatch?.[1]) {
-                          handleUpdate('body', bodyMatch[1].trim());
-                        }
-                        if (ctaMatch?.[1]) {
-                          handleUpdate('cta', ctaMatch[1].trim());
+                          if (titleMatch?.[1]) {
+                            handleUpdate('title', titleMatch[1].trim());
+                          }
+                          if (hookMatch?.[1]) {
+                            handleUpdate('hook', hookMatch[1].trim());
+                          }
+                          if (bodyMatch?.[1]) {
+                            handleUpdate('body', bodyMatch[1].trim());
+                          }
+                          if (ctaMatch?.[1]) {
+                            handleUpdate('cta', ctaMatch[1].trim());
+                          }
                         }
                       }
-                    }
-                  }}
-                />
-              </div>
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -917,18 +955,22 @@ export default function TaskDetailModal({
                     if (
                       e.key === 'Enter' &&
                       linkInput.trim() &&
-                      !isAddingLink
+                      !isAddingLink &&
+                      !isEditingDisabled
                     ) {
                       e.preventDefault();
                       handleAddLink();
                     }
                   }}
                   placeholder="Paste link (YouTube, Instagram, TikTok...)"
-                  className="flex-1 bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  className="flex-1 bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isEditingDisabled}
                 />
                 <button
                   onClick={handleAddLink}
-                  disabled={!linkInput.trim() || isAddingLink}
+                  disabled={
+                    !linkInput.trim() || isAddingLink || isEditingDisabled
+                  }
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-sm font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500 flex items-center gap-2"
                 >
                   {isAddingLink ? (
@@ -989,6 +1031,7 @@ export default function TaskDetailModal({
                         </a>
                         <button
                           onClick={async () => {
+                            if (isEditingDisabled) return;
                             setRemovingLinkId(item.id);
                             isManagingLinksRef.current = true;
                             try {
@@ -1009,7 +1052,9 @@ export default function TaskDetailModal({
                               }, 100);
                             }
                           }}
-                          disabled={removingLinkId === item.id}
+                          disabled={
+                            removingLinkId === item.id || isEditingDisabled
+                          }
                           className="text-slate-600 hover:text-red-400 transition-colors shrink-0 disabled:opacity-50"
                           title="Obriši link"
                         >
@@ -1057,20 +1102,20 @@ export default function TaskDetailModal({
                 placeholder="Izaberi datum objavljivanja"
                 className="w-full"
                 disablePast={true}
+                disabled={isEditingDisabled}
               />
             </div>
           )}
 
-          {editedTask.status === 'published' && activeTab === 'results' && (
+          {activeTab === 'results' && (
             <div className="space-y-4">
               <h4 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
-                <Eye size={14} className="text-emerald-400" /> Analiza Rezultata
-                (za Case Study)
+                <Eye size={14} className="text-emerald-400" /> Analiza rezultata
               </h4>
 
               <div>
                 <label className="text-blue-400 text-xs font-bold block mb-1">
-                  Detaljna Analiza (Zašto je radilo?)
+                  Detaljna analiza
                 </label>
                 <RichTextEditor
                   content={analysisHtml}
@@ -1085,7 +1130,7 @@ export default function TaskDetailModal({
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="text-emerald-400 text-xs font-bold block mb-1">
-                    Pregleda (Views)
+                    Broj pregleda
                   </label>
                   <input
                     type="text"
@@ -1098,7 +1143,7 @@ export default function TaskDetailModal({
                 </div>
                 <div>
                   <label className="text-purple-400 text-xs font-bold block mb-1">
-                    Angažman (Engagement)
+                    Engagement
                   </label>
                   <input
                     type="text"
@@ -1111,7 +1156,7 @@ export default function TaskDetailModal({
                 </div>
                 <div>
                   <label className="text-yellow-400 text-xs font-bold block mb-1">
-                    Konverzije
+                    Broj konverzija
                   </label>
                   <input
                     type="text"
@@ -1124,7 +1169,7 @@ export default function TaskDetailModal({
                 </div>
               </div>
 
-              <div>
+              {/* <div>
                 <label className="text-red-400 text-xs font-bold block mb-1">
                   Cover Slika URL (Thumbnail)
                 </label>
@@ -1147,7 +1192,7 @@ export default function TaskDetailModal({
                     />
                   </div>
                 )}
-              </div>
+              </div> */}
             </div>
           )}
         </div>

@@ -3,7 +3,7 @@
 import { ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-export type Tone = 
+export type Tone =
   | 'friendly'
   | 'contrarian'
   | 'expert'
@@ -22,43 +22,43 @@ export interface ToneOption {
 export const TONE_OPTIONS: ToneOption[] = [
   {
     value: 'friendly',
-    label: 'Friendly',
-    description: 'Warm, approachable',
+    label: 'Prijateljski',
+    description: 'Topao, pristupačan ton komunikacije',
   },
   {
     value: 'contrarian',
-    label: 'Contrarian',
-    description: 'Bold, challenging',
+    label: 'Kontrarian',
+    description: 'Smeo, izaziva ustaljena mišljenja',
   },
   {
     value: 'expert',
-    label: 'Expert',
-    description: 'Authoritative, credible',
+    label: 'Stručan',
+    description: 'Autoritativan, pouzdan i kredibilan',
   },
   {
     value: 'playful',
-    label: 'Playful',
-    description: 'Fun, lighthearted',
+    label: 'Razigran',
+    description: 'Zabavan, lagan i opušten stil',
   },
   {
     value: 'cinematic',
-    label: 'Cinematic',
-    description: 'Dramatic, visual',
+    label: 'Filmski',
+    description: 'Dramatičan, vizuelan i narativan',
   },
   {
     value: 'educational',
-    label: 'Educational',
-    description: 'Informative, teaching',
+    label: 'Edukativan',
+    description: 'Informativan, objašnjava i podučava',
   },
   {
     value: 'entertaining',
-    label: 'Entertaining',
-    description: 'Engaging, amusing',
+    label: 'Zabavan',
+    description: 'Interesantan, dinamičan i privlačan pažnji',
   },
   {
     value: 'inspirational',
-    label: 'Inspirational',
-    description: 'Motivating, uplifting',
+    label: 'Inspirativan',
+    description: 'Motivišući, podstiče i ohrabruje',
   },
 ];
 
@@ -67,6 +67,7 @@ interface ToneSelectProps {
   onChange: (tone: Tone | null) => void;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export default function ToneSelect({
@@ -74,13 +75,16 @@ export default function ToneSelect({
   onChange,
   placeholder = 'Izaberi ton',
   className = '',
+  disabled = false,
 }: ToneSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const selectRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const selectedTone = value ? TONE_OPTIONS.find((t) => t.value === value) : null;
+  const selectedTone = value
+    ? TONE_OPTIONS.find((t) => t.value === value)
+    : null;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -113,6 +117,7 @@ export default function ToneSelect({
   }, [highlightedIndex, isOpen]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled) return;
     switch (e.key) {
       case 'Enter':
       case ' ':
@@ -156,11 +161,14 @@ export default function ToneSelect({
     <div ref={selectRef} className={`relative ${className}`}>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
-        className={`w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-left flex items-center justify-between transition-colors hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer ${
-          isOpen ? 'border-blue-500 ring-2 ring-blue-500/20' : ''
-        }`}
+        disabled={disabled}
+        className={`w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-left flex items-center justify-between transition-colors ${
+          disabled
+            ? 'opacity-50 cursor-not-allowed'
+            : 'hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer'
+        } ${isOpen ? 'border-blue-500 ring-2 ring-blue-500/20' : ''}`}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
@@ -184,7 +192,7 @@ export default function ToneSelect({
         />
       </button>
 
-      {isOpen && (
+      {isOpen && !disabled && (
         <ul
           ref={listRef}
           role="listbox"
@@ -203,8 +211,8 @@ export default function ToneSelect({
               value === null
                 ? 'bg-blue-600/20 text-white'
                 : highlightedIndex === -1
-                ? 'text-white'
-                : 'text-slate-300 hover:bg-slate-700'
+                  ? 'text-white'
+                  : 'text-slate-300 hover:bg-slate-700'
             }`}
           >
             <span className="text-slate-400 text-sm">Bez tona</span>
@@ -224,8 +232,8 @@ export default function ToneSelect({
                 value === tone.value
                   ? 'bg-blue-600/20 text-white'
                   : highlightedIndex === index
-                  ? 'bg-slate-700 text-white'
-                  : 'text-slate-300 hover:bg-slate-700'
+                    ? 'bg-slate-700 text-white'
+                    : 'text-slate-300 hover:bg-slate-700'
               }`}
             >
               <div className="flex flex-col gap-0.5">
@@ -241,4 +249,3 @@ export default function ToneSelect({
     </div>
   );
 }
-

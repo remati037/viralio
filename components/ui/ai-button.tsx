@@ -46,13 +46,43 @@ const fieldPrompts: Record<
     const audienceInfo = context?.targetAudience
       ? ` Ciljna publika: ${context.targetAudience}.`
       : '';
-    return `Kreiraj moćan hook (udicu) za ${
-      context?.format || 'video'
-    } koji će privući pažnju u prve 3 sekunde. Neka bude intrigantan, izazove radoznalost i zadrži gledaoce. Format: ${
-      context?.format || 'Kratka Forma'
-    }. Niša: ${context?.niche || 'marketing'}.${categoryInfo}${toneInfo}${audienceInfo}
+    return `### ROLE & OBJECTIVE
+You are a Viral Hook Expert for Short-Form content (TikTok, Reels, Shorts).
+Your ONLY goal is to write opening lines that stop the scroll immediately.
 
-VAŽNO: Vrati SAMO tekst hooka, bez objašnjenja, bez dodatnog teksta, bez labela. Samo hook.`;
+### INPUT DATA
+- *Topic:* ${context?.title}
+- *Target Audience:* ${context?.targetAudience} (default: General)
+
+### STRICT RULES FOR HOOKS
+1.  *NO GREETINGS:* NEVER start with "Hello everyone", "Hi guys", "Dobrodošli". Start instantly.
+2.  *LENGTH:* Maximum 10-15 words per hook. It must be spoken in under 3 seconds.
+3.  *LANGUAGE:* Serbian (Latin script). Use the informal "Ti" (You).
+4.  *TONE:* Urgent, specific, and bold.
+5.  *VISUAL CUE:* The text must imply visual movement or a strong statement.
+
+### TASK: GENERATE 3 DISTINCT VARIATIONS
+
+*Variation 1: The Negative/Warning Hook*
+* Logic: Focus on a mistake, a stop command, or a fear of missing out.
+* Template examples: "Prestani da radiš X...", "Ovo je razlog zašto ne uspevaš da...", "Najveća greška kod..."
+
+*Variation 2: The Direct Benefit Hook*
+* Logic: A massive promise delivered quickly. "How to" without boring words.
+* Template examples: "Kako da [Benefit] za manje od [Time]...", "Jedini trik koji ti treba za..."
+
+*Variation 3: The Curiosity/Secret Hook*
+* Logic: Start in the middle of a sentence or state something counter-intuitive.
+* Template examples: "Niko ti ovo neće reći o...", "Ovo zvuči ludo, ali..."
+
+### OUTPUT FORMAT
+Provide the output specifically formatted like this (just the text):
+
+[Warning]: [Insert Hook Text Here]
+[Benefit]: [Insert Hook Text Here]
+[Curiosity]: [Insert Hook Text Here]
+
+### GENERATE HOOKS NOW FOR TOPIC: ${context?.title}`;
   },
   body: (context, currentContent) => {
     const hasContent = currentContent.trim().length > 0;
@@ -63,15 +93,39 @@ VAŽNO: Vrati SAMO tekst hooka, bez objašnjenja, bez dodatnog teksta, bez label
     const audienceInfo = context?.targetAudience
       ? ` Ciljna publika: ${context.targetAudience}.`
       : '';
-    return `Napiši vrednosni deo (body) za ${
-      context?.format || 'video'
-    } koji će zadržati gledaoce i pružiti korisne informacije. ${
-      hasContent
-        ? `Trenutni sadržaj: ${currentContent.substring(0, 200)}. `
-        : ''
-    }Format: ${context?.format || 'Kratka Forma'}. Niša: ${
-      context?.niche || 'marketing'
-    }. Naslov: ${context?.title || 'N/A'}.${categoryInfo}${toneInfo}${audienceInfo}`;
+    return `### ROLE & OBJECTIVE
+You are an expert Short-Form Video Scriptwriter for the Balkan market (Serbia, Croatia, Bosnia, Montenegro). Your task is to write the *BODY* section of a viral Reel/TikTok script based on the User's Topic.
+
+### INPUT DATA
+- *Topic:* ${context?.title}
+- *Tone:* ${context?.tone} (default: Energetic, confident, informal)
+- *Target Audience:* ${context?.targetAudience} (optional, default: General public)
+
+### STRICT WRITING RULES (CRITICAL)
+1.  *LANGUAGE:* Output must be in *SERBIAN* (Latin script).
+2.  *TONE & STYLE:*
+    - Use the informal "Ti" (You) to address the viewer directly. NEVER use the formal "Vi" unless explicitly requested.
+    - Write exactly how people speak in Belgrade/region (urban, modern, conversational).
+    - Avoid complex academic words. Use simple, punchy vocabulary (6th-grade level).
+    - NO generic fluff phrases like "U današnjem videu ću vam pokazati..." (In today's video I will show you...).
+3.  *PACING & STRUCTURE:*
+    - *Start immediately:* The Hook is already done. Jump straight into the value/story.
+    - *Sentence Length:* Keep sentences short. One breath per sentence.
+    - *Formatting:* Write each sentence on a new line for easier reading on a teleprompter.
+    - *Length:* Target 60-90 words total (approx. 20-30 seconds spoken).
+
+### CONTENT LOGIC (Dynamic Selection)
+Based on the Topic, choose the best structure automatically:
+- *If Educational:* Use "Step-by-Step" (Prvo uradi ovo... Zatim...).
+- *If Explanatory:* Use "The Insight" (Većina ljudi misli X, ali zapravo je Y...).
+- *If Tips:* Use "Rapid Fire" (Broj 1... Broj 2... Broj 3...).
+
+### OUTPUT FORMAT
+- Do NOT output the Hook or CTA. Only the BODY.
+- Do NOT use labels like "Body:" or "Tekst:". Just the raw script text.
+- Do NOT use markdown bolding (**) in the final text (it confuses some teleprompters).
+
+### GENERATE SCRIPT BODY NOW FOR TOPIC: ${context?.title}`;
   },
   cta: (context, currentContent) => {
     const hasContent = currentContent.trim().length > 0;
@@ -229,9 +283,10 @@ export default function AIButton({
       const generatedContent = data.message;
 
       // Clean up the response - remove any markdown formatting or labels
-      let cleanedContent = generatedContent.trim();
+      // let cleanedContent = generatedContent.trim();
+      let cleanedContent = generatedContent;
 
-      // For hooks, extract only the hook text (first sentence/paragraph)
+      // For hooks, preserve all lines and format them properly
       if (fieldType === 'hook') {
         // Remove common prefixes
         const prefixes = [
@@ -249,17 +304,13 @@ export default function AIButton({
           }
         }
 
-        // Extract only the first sentence/paragraph (hook should be short)
-        // Split by newlines and take the first non-empty line
+        // Remove explanation lines but keep all hook content lines
         const lines = cleanedContent
           .split('\n')
           .map((line: string) => line.trim())
           .filter((line: string) => line);
-        if (lines.length > 0) {
-          // Take the first line, but if it's too long (likely an explanation), take first sentence
-          let hookText = lines[0];
 
-          // If first line contains common explanation words, try to extract just the hook
+        if (lines.length > 0) {
           const explanationIndicators = [
             'ovo je',
             'evo',
@@ -268,37 +319,22 @@ export default function AIButton({
             'udica bi',
             'može biti',
           ];
-          const lowerFirstLine = hookText.toLowerCase();
 
-          // Check if first line seems like an explanation
-          if (
-            explanationIndicators.some((indicator) =>
-              lowerFirstLine.includes(indicator)
-            ) &&
-            lines.length > 1
-          ) {
-            // Look for the actual hook in subsequent lines
-            for (let i = 1; i < lines.length; i++) {
-              const line = lines[i];
-              // Skip lines that look like explanations
-              if (
-                !explanationIndicators.some((indicator) =>
-                  line.toLowerCase().includes(indicator)
-                )
-              ) {
-                hookText = line;
-                break;
-              }
-            }
-          }
+          // Filter out explanation lines but keep all actual hook content
+          const hookLines = lines.filter((line: string) => {
+            const lowerLine = line.toLowerCase();
+            return !explanationIndicators.some((indicator) =>
+              lowerLine.includes(indicator)
+            );
+          });
 
-          // Take only first sentence if it ends with punctuation
-          const sentenceEnd = hookText.match(/^[^.!?]*[.!?]/);
-          if (sentenceEnd) {
-            hookText = sentenceEnd[0].trim();
-          }
+          // If we filtered out all lines, use the original lines
+          const finalLines = hookLines.length > 0 ? hookLines : lines;
 
-          cleanedContent = hookText;
+          // Join all lines preserving the structure - convert to HTML paragraphs
+          cleanedContent = finalLines
+            .map((line: string) => `<p>${line.trim()}</p>`)
+            .join('');
         }
       } else {
         // For other field types, use existing logic

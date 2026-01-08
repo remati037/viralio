@@ -12,6 +12,7 @@ interface DatePickerProps {
   minDate?: string; // ISO date string
   maxDate?: string; // ISO date string
   disablePast?: boolean; // If true, disables all dates before today
+  disabled?: boolean;
 }
 
 const MONTHS = [
@@ -39,6 +40,7 @@ export default function DatePicker({
   minDate,
   maxDate,
   disablePast = false,
+  disabled = false,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
@@ -313,10 +315,13 @@ export default function DatePicker({
     <div ref={pickerRef} className={`relative ${className}`}>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-left flex items-center justify-between transition-colors hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer ${
-          isOpen ? 'border-blue-500 ring-2 ring-blue-500/20' : ''
-        }`}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-left flex items-center justify-between transition-colors ${
+          disabled
+            ? 'opacity-50 cursor-not-allowed'
+            : 'hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer'
+        } ${isOpen ? 'border-blue-500 ring-2 ring-blue-500/20' : ''}`}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
       >
@@ -360,6 +365,7 @@ export default function DatePicker({
       </button>
 
       {isOpen &&
+        !disabled &&
         mounted &&
         createPortal(
           <div

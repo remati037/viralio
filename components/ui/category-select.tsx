@@ -16,6 +16,7 @@ interface CategorySelectProps {
   onChange: (categoryId: string | null) => void;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export default function CategorySelect({
@@ -24,6 +25,7 @@ export default function CategorySelect({
   onChange,
   placeholder = 'Izaberi kategoriju',
   className = '',
+  disabled = false,
 }: CategorySelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -103,8 +105,6 @@ export default function CategorySelect({
         break;
     }
   };
-
-  const disabled = false;
 
   return (
     <div ref={selectRef} className={`relative ${className}`}>

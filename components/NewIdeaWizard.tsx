@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import AIAssistant from './AIAssistant';
 import AICreditBadge from './ui/ai-credit-badge';
 import CategorySelect, { type TaskCategory } from './ui/category-select';
 import DatePicker from './ui/date-picker';
@@ -1055,7 +1054,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
             </div>
           </div>
 
-          <div className="mt-4">
+          {/* <div className="mt-4">
             <AIAssistant
               taskContext={{
                 title: formData.title,
@@ -1152,7 +1151,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
                 }
               }}
             />
-          </div>
+          </div> */}
 
           <div className="border-t border-slate-800 pt-6">
             <button
