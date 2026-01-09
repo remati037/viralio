@@ -13,13 +13,11 @@ import type { TaskInsert, UserTier } from '@/types';
 import {
   ClipboardList,
   Layout,
-  Menu,
   Play,
   Plus,
   Shield,
   Trello,
   User,
-  X,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
@@ -62,6 +60,28 @@ export default function AppLayout({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Prevent body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (isSidebarOpen) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+      // Lock body scroll
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+
+      return () => {
+        // Restore scroll position when sidebar closes
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isSidebarOpen]);
 
   // Initialize loading state consistently - only show loader after mount
   // This ensures server and client render the same initial structure
@@ -116,7 +136,7 @@ export default function AppLayout({
           </div>
         )}
         {/* Mobile Header */}
-        <div className="lg:hidden flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
+        <div className="lg:hidden flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
           <div className="font-bold text-xl text-white tracking-tighter flex items-center gap-2">
             <Image
               src="/viralio-icon-512.png"
@@ -124,23 +144,45 @@ export default function AppLayout({
               width={32}
               height={32}
             />
-            {/* <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Play fill="white" size={16} className="text-white" />
-            </div> */}
             Viralio
           </div>
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 text-slate-400"
+            className="p-2 text-slate-400 transition-transform duration-300"
+            aria-label="Toggle menu"
           >
-            {isSidebarOpen ? <X /> : <Menu />}
+            <div className="relative w-6 h-6 flex flex-col gap-1.5 justify-center">
+              <span
+                className={`left-0 w-6 h-0.5 bg-current transition-all duration-300 ${
+                  isSidebarOpen ? 'rotate-45 translate-y-2' : 'translate-y-0'
+                }`}
+              />
+              <span
+                className={`left-0 w-6 h-0.5 bg-current transition-all duration-300 ${
+                  isSidebarOpen ? 'opacity-0' : 'opacity-100'
+                }`}
+              />
+              <span
+                className={`left-0 w-6 h-0.5 bg-current transition-all duration-300 ${
+                  isSidebarOpen ? '-rotate-45 -translate-y-2' : 'translate-y-0'
+                }`}
+              />
+            </div>
           </button>
         </div>
+
+        {/* Backdrop overlay when sidebar is open */}
+        {isSidebarOpen && (
+          <div
+            className="fixed top-[57px] bottom-0 left-0 right-0 bg-black/50 z-30 lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
 
         <div className="flex">
           {/* Sidebar */}
           <aside
-            className={`fixed inset-y-0 left-0 z-30 w-64 bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-screen ${
+            className={`fixed top-[57px] bottom-0 left-0 z-40 w-full bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:h-screen lg:top-0 overflow-y-auto ${
               isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
             }`}
           >
@@ -269,7 +311,7 @@ export default function AppLayout({
           </aside>
 
           {/* Main Content */}
-          <main className="flex-1 p-4 lg:p-8 overflow-x-hidden h-screen overflow-y-auto">
+          <main className="flex-1 p-4 lg:p-8 overflow-x-hidden h-full overflow-y-auto lg:ml-64">
             {children}
           </main>
         </div>

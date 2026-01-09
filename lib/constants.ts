@@ -1,7 +1,10 @@
 import type { Network, Niche } from '@/types'
 import {
+  CheckCircle,
+  Clock,
   Dumbbell,
   Facebook,
+  FileText,
   Home,
   Instagram,
   Move,
@@ -27,23 +30,31 @@ export const NETWORKS: Network[] = [
 export const KANBAN_COLUMNS = [
   {
     id: 'idea',
-    title: '💡 Ideja',
-    color: 'border-yellow-500/50 bg-yellow-500/10 text-yellow-500',
+    title: 'Ideja',
+    icon: FileText,
+    iconColor: 'text-slate-400',
+    color: 'border-yellow-500/50 bg-yellow-500/10 text-slate-400',
   },
   {
     id: 'ready',
-    title: '🎬 Spremno za snimanje',
-    color: 'border-blue-500/50 bg-blue-500/10 text-blue-400',
+    title: 'Spremno za snimanje',
+    icon: CheckCircle,
+    iconColor: 'text-green-400',
+    color: 'border-blue-500/50 bg-blue-500/10 text-green-400',
   },
   {
     id: 'scheduled',
-    title: '📅 Zakazano',
-    color: 'border-purple-500/50 bg-purple-500/10 text-purple-400',
+    title: 'Zakazano',
+    icon: Clock,
+    iconColor: 'text-yellow-400',
+    color: 'border-purple-500/50 bg-purple-500/10 text-yellow-400',
   },
   {
     id: 'published',
-    title: '✅ Objavljeno',
-    color: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
+    title: 'Objavljeno',
+    icon: CheckCircle,
+    iconColor: 'text-blue-400',
+    color: 'border-emerald-500/50 bg-emerald-500/10 text-blue-400',
   },
 ]
 

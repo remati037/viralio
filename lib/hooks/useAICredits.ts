@@ -135,14 +135,9 @@ export function useAICredits(userId: string | null): UseAICreditsReturn {
   }
 
   useEffect(() => {
-    fetchCredits()
-
-    // Refresh credits every 30 seconds to keep them up to date
-    const interval = setInterval(() => {
+    if (userId) {
       fetchCredits()
-    }, 30000)
-
-    return () => clearInterval(interval)
+    }
   }, [userId])
 
   const refreshCredits = () => {

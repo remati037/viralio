@@ -59,7 +59,12 @@ export default function KanbanBoard({
               <div
                 className={`flex items-center justify-between gap-2 p-3 rounded-t-lg border-t border-x border-slate-700/50 ${column.color} bg-opacity-10`}
               >
-                <span className="font-bold text-md">{column.title}</span>
+                <div className="flex items-center gap-2">
+                  {column.icon && (
+                    <column.icon className={column.iconColor} size={18} />
+                  )}
+                  <span className="font-bold text-md">{column.title}</span>
+                </div>
                 <span className="bg-slate-900/50 px-2 py-0.5 rounded text-xs opacity-70">
                   {columnTasks.length}
                 </span>

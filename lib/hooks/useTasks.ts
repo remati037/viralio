@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { updateUserStatistics } from '@/lib/utils/userStatistics'
 import type { Task, TaskInsert, TaskUpdate, InspirationLink } from '@/types'
 
 export function useTasks(userId: string | null) {
@@ -53,6 +54,14 @@ export function useTasks(userId: string | null) {
       if (insertError) throw insertError
 
       setTasks((prev) => [data as Task, ...prev])
+      
+      // Update user statistics after creating a task
+      if (userId) {
+        updateUserStatistics(userId).catch((err) => {
+          console.error('Error updating user statistics after task creation:', err)
+        })
+      }
+      
       return { data, error: null }
     } catch (err: any) {
       setError(err.message)
@@ -75,6 +84,13 @@ export function useTasks(userId: string | null) {
         prev.map((task) => (task.id === taskId ? (data as Task) : task))
       )
 
+      // Update user statistics after updating a task (especially if status changed)
+      if (userId && (updates.status !== undefined || updates.result_views || updates.result_engagement || updates.result_conversions)) {
+        updateUserStatistics(userId).catch((err) => {
+          console.error('Error updating user statistics after task update:', err)
+        })
+      }
+
       return { data, error: null }
     } catch (err: any) {
       setError(err.message)
@@ -92,6 +108,14 @@ export function useTasks(userId: string | null) {
       if (deleteError) throw deleteError
 
       setTasks((prev) => prev.filter((task) => task.id !== taskId))
+      
+      // Update user statistics after deleting a task
+      if (userId) {
+        updateUserStatistics(userId).catch((err) => {
+          console.error('Error updating user statistics after task deletion:', err)
+        })
+      }
+      
       return { error: null }
     } catch (err: any) {
       setError(err.message)

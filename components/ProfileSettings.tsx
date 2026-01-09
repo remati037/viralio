@@ -1,89 +1,126 @@
-'use client'
+'use client';
 
-import { createClient } from '@/lib/supabase/client'
-import type { Payment, Profile, SocialLink } from '@/types'
-import { Calendar, Check, CreditCard, DollarSign, Tag, Target, User, Video, X, Youtube } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
-import CancelSubscriptionModal from './CancelSubscriptionModal'
-import CategoryManagement from './CategoryManagement'
-import SocialLinkInput from './SocialLinkInput'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import Skeleton from './ui/skeleton'
+import { useAICredits } from '@/lib/hooks/useAICredits';
+import { createClient } from '@/lib/supabase/client';
+import type { Payment, Profile, SocialLink } from '@/types';
+import {
+  BarChart3,
+  Calendar,
+  Check,
+  CreditCard,
+  DollarSign,
+  Sparkles,
+  Tag,
+  Target,
+  User,
+  Video,
+  X,
+  Youtube,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import CancelSubscriptionModal from './CancelSubscriptionModal';
+import CategoryManagement from './CategoryManagement';
+import SocialLinkInput from './SocialLinkInput';
+import UserStatisticsComponent from './UserStatistics';
+import AICreditBadge from './ui/ai-credit-badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from './ui/card';
+import Loader from './ui/loader';
+import Skeleton from './ui/skeleton';
 
 interface ProfileSettingsProps {
-  profile: Profile | null
-  onSave: (profile: Partial<Profile> & { social_links?: SocialLink[] }) => Promise<void>
+  profile: Profile | null;
+  onSave: (
+    profile: Partial<Profile> & { social_links?: SocialLink[] }
+  ) => Promise<void>;
 }
 
-export default function ProfileSettings({ profile, onSave }: ProfileSettingsProps) {
-  const [activeTab, setActiveTab] = useState<'profile' | 'payment' | 'categories'>('profile')
-  const [isSaving, setIsSaving] = useState(false)
-  const [payments, setPayments] = useState<Payment[]>([])
-  const [loadingPayments, setLoadingPayments] = useState(true)
-  const [showCancelModal, setShowCancelModal] = useState(false)
+export default function ProfileSettings({
+  profile,
+  onSave,
+}: ProfileSettingsProps) {
+  const [activeTab, setActiveTab] = useState<
+    'profile' | 'payment' | 'categories' | 'statistics' | 'ai-credits'
+  >('profile');
+  const { credits, loading: creditsLoading } = useAICredits(
+    profile?.id || null
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(true);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<{
-    isCancelled: boolean
-    hasActiveSubscription: boolean
-    isTrialing?: boolean
-    trialDaysRemaining?: number | null
-    trialEnd?: number | null
-    currentPeriodEnd?: number | null
-  } | null>(null)
-  const [loadingStatus, setLoadingStatus] = useState(true) // Start as true to show loader initially
-  const supabase = createClient()
+    isCancelled: boolean;
+    hasActiveSubscription: boolean;
+    isTrialing?: boolean;
+    trialDaysRemaining?: number | null;
+    trialEnd?: number | null;
+    currentPeriodEnd?: number | null;
+  } | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState(true); // Start as true to show loader initially
+  const supabase = createClient();
   const [formData, setFormData] = useState({
     business_name: profile?.business_name || '',
     target_audience: profile?.target_audience || '',
     persona: profile?.persona || '',
     monthly_goal_short: profile?.monthly_goal_short || 0,
     monthly_goal_long: profile?.monthly_goal_long || 0,
-  })
-  const [socialLinks, setSocialLinks] = useState<SocialLink[]>(profile?.social_links || [])
+  });
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>(
+    profile?.social_links || []
+  );
 
   useEffect(() => {
     if (activeTab === 'payment' && profile?.id) {
-      fetchPayments()
-      fetchSubscriptionStatus()
+      fetchPayments();
+      fetchSubscriptionStatus();
     }
-  }, [activeTab, profile?.id])
+  }, [activeTab, profile?.id]);
 
   const fetchSubscriptionStatus = async () => {
-    if (!profile?.id) return
-    setLoadingStatus(true)
+    if (!profile?.id) return;
+    setLoadingStatus(true);
     try {
-      const response = await fetch('/api/stripe/subscription-status')
-      const data = await response.json()
-      setSubscriptionStatus(data)
+      const response = await fetch('/api/stripe/subscription-status');
+      const data = await response.json();
+      setSubscriptionStatus(data);
     } catch (error: any) {
-      console.error('Error fetching subscription status:', error)
+      console.error('Error fetching subscription status:', error);
     } finally {
-      setLoadingStatus(false)
+      setLoadingStatus(false);
     }
-  }
+  };
 
   const fetchPayments = async () => {
-    if (!profile?.id) return
-    setLoadingPayments(true)
+    if (!profile?.id) return;
+    setLoadingPayments(true);
     try {
       const { data, error } = await supabase
         .from('payments')
         .select('*')
         .eq('user_id', profile.id)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false });
 
-      if (error) throw error
-      setPayments(data || [])
+      if (error) throw error;
+      setPayments(data || []);
     } catch (error: any) {
       toast.error('Greška pri učitavanju platnih podataka', {
         description: error.message,
-      })
+      });
     } finally {
-      setLoadingPayments(false)
+      setLoadingPayments(false);
     }
-  }
+  };
 
-  const nextPayment = payments.find((p) => p.next_payment_date && new Date(p.next_payment_date) > new Date())
+  const nextPayment = payments.find(
+    (p) => p.next_payment_date && new Date(p.next_payment_date) > new Date()
+  );
 
   useEffect(() => {
     if (profile) {
@@ -93,10 +130,10 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
         persona: profile.persona || '',
         monthly_goal_short: profile.monthly_goal_short || 0,
         monthly_goal_long: profile.monthly_goal_long || 0,
-      })
-      setSocialLinks(profile.social_links || [])
+      });
+      setSocialLinks(profile.social_links || []);
     }
-  }, [profile])
+  }, [profile]);
 
   const handleSave = async () => {
     // if (!formData.business_name.trim()) {
@@ -106,65 +143,181 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
     //   return
     // }
 
-    setIsSaving(true)
-    await onSave({ ...formData, social_links: socialLinks })
-    setIsSaving(false)
-  }
+    setIsSaving(true);
+    await onSave({ ...formData, social_links: socialLinks });
+    setIsSaving(false);
+  };
 
   return (
-    <div className="max-w-4xl mx-auto bg-slate-900/50 p-6 lg:p-10 rounded-3xl border border-slate-800 shadow-xl">
-      <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-        <User className="text-blue-400" size={24} /> Postavke Profila
+    <div className="max-w-4xl mx-auto bg-slate-900/50 p-5 lg:p-10 rounded-lg border border-slate-800 shadow-xl">
+      <h1 className="text-2xl font-bold text-white mb-2 flex items-center justify-center gap-3">
+        <User className="text-blue-400" size={24} />
+        Postavke profila
       </h1>
-      <p className="text-slate-400 mb-8">
-        Ove informacije će AI koristiti za personalizaciju skripti, tona i poziva na akciju (CTA).
-      </p>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-slate-700">
+      <div className="flex gap-2 mb-6 border-b border-slate-700 flex-wrap justify-center">
         <button
           onClick={() => setActiveTab('profile')}
-          className={`px-4 py-2 font-medium transition-colors ${activeTab === 'profile'
-            ? 'text-white border-b-2 border-blue-500'
-            : 'text-slate-400 hover:text-white'
-            }`}
+          className={`px-4 py-2 font-medium transition-colors ${
+            activeTab === 'profile'
+              ? 'text-white border-b-2 border-blue-500'
+              : 'text-slate-400 hover:text-white'
+          }`}
         >
           Profil
         </button>
         <button
           onClick={() => setActiveTab('payment')}
-          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'payment'
-            ? 'text-white border-b-2 border-blue-500'
-            : 'text-slate-400 hover:text-white'
-            }`}
+          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'payment'
+              ? 'text-white border-b-2 border-blue-500'
+              : 'text-slate-400 hover:text-white'
+          }`}
         >
           <DollarSign size={16} /> Plaćanje
         </button>
         <button
           onClick={() => setActiveTab('categories')}
-          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'categories'
-            ? 'text-white border-b-2 border-blue-500'
-            : 'text-slate-400 hover:text-white'
-            }`}
+          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'categories'
+              ? 'text-white border-b-2 border-blue-500'
+              : 'text-slate-400 hover:text-white'
+          }`}
         >
           <Tag size={16} /> Kategorije
+        </button>
+        <button
+          onClick={() => setActiveTab('statistics')}
+          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'statistics'
+              ? 'text-white border-b-2 border-blue-500'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <BarChart3 size={16} /> Statistika
+        </button>
+        <button
+          onClick={() => setActiveTab('ai-credits')}
+          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'ai-credits'
+              ? 'text-white border-b-2 border-blue-500'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Sparkles size={16} /> AI Krediti
         </button>
       </div>
 
       {activeTab === 'categories' && profile?.id && (
         <Card className="bg-slate-800 border-slate-700">
-          <CardContent className="pt-6">
+          <CardContent className="p-4">
             <CategoryManagement userId={profile.id} />
           </CardContent>
         </Card>
       )}
 
+      {activeTab === 'statistics' && profile?.id && (
+        <UserStatisticsComponent userId={profile.id} />
+      )}
+
+      {activeTab === 'ai-credits' && (
+        <Card className="bg-slate-800 border-slate-700">
+          <CardHeader className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="text-purple-400" size={20} />
+                <CardTitle className="text-white">AI Krediti</CardTitle>
+              </div>
+            </div>
+            <CardDescription className="text-slate-400">
+              Koristite AI funkcionalnosti za generisanje sadržaja. Svaki AI
+              zahtev koristi 1 kredit.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            {creditsLoading ? (
+              <Loader text="Učitavanje kredita..." />
+            ) : credits ? (
+              <div className="space-y-3">
+                <AICreditBadge
+                  creditsRemaining={credits.credits_remaining}
+                  maxCredits={credits.max_credits}
+                  compact={false}
+                  showWarning={true}
+                />
+
+                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-700">
+                  <div className="bg-slate-900 p-3 rounded-md">
+                    <div className="text-sm text-slate-400 mb-1">
+                      Iskorišćeno
+                    </div>
+                    <div className="text-lg font-bold text-white">
+                      {credits.credits_used}
+                    </div>
+                  </div>
+                  <div className="bg-slate-900 p-3 rounded-md">
+                    <div className="text-sm text-slate-400 mb-1">Preostalo</div>
+                    <div
+                      className={`text-lg font-bold ${
+                        credits.credits_remaining === 0
+                          ? 'text-red-400'
+                          : credits.credits_remaining <= 100
+                            ? 'text-orange-400'
+                            : 'text-green-400'
+                      }`}
+                    >
+                      {credits.credits_remaining}
+                    </div>
+                  </div>
+                  <div className="bg-slate-900 p-3 rounded-md">
+                    <div className="text-sm text-slate-400 mb-1">
+                      Resetuje se
+                    </div>
+                    <div className="text-lg font-bold text-white">
+                      {new Date(credits.reset_at).toLocaleDateString('sr-RS', {
+                        day: '2-digit',
+                        month: '2-digit',
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-blue-900/20 border border-blue-800/50 rounded-md p-3 text-blue-200">
+                  <p className="font-medium mb-1 text-md">
+                    💡 Kako funkcionišu AI krediti?
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-blue-300">
+                    <li className="leading-5">
+                      Svaki AI zahtev (generisanje sadržaja) koristi 1 kredit
+                    </li>
+                    <li className="leading-5">
+                      Imate {credits.max_credits} kredita mesečno
+                    </li>
+                    <li className="leading-5">
+                      Krediti se automatski resetuju na početku svakog meseca
+                    </li>
+                    <li className="leading-5">
+                      Preostali krediti ne prelaze u sledeći mesec
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div className="text-slate-400">
+                Greška pri učitavanju kredita
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {activeTab === 'payment' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
-                <CreditCard size={20} /> Trenutni Plan
+                <CreditCard size={20} /> Trenutni plan
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -177,69 +330,87 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
               ) : (
                 <div className="space-y-4">
                   <div>
-                    <div className="text-slate-400 text-sm mb-1">Trenutni Tier</div>
-                    <div className="text-2xl font-bold text-white">
+                    <div className="text-slate-400 text-sm mb-1">
+                      Trenutni tier
+                    </div>
+                    <div className="text-xl font-bold text-white">
                       {profile?.tier?.toUpperCase() || 'FREE'}
                     </div>
                   </div>
 
                   {/* Show trial information if in trial */}
-                  {subscriptionStatus?.isTrialing && subscriptionStatus.trialEnd && (
-                    <div className="bg-blue-600/10 border border-blue-600/30 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center shrink-0">
-                          <Calendar className="text-blue-400" size={20} />
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-blue-300 font-bold mb-1">Besplatna Probna Perioda</div>
-                          <div className="text-white text-lg font-semibold mb-2">
-                            {subscriptionStatus.trialDaysRemaining !== null && subscriptionStatus.trialDaysRemaining !== undefined
-                              ? `${subscriptionStatus.trialDaysRemaining} ${subscriptionStatus.trialDaysRemaining === 1 ? 'dan' : 'dana'} preostalo`
-                              : 'Aktivna probna perioda'}
+                  {subscriptionStatus?.isTrialing &&
+                    subscriptionStatus.trialEnd && (
+                      <div className="bg-blue-600/10 border border-blue-600/30 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center shrink-0">
+                            <Calendar className="text-blue-400" size={20} />
                           </div>
-                          <div className="text-slate-300 text-sm">
-                            Prvo plaćanje: {new Date(subscriptionStatus.trialEnd * 1000).toLocaleDateString('sr-RS', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                            })}
+                          <div className="flex-1">
+                            <div className="text-blue-300 font-bold mb-1">
+                              Besplatni probni period
+                            </div>
+                            <div className="text-white text-lg font-semibold mb-2">
+                              {subscriptionStatus.trialDaysRemaining !== null &&
+                              subscriptionStatus.trialDaysRemaining !==
+                                undefined
+                                ? `${subscriptionStatus.trialDaysRemaining} ${subscriptionStatus.trialDaysRemaining === 1 ? 'dan' : 'dana'} preostalo`
+                                : 'Aktivan besplatni probni period'}
+                            </div>
+                            <div className="text-slate-300 text-sm">
+                              Prvo plaćanje:{' '}
+                              {new Date(
+                                subscriptionStatus.trialEnd * 1000
+                              ).toLocaleDateString('sr-RS', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              })}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Show next payment date if not in trial and not cancelled */}
-                  {!subscriptionStatus?.isTrialing && nextPayment && !subscriptionStatus?.isCancelled && (
-                    <div>
-                      <div className="text-slate-400 text-sm mb-1 flex items-center gap-2">
-                        <Calendar size={14} /> Sledeće Plaćanje
+                  {!subscriptionStatus?.isTrialing &&
+                    nextPayment &&
+                    !subscriptionStatus?.isCancelled && (
+                      <div>
+                        <div className="text-slate-400 text-sm mb-1 flex items-center gap-2">
+                          <Calendar size={14} /> Sledeće Plaćanje
+                        </div>
+                        <div className="text-lg font-semibold text-white">
+                          {new Date(
+                            nextPayment.next_payment_date!
+                          ).toLocaleDateString('sr-RS', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })}
+                        </div>
                       </div>
-                      <div className="text-lg font-semibold text-white">
-                        {new Date(nextPayment.next_payment_date!).toLocaleDateString('sr-RS', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}
-                      </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Show next payment from trial end if in trial */}
-                  {subscriptionStatus?.isTrialing && subscriptionStatus.trialEnd && !subscriptionStatus?.isCancelled && (
-                    <div>
-                      <div className="text-slate-400 text-sm mb-1 flex items-center gap-2">
-                        <Calendar size={14} /> Prvo Plaćanje
+                  {subscriptionStatus?.isTrialing &&
+                    subscriptionStatus.trialEnd &&
+                    !subscriptionStatus?.isCancelled && (
+                      <div>
+                        <div className="text-slate-400 text-sm mb-1 flex items-center gap-2">
+                          <Calendar size={14} /> Prvo Plaćanje
+                        </div>
+                        <div className="text-lg font-semibold text-white">
+                          {new Date(
+                            subscriptionStatus.trialEnd * 1000
+                          ).toLocaleDateString('sr-RS', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })}
+                        </div>
                       </div>
-                      <div className="text-lg font-semibold text-white">
-                        {new Date(subscriptionStatus.trialEnd * 1000).toLocaleDateString('sr-RS', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}
-                      </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Show expiration date if cancelled */}
                   {subscriptionStatus?.isCancelled && (
@@ -250,29 +421,38 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
                       <div className="text-lg font-semibold text-slate-300">
                         {(() => {
                           // If in trial and cancelled, use trial end date
-                          if (subscriptionStatus.isTrialing && subscriptionStatus.trialEnd) {
-                            return new Date(subscriptionStatus.trialEnd * 1000).toLocaleDateString('sr-RS', {
+                          if (
+                            subscriptionStatus.isTrialing &&
+                            subscriptionStatus.trialEnd
+                          ) {
+                            return new Date(
+                              subscriptionStatus.trialEnd * 1000
+                            ).toLocaleDateString('sr-RS', {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric',
-                            })
+                            });
                           }
                           // Otherwise use subscription period end or next payment date
                           if (subscriptionStatus.currentPeriodEnd) {
-                            return new Date(subscriptionStatus.currentPeriodEnd * 1000).toLocaleDateString('sr-RS', {
+                            return new Date(
+                              subscriptionStatus.currentPeriodEnd * 1000
+                            ).toLocaleDateString('sr-RS', {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric',
-                            })
+                            });
                           }
                           if (nextPayment?.subscription_period_end) {
-                            return new Date(nextPayment.subscription_period_end).toLocaleDateString('sr-RS', {
+                            return new Date(
+                              nextPayment.subscription_period_end
+                            ).toLocaleDateString('sr-RS', {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric',
-                            })
+                            });
                           }
-                          return 'N/A'
+                          return 'N/A';
                         })()}
                       </div>
                       <p className="text-xs text-slate-500 mt-1">
@@ -300,7 +480,8 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
                             Otkaži Pretplatu
                           </button>
                           <p className="text-xs text-slate-500 text-center mt-2">
-                            Sve funkcionalnosti će biti dostupne do datuma isteka pretplate
+                            Sve funkcionalnosti će biti dostupne do datuma
+                            isteka pretplate
                           </p>
                         </>
                       )}
@@ -313,7 +494,7 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
 
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
-              <CardTitle className="text-white">Istorija Plaćanja</CardTitle>
+              <CardTitle className="text-white">Istorija plaćanja</CardTitle>
               <CardDescription className="text-slate-400">
                 Pregled svih vaših transakcija
               </CardDescription>
@@ -327,7 +508,8 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
                 </div>
               ) : payments.length === 0 ? (
                 <div className="text-slate-500 text-center py-8">
-                  Nema platnih podataka. Plaćanja će se prikazati ovde kada se pretplatite.
+                  Nema platnih podataka. Plaćanja će se prikazati ovde kada se
+                  pretplatite.
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -341,11 +523,14 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
                           ${payment.amount} {payment.currency}
                         </div>
                         <div className="text-slate-400 text-sm">
-                          {new Date(payment.created_at).toLocaleDateString('sr-RS', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                          })}
+                          {new Date(payment.created_at).toLocaleDateString(
+                            'sr-RS',
+                            {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            }
+                          )}
                         </div>
                         {payment.tier_at_payment && (
                           <div className="text-xs text-slate-500 mt-1">
@@ -355,12 +540,13 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
                       </div>
                       <div>
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold ${payment.status === 'completed'
-                            ? 'bg-green-900/30 text-green-300'
-                            : payment.status === 'pending'
-                              ? 'bg-yellow-900/30 text-yellow-300'
-                              : 'bg-red-900/30 text-red-300'
-                            }`}
+                          className={`px-3 py-1 rounded-full text-xs font-bold ${
+                            payment.status === 'completed'
+                              ? 'bg-green-900/30 text-green-300'
+                              : payment.status === 'pending'
+                                ? 'bg-yellow-900/30 text-yellow-300'
+                                : 'bg-red-900/30 text-red-300'
+                          }`}
                         >
                           {payment.status.toUpperCase()}
                         </span>
@@ -375,94 +561,122 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
       )}
 
       {activeTab === 'profile' && (
-
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Ime Biznisa / Lični Brend</label>
+            <label className="block text-md font-medium text-slate-300 mb-2">
+              Ime i prezime / Ime biznisa
+            </label>
             <input
               type="text"
               value={formData.business_name}
-              onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-              placeholder="Npr. Biznis Priče, Vlads Digital, Prodaja Nekretnina Beograd"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              onChange={(e) =>
+                setFormData({ ...formData, business_name: e.target.value })
+              }
+              placeholder="Npr. Biznis Priče, Vladsdigital, Prodaja Nekretnina Beograd"
+              className="w-full bg-slate-800 border border-slate-700 rounded-md py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Ciljna Publika (Ko želiš da te gleda?)
+            <label className="block text-md font-medium text-slate-300 mb-2">
+              Ciljna publika (Ko želiš da te gleda?)
             </label>
             <textarea
               value={formData.target_audience}
-              onChange={(e) => setFormData({ ...formData, target_audience: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, target_audience: e.target.value })
+              }
               placeholder="Npr. Vlasnici malih biznisa u Srbiji, stari 25-45, koji tek ulaze u svet digitalnog marketinga..."
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white placeholder-slate-500 resize-none h-24 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              className="w-full bg-slate-800 border border-slate-700 rounded-md py-3 px-4 text-white placeholder-slate-500 resize-none h-24 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Persona / Ton (Kako zvučiš?)</label>
+            <label className="block text-md font-medium text-slate-300 mb-2">
+              Ton (Kako želiš da zvučiš?)
+            </label>
             <input
               type="text"
               value={formData.persona}
-              onChange={(e) => setFormData({ ...formData, persona: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, persona: e.target.value })
+              }
               placeholder="Npr. Stručan, motivišući, direktan, pun energije, koristiš humor"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              className="w-full bg-slate-800 border border-slate-700 rounded-md py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
             />
           </div>
 
           <div>
-            <h3 className="text-xl font-bold text-white mb-4 mt-6 border-t border-slate-700 pt-6 flex items-center gap-2">
-              <Target size={20} className="text-yellow-400" /> Mesečni Ciljevi Sadržaja
+            <h3 className="text-xl font-bold text-white mb-2 mt-6 border-t border-slate-700 pt-6 flex items-center gap-2">
+              <Target size={16} className="text-yellow-400" /> Mesečni ciljevi
+              sadržaja
             </h3>
-            <p className="text-slate-400 text-sm mb-4">Postavite ciljeve za tekući mesec za praćenje progresa.</p>
+            <p className="text-slate-400 text-sm mb-4">
+              Postavite ciljeve za tekući mesec za praćenje progresa
+            </p>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-1">
-                  <Video size={16} className="text-red-400" /> Kratka Forma (Reel/TikTok)
+                <label className="text-md font-medium text-slate-300 mb-2 flex items-center gap-2">
+                  <Video size={16} className="text-red-400" /> Kratka forma
                 </label>
                 <input
                   type="number"
                   min="0"
                   value={formData.monthly_goal_short}
                   onChange={(e) =>
-                    setFormData({ ...formData, monthly_goal_short: Math.max(0, parseInt(e.target.value) || 0) })
+                    setFormData({
+                      ...formData,
+                      monthly_goal_short: Math.max(
+                        0,
+                        parseInt(e.target.value) || 0
+                      ),
+                    })
                   }
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-md py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-1">
-                  <Youtube size={16} className="text-green-400" /> Duga Forma (YouTube)
+                <label className="text-md font-medium text-slate-300 mb-2 flex items-center gap-2">
+                  <Youtube size={16} className="text-green-400" /> Duga forma
                 </label>
                 <input
                   type="number"
                   min="0"
                   value={formData.monthly_goal_long}
                   onChange={(e) =>
-                    setFormData({ ...formData, monthly_goal_long: Math.max(0, parseInt(e.target.value) || 0) })
+                    setFormData({
+                      ...formData,
+                      monthly_goal_long: Math.max(
+                        0,
+                        parseInt(e.target.value) || 0
+                      ),
+                    })
                   }
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-md py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 />
               </div>
             </div>
           </div>
 
-          <SocialLinkInput socialLinks={socialLinks} setSocialLinks={setSocialLinks} />
+          <SocialLinkInput
+            socialLinks={socialLinks}
+            setSocialLinks={setSocialLinks}
+          />
 
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${isSaving
-              ? 'bg-blue-800 text-blue-300'
-              : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
-              }`}
+            className={`w-full py-3 rounded-md font-bold text-md flex items-center justify-center gap-2 transition-all ${
+              isSaving
+                ? 'bg-blue-800 text-blue-300'
+                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
+            }`}
           >
             {isSaving ? (
               <>Čuvanje...</>
             ) : (
               <>
-                <Check size={20} /> Sačuvaj Profil
+                <Check size={18} /> Sačuvaj Profil
               </>
             )}
           </button>
@@ -479,12 +693,11 @@ export default function ProfileSettings({ profile, onSave }: ProfileSettingsProp
           isTrialing={subscriptionStatus?.isTrialing || false}
           onCancelSuccess={() => {
             // Refresh payments and subscription status after cancellation
-            fetchPayments()
-            fetchSubscriptionStatus()
+            fetchPayments();
+            fetchSubscriptionStatus();
           }}
         />
       )}
     </div>
-  )
+  );
 }
-

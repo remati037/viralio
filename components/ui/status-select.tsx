@@ -114,11 +114,17 @@ export default function StatusSelect({
         aria-expanded={isOpen}
       >
         {selectedStatus ? (
-          <span
-            className={`text-sm font-bold rounded border ${selectedStatus.color}`}
-          >
-            {selectedStatus.title}
-          </span>
+          <div className="flex items-center gap-2">
+            {selectedStatus.icon && (
+              <selectedStatus.icon
+                className={selectedStatus.iconColor}
+                size={16}
+              />
+            )}
+            <span className={`text-sm font-bold ${selectedStatus.iconColor}`}>
+              {selectedStatus.title}
+            </span>
+          </div>
         ) : (
           <span className="text-slate-500">Izaberi status</span>
         )}
@@ -155,7 +161,10 @@ export default function StatusSelect({
                   : 'text-slate-300 hover:bg-slate-700'
               }`}
             >
-              <span className={`text-sm font-boldrounded ${column.color}`}>
+              {column.icon && (
+                <column.icon className={column.iconColor} size={16} />
+              )}
+              <span className={`text-sm font-bold ${column.iconColor}`}>
                 {column.title}
               </span>
             </li>
