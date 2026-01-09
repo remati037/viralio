@@ -1,16 +1,12 @@
 'use client';
 
-import { useAICredits } from '@/lib/hooks/useAICredits';
 import { createClient } from '@/lib/supabase/client';
 import type { Payment, Profile, SocialLink } from '@/types';
 import {
-  BarChart3,
   Calendar,
   Check,
   CreditCard,
   DollarSign,
-  Sparkles,
-  Tag,
   Target,
   User,
   Video,
@@ -20,10 +16,7 @@ import {
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import CancelSubscriptionModal from './CancelSubscriptionModal';
-import CategoryManagement from './CategoryManagement';
 import SocialLinkInput from './SocialLinkInput';
-import UserStatisticsComponent from './UserStatistics';
-import AICreditBadge from './ui/ai-credit-badge';
 import {
   Card,
   CardContent,
@@ -31,7 +24,6 @@ import {
   CardHeader,
   CardTitle,
 } from './ui/card';
-import Loader from './ui/loader';
 import Skeleton from './ui/skeleton';
 
 interface ProfileSettingsProps {
@@ -45,12 +37,7 @@ export default function ProfileSettings({
   profile,
   onSave,
 }: ProfileSettingsProps) {
-  const [activeTab, setActiveTab] = useState<
-    'profile' | 'payment' | 'categories' | 'statistics' | 'ai-credits'
-  >('profile');
-  const { credits, loading: creditsLoading } = useAICredits(
-    profile?.id || null
-  );
+  const [activeTab, setActiveTab] = useState<'profile' | 'payment'>('profile');
   const [isSaving, setIsSaving] = useState(false);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(true);
@@ -156,7 +143,7 @@ export default function ProfileSettings({
       </h1>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-slate-700 flex-wrap justify-center">
+      <div className="flex gap-y-2 gap-x-0 mb-6 border-b border-slate-700 flex-wrap justify-center">
         <button
           onClick={() => setActiveTab('profile')}
           className={`px-4 py-2 font-medium transition-colors ${
@@ -177,140 +164,7 @@ export default function ProfileSettings({
         >
           <DollarSign size={16} /> Plaćanje
         </button>
-        <button
-          onClick={() => setActiveTab('categories')}
-          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
-            activeTab === 'categories'
-              ? 'text-white border-b-2 border-blue-500'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Tag size={16} /> Kategorije
-        </button>
-        <button
-          onClick={() => setActiveTab('statistics')}
-          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
-            activeTab === 'statistics'
-              ? 'text-white border-b-2 border-blue-500'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <BarChart3 size={16} /> Statistika
-        </button>
-        <button
-          onClick={() => setActiveTab('ai-credits')}
-          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
-            activeTab === 'ai-credits'
-              ? 'text-white border-b-2 border-blue-500'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Sparkles size={16} /> AI Krediti
-        </button>
       </div>
-
-      {activeTab === 'categories' && profile?.id && (
-        <Card className="bg-slate-800 border-slate-700">
-          <CardContent className="p-4">
-            <CategoryManagement userId={profile.id} />
-          </CardContent>
-        </Card>
-      )}
-
-      {activeTab === 'statistics' && profile?.id && (
-        <UserStatisticsComponent userId={profile.id} />
-      )}
-
-      {activeTab === 'ai-credits' && (
-        <Card className="bg-slate-800 border-slate-700">
-          <CardHeader className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="text-purple-400" size={20} />
-                <CardTitle className="text-white">AI Krediti</CardTitle>
-              </div>
-            </div>
-            <CardDescription className="text-slate-400">
-              Koristite AI funkcionalnosti za generisanje sadržaja. Svaki AI
-              zahtev koristi 1 kredit.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            {creditsLoading ? (
-              <Loader text="Učitavanje kredita..." />
-            ) : credits ? (
-              <div className="space-y-3">
-                <AICreditBadge
-                  creditsRemaining={credits.credits_remaining}
-                  maxCredits={credits.max_credits}
-                  compact={false}
-                  showWarning={true}
-                />
-
-                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-700">
-                  <div className="bg-slate-900 p-3 rounded-md">
-                    <div className="text-sm text-slate-400 mb-1">
-                      Iskorišćeno
-                    </div>
-                    <div className="text-lg font-bold text-white">
-                      {credits.credits_used}
-                    </div>
-                  </div>
-                  <div className="bg-slate-900 p-3 rounded-md">
-                    <div className="text-sm text-slate-400 mb-1">Preostalo</div>
-                    <div
-                      className={`text-lg font-bold ${
-                        credits.credits_remaining === 0
-                          ? 'text-red-400'
-                          : credits.credits_remaining <= 100
-                            ? 'text-orange-400'
-                            : 'text-green-400'
-                      }`}
-                    >
-                      {credits.credits_remaining}
-                    </div>
-                  </div>
-                  <div className="bg-slate-900 p-3 rounded-md">
-                    <div className="text-sm text-slate-400 mb-1">
-                      Resetuje se
-                    </div>
-                    <div className="text-lg font-bold text-white">
-                      {new Date(credits.reset_at).toLocaleDateString('sr-RS', {
-                        day: '2-digit',
-                        month: '2-digit',
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-blue-900/20 border border-blue-800/50 rounded-md p-3 text-blue-200">
-                  <p className="font-medium mb-1 text-md">
-                    💡 Kako funkcionišu AI krediti?
-                  </p>
-                  <ul className="list-disc list-inside space-y-1 text-sm text-blue-300">
-                    <li className="leading-5">
-                      Svaki AI zahtev (generisanje sadržaja) koristi 1 kredit
-                    </li>
-                    <li className="leading-5">
-                      Imate {credits.max_credits} kredita mesečno
-                    </li>
-                    <li className="leading-5">
-                      Krediti se automatski resetuju na početku svakog meseca
-                    </li>
-                    <li className="leading-5">
-                      Preostali krediti ne prelaze u sledeći mesec
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            ) : (
-              <div className="text-slate-400">
-                Greška pri učitavanju kredita
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {activeTab === 'payment' && (
         <div className="space-y-4">

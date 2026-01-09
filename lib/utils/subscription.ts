@@ -139,8 +139,10 @@ export async function checkSubscriptionStatus(userId: string): Promise<Subscript
       isAdmin: false,
     }
   }
+  console.log(paymentRecords);
 
   const latestPayment = paymentRecords[0]
+  console.log(latestPayment);
 
   // Check if subscription is still active (end date is in the future)
   if (latestPayment.subscription_period_end) {

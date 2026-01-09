@@ -56,51 +56,75 @@ export default function AIAssistant({
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = async () => {
+  const handleSend = async (isCTAPrompt: boolean = false) => {
     if (!input.trim() || isLoading) return;
 
-    // Check if title is provided
-    if (!taskContext?.title || !taskContext.title.trim()) {
-      toast.error('Naslov je obavezan', {
-        description: 'Molimo unesite naslov pre korišćenja AI generatora.',
-        duration: 5000,
-      });
-      return;
-    }
+    // Special validation for CTA generator - ONLY requires title and CTA, nothing else
+    if (isCTAPrompt) {
+      const hasTitle =
+        taskContext?.title && taskContext.title.trim().length > 0;
+      const hasCTA = taskContext?.cta && taskContext.cta.trim().length > 0;
 
-    // Check if category is selected
-    if (!taskContext?.categoryId) {
-      toast.error('Kategorija je obavezna', {
-        description:
-          'Molimo izaberite kategoriju pre korišćenja AI generatora.',
-        duration: 5000,
-      });
-      return;
-    }
+      if (!hasTitle) {
+        toast.error('Naslov je obavezan', {
+          description:
+            'CTA generator zahteva unos Naslova (Naziv) pre korišćenja.',
+          duration: 5000,
+        });
+        return;
+      }
+      if (!hasCTA) {
+        toast.error('CTA je obavezan', {
+          description: 'CTA generator zahteva unos CTA polja pre korišćenja.',
+          duration: 5000,
+        });
+        return;
+      }
+    } else {
+      // Standard validation for other generators
+      // Check if title is provided
+      if (!taskContext?.title || !taskContext.title.trim()) {
+        toast.error('Naslov je obavezan', {
+          description: 'Molimo unesite naslov pre korišćenja AI generatora.',
+          duration: 5000,
+        });
+        return;
+      }
 
-    // Check if tone is selected
-    // Tone can be a string (valid tone value) or null/undefined
-    const toneValue = taskContext?.tone;
-    const hasValidTone =
-      toneValue && typeof toneValue === 'string' && toneValue.trim() !== '';
-    console.log(taskContext);
+      // Check if category is selected
+      if (!taskContext?.categoryId) {
+        toast.error('Kategorija je obavezna', {
+          description:
+            'Molimo izaberite kategoriju pre korišćenja AI generatora.',
+          duration: 5000,
+        });
+        return;
+      }
 
-    if (!hasValidTone) {
-      toast.error('Ton je obavezan', {
-        description: 'Molimo izaberite ton pre korišćenja AI generatora.',
-        duration: 5000,
-      });
-      return;
-    }
+      // Check if tone is selected
+      // Tone can be a string (valid tone value) or null/undefined
+      const toneValue = taskContext?.tone;
+      const hasValidTone =
+        toneValue && typeof toneValue === 'string' && toneValue.trim() !== '';
+      console.log(taskContext);
 
-    // Check if target audience is provided
-    if (!taskContext?.targetAudience || !taskContext.targetAudience.trim()) {
-      toast.error('Ciljna publika je obavezna', {
-        description:
-          'Molimo unesite ciljnu publiku pre korišćenja AI generatora.',
-        duration: 5000,
-      });
-      return;
+      if (!hasValidTone) {
+        toast.error('Ton je obavezan', {
+          description: 'Molimo izaberite ton pre korišćenja AI generatora.',
+          duration: 5000,
+        });
+        return;
+      }
+
+      // Check if target audience is provided
+      if (!taskContext?.targetAudience || !taskContext.targetAudience.trim()) {
+        toast.error('Ciljna publika je obavezna', {
+          description:
+            'Molimo unesite ciljnu publiku pre korišćenja AI generatora.',
+          duration: 5000,
+        });
+        return;
+      }
     }
 
     // Check if user has credits
@@ -181,11 +205,37 @@ export default function AIAssistant({
     }
   };
 
-  const handleQuickPrompt = async (prompt: string) => {
+  const handleQuickPrompt = async (
+    prompt: string,
+    isCTAPrompt: boolean = false
+  ) => {
+    // Special validation for CTA generator - ONLY requires title and CTA
+    if (isCTAPrompt) {
+      const hasTitle =
+        taskContext?.title && taskContext.title.trim().length > 0;
+      const hasCTA = taskContext?.cta && taskContext.cta.trim().length > 0;
+
+      if (!hasTitle) {
+        toast.error('Naslov je obavezan', {
+          description:
+            'CTA generator zahteva unos Naslova (Naziv) pre korišćenja.',
+          duration: 5000,
+        });
+        return;
+      }
+      if (!hasCTA) {
+        toast.error('CTA je obavezan', {
+          description: 'CTA generator zahteva unos CTA polja pre korišćenja.',
+          duration: 5000,
+        });
+        return;
+      }
+    }
+
     setInput(prompt);
     // Auto-send after a brief delay
     setTimeout(() => {
-      handleSend();
+      handleSend(isCTAPrompt);
     }, 100);
   };
 
@@ -362,7 +412,40 @@ Based on the Topic, choose the best structure automatically:
     },
     {
       label: 'Generiši CTA',
-      prompt: `Kreiraj jasan i akcijski poziv na akciju (CTA) koji će motivisati gledaoce da reaguju.${categoryInfo}${toneInfo}${audienceInfo}`,
+      prompt: `### ROLE & OBJECTIVE
+You are a Conversion Rate Optimization (CRO) Expert for social media.
+Your task is to take a User's DRAFT CTA and rewrite it into 3 high-converting variations.
+
+### INPUT DATA
+- *User's Draft:* ${taskContext?.cta} (The raw idea)
+- *Topic:* ${taskContext?.title} (Context for relevance)
+
+### ANALYSIS LOGIC
+1.  *Identify the Goal:* Determine what the user wants (Follow, Comment, Share, Save, or Click Link) based on their draft.
+2.  *Respect the Goal:* Do NOT change the action type. If they ask for a "Comment", do not write a "Follow" CTA.
+3.  *Upgrade the Phrasing:*
+    - Remove "Please" or begging tones.
+    - Add a "Benefit" (Why should they do it?).
+    - Add "Urgency" or "FOMO" (Fear Of Missing Out).
+
+### STRICT RULES
+1.  *Language:* Serbian (Latin script). Informal "Ti".
+2.  *Length:* Short and punchy (max 8-10 words).
+3.  *Tone:* Confident and directive.
+
+### OUTPUT FORMAT (JSON)
+Output a strictly valid JSON object.
+
+Structure:
+{
+  "direct_upgrade": "A polished, stronger version of their exact words.",
+  "value_based": "The action + the specific benefit they get.",
+  "psychological": "Uses curiosity, FOMO, or reverse psychology."
+}
+
+### GENERATE CTA UPGRADES NOW.
+USER DRAFT: "${taskContext?.cta}"
+TOPIC: "${taskContext?.title}"`,
     },
     {
       label: 'Generiši kompletan sadržaj',
@@ -427,26 +510,41 @@ Based on the Topic, choose the best structure automatically:
                 taskContext?.tone &&
                 typeof taskContext.tone === 'string' &&
                 taskContext.tone.trim() !== '';
-              const isDisabled =
-                !taskContext?.title?.trim() ||
-                !taskContext?.categoryId ||
-                !hasValidTone ||
-                !taskContext?.targetAudience?.trim();
-              const tooltipText = !taskContext?.title?.trim()
-                ? 'Unesite naslov pre korišćenja'
-                : !taskContext?.categoryId
-                  ? 'Izaberite kategoriju pre korišćenja'
-                  : !hasValidTone
-                    ? 'Izaberite ton pre korišćenja'
-                    : !taskContext?.targetAudience?.trim()
-                      ? 'Unesite ciljnu publiku pre korišćenja'
-                      : undefined;
+
+              // Special condition for CTA generator: requires both title and cta ONLY
+              const isCTAGenerator = qp.label === 'Generiši CTA';
+              const hasTitle =
+                taskContext?.title && taskContext.title.trim().length > 0;
+              const hasCTA =
+                taskContext?.cta && taskContext.cta.trim().length > 0;
+              const isDisabled = isCTAGenerator
+                ? !hasTitle || !hasCTA
+                : !taskContext?.title?.trim() ||
+                  !taskContext?.categoryId ||
+                  !hasValidTone ||
+                  !taskContext?.targetAudience?.trim();
+
+              const tooltipText = isCTAGenerator
+                ? !hasTitle
+                  ? 'Unesite naslov (Naziv) pre korišćenja CTA generatora'
+                  : !hasCTA
+                    ? 'Unesite CTA pre korišćenja CTA generatora'
+                    : undefined
+                : !taskContext?.title?.trim()
+                  ? 'Unesite naslov pre korišćenja'
+                  : !taskContext?.categoryId
+                    ? 'Izaberite kategoriju pre korišćenja'
+                    : !hasValidTone
+                      ? 'Izaberite ton pre korišćenja'
+                      : !taskContext?.targetAudience?.trim()
+                        ? 'Unesite ciljnu publiku pre korišćenja'
+                        : undefined;
               console.log(taskContext);
 
               return (
                 <button
                   key={idx}
-                  onClick={() => handleQuickPrompt(qp.prompt)}
+                  onClick={() => handleQuickPrompt(qp.prompt, isCTAGenerator)}
                   disabled={isDisabled}
                   className="px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   title={tooltipText}
@@ -456,30 +554,77 @@ Based on the Topic, choose the best structure automatically:
               );
             })}
           </div>
-          {(() => {
-            const hasValidTone =
-              taskContext?.tone &&
-              typeof taskContext.tone === 'string' &&
-              taskContext.tone.trim() !== '';
-            console.log(taskContext);
-            return (
-              (!taskContext?.title?.trim() ||
-                !taskContext?.categoryId ||
-                !hasValidTone ||
-                !taskContext?.targetAudience?.trim()) && (
-                <p className="text-xs text-red-400 mt-2">
-                  ⚠️{' '}
-                  {!taskContext?.title?.trim()
-                    ? 'Unesite naslov pre korišćenja AI generatora'
-                    : !taskContext?.categoryId
-                      ? 'Izaberite kategoriju pre korišćenja AI generatora'
-                      : !hasValidTone
-                        ? 'Izaberite ton pre korišćenja AI generatora'
-                        : 'Unesite ciljnu publiku pre korišćenja AI generatora'}
-                </p>
-              )
-            );
-          })()}
+          <div className="mt-2">
+            {(() => {
+              // Check for CTA generator specific requirements
+              const ctaGeneratorHasTitle =
+                taskContext?.title && taskContext.title.trim().length > 0;
+              const ctaGeneratorHasCTA =
+                taskContext?.cta && taskContext.cta.trim().length > 0;
+              const ctaGeneratorMissingTitle = !ctaGeneratorHasTitle;
+              const ctaGeneratorMissingCTA = !ctaGeneratorHasCTA;
+              const ctaGeneratorReady =
+                ctaGeneratorHasTitle && ctaGeneratorHasCTA;
+
+              // Always show CTA-specific warning if CTA generator is not ready
+              if (!ctaGeneratorReady) {
+                if (ctaGeneratorMissingCTA && ctaGeneratorMissingTitle) {
+                  return (
+                    <p className="text-xs text-red-400 font-medium">
+                      ⚠️ CTA generator zahteva unos{' '}
+                      <strong>Naslova (Naziv)</strong> i <strong>CTA</strong>{' '}
+                      polja
+                    </p>
+                  );
+                }
+                if (ctaGeneratorMissingCTA) {
+                  return (
+                    <p className="text-xs text-red-400 font-medium">
+                      ⚠️ CTA generator zahteva unos <strong>CTA</strong> polja.
+                      Unesite CTA polje pre korišćenja CTA generatora.
+                    </p>
+                  );
+                }
+                if (ctaGeneratorMissingTitle) {
+                  return (
+                    <p className="text-xs text-red-400 font-medium">
+                      ⚠️ CTA generator zahteva unos{' '}
+                      <strong>Naslova (Naziv)</strong>. Unesite Naslov pre
+                      korišćenja CTA generatora.
+                    </p>
+                  );
+                }
+              }
+
+              // Show general requirements for other generators only if CTA generator is ready
+              const hasValidTone =
+                taskContext?.tone &&
+                typeof taskContext.tone === 'string' &&
+                taskContext.tone.trim() !== '';
+              const otherGeneratorsReady =
+                taskContext?.title?.trim() &&
+                taskContext?.categoryId &&
+                hasValidTone &&
+                taskContext?.targetAudience?.trim();
+
+              if (!otherGeneratorsReady && ctaGeneratorReady) {
+                return (
+                  <p className="text-xs text-red-400">
+                    ⚠️{' '}
+                    {!taskContext?.title?.trim()
+                      ? 'Unesite naslov pre korišćenja AI generatora'
+                      : !taskContext?.categoryId
+                        ? 'Izaberite kategoriju pre korišćenja AI generatora'
+                        : !hasValidTone
+                          ? 'Izaberite ton pre korišćenja AI generatora'
+                          : 'Unesite ciljnu publiku pre korišćenja AI generatora'}
+                  </p>
+                );
+              }
+
+              return null;
+            })()}
+          </div>
         </div>
       )}
 
@@ -621,7 +766,7 @@ Based on the Topic, choose the best structure automatically:
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                handleSend();
+                handleSend(false);
               }
             }}
             placeholder="Pitaj AI asistenta..."
@@ -629,7 +774,7 @@ Based on the Topic, choose the best structure automatically:
             className="flex-1 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
           />
           <button
-            onClick={handleSend}
+            onClick={() => handleSend(false)}
             disabled={
               !input.trim() ||
               isLoading ||

@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import { createClient } from '@/lib/supabase/client'
-import type { Payment, Profile, UserStatistics } from '@/types'
+import { createClient } from '@/lib/supabase/client';
+import type { Payment, Profile, UserStatistics } from '@/types';
 import {
   flexRender,
   getCoreRowModel,
@@ -11,173 +11,261 @@ import {
   useReactTable,
   type ColumnDef,
   type SortingState,
-} from '@tanstack/react-table'
-import { ArrowDown, ArrowUp, ArrowUpDown, ClipboardList, Edit, FileText, Plus, Shield, Trash2, Users, Database, RefreshCw } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { toast } from 'sonner'
-import AdminCaseStudyCreation from './AdminCaseStudyCreation'
-import AdminTemplateManagement from './AdminTemplateManagement'
-import CreateUserModal from './CreateUserModal'
-import DeleteUserModal from './DeleteUserModal'
-import UpdateUserModal from './UpdateUserModal'
-import { Button } from './ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import { Input } from './ui/input'
-import Loader from './ui/loader'
+} from '@tanstack/react-table';
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Database,
+  Edit,
+  MoreVertical,
+  Plus,
+  RefreshCw,
+  Shield,
+  Trash2,
+  Users,
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import AdminCaseStudyCreation from './AdminCaseStudyCreation';
+import AdminTemplateManagement from './AdminTemplateManagement';
+import CreateUserModal from './CreateUserModal';
+import DeleteUserModal from './DeleteUserModal';
+import UpdateUserModal from './UpdateUserModal';
+import { Button } from './ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from './ui/card';
+import { Input } from './ui/input';
+import Loader from './ui/loader';
 
 interface AdminDashboardProps {
-  userId: string
+  userId: string;
 }
 
 export default function AdminDashboard({ userId }: AdminDashboardProps) {
-  const supabase = createClient()
-  const [activeTab, setActiveTab] = useState<'users' | 'templates' | 'case-studies' | 'sanity'>('users')
-  const [syncingTemplates, setSyncingTemplates] = useState(false)
-  const [syncingCaseStudies, setSyncingCaseStudies] = useState(false)
-  const [users, setUsers] = useState<(Profile & { statistics?: UserStatistics; payments?: Payment[] })[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [updatingTierId, setUpdatingTierId] = useState<string | null>(null)
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
-  const [userToDelete, setUserToDelete] = useState<Profile | null>(null)
-  const [userToUpdate, setUserToUpdate] = useState<Profile | null>(null)
-  const [userEmails, setUserEmails] = useState<Record<string, string>>({})
-  const [emailConfirmations, setEmailConfirmations] = useState<Record<string, boolean>>({})
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [globalFilter, setGlobalFilter] = useState('')
-  const [loadingEmails, setLoadingEmails] = useState(false)
+  const supabase = createClient();
+  const [activeTab, setActiveTab] = useState<
+    'users' | 'templates' | 'case-studies' | 'sanity'
+  >('users');
+  const [syncingTemplates, setSyncingTemplates] = useState(false);
+  const [syncingCaseStudies, setSyncingCaseStudies] = useState(false);
+  const [users, setUsers] = useState<
+    (Profile & {
+      statistics?: UserStatistics;
+      payments?: Payment[];
+      realStats?: {
+        total_tasks: number;
+        published_tasks: number;
+        total_views: number;
+        total_engagement: number;
+        total_conversions: number;
+      };
+    })[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [updatingTierId, setUpdatingTierId] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
+  const [userToUpdate, setUserToUpdate] = useState<Profile | null>(null);
+  const [userEmails, setUserEmails] = useState<Record<string, string>>({});
+  const [emailConfirmations, setEmailConfirmations] = useState<
+    Record<string, boolean>
+  >({});
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [globalFilter, setGlobalFilter] = useState('');
+  const [loadingEmails, setLoadingEmails] = useState(false);
   const [userRealStatistics, setUserRealStatistics] = useState<{
-    total_tasks: number
-    published_tasks: number
-    total_views: string
-    total_engagement: string
-    total_conversions: string
-  } | null>(null)
-  const [loadingStatistics, setLoadingStatistics] = useState(false)
+    total_tasks: number;
+    published_tasks: number;
+    total_views: string;
+    total_engagement: string;
+    total_conversions: string;
+  } | null>(null);
+  const [loadingStatistics, setLoadingStatistics] = useState(false);
+  const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchAllUsers()
-  }, [])
+    fetchAllUsers();
+  }, []);
 
   useEffect(() => {
     if (selectedUser) {
-      fetchUserRealStatistics(selectedUser.id)
+      fetchUserRealStatistics(selectedUser.id);
     } else {
-      setUserRealStatistics(null)
+      setUserRealStatistics(null);
     }
-  }, [selectedUser])
+  }, [selectedUser]);
 
   const fetchAllUsers = async () => {
     try {
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false });
 
-      if (profilesError) throw profilesError
+      if (profilesError) throw profilesError;
 
       const { data: statistics, error: statsError } = await supabase
         .from('user_statistics')
-        .select('*')
+        .select('*');
 
-      if (statsError) throw statsError
+      if (statsError) throw statsError;
 
       const { data: payments, error: paymentsError } = await supabase
         .from('payments')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false });
 
-      if (paymentsError) throw paymentsError
+      if (paymentsError) throw paymentsError;
 
-      const usersWithData = (profiles || []).map((profile) => ({
-        ...profile,
-        statistics: statistics?.find((s) => s.user_id === profile.id),
-        payments: payments?.filter((p) => p.user_id === profile.id),
-      }))
+      // Fetch all tasks for all users to calculate real statistics
+      const { data: allTasks, error: tasksError } = await supabase
+        .from('tasks')
+        .select(
+          'user_id, status, result_views, result_engagement, result_conversions, is_admin_case_study'
+        );
 
-      setUsers(usersWithData as any)
+      if (tasksError) throw tasksError;
+
+      // Calculate real statistics for each user
+      const usersWithData = (profiles || []).map((profile) => {
+        // Filter out admin case studies - only count user's own tasks
+        const userTasks =
+          allTasks?.filter(
+            (t) => t.user_id === profile.id && !t.is_admin_case_study
+          ) || [];
+        const totalTasks = userTasks.length;
+        const publishedTasks = userTasks.filter(
+          (t) => t.status === 'published'
+        ).length;
+
+        // Calculate views, engagement, and conversions from published tasks
+        let totalViews = 0;
+        let totalEngagement = 0;
+        let totalConversions = 0;
+
+        userTasks.forEach((task) => {
+          if (task.status === 'published') {
+            const views = parseInt(task.result_views || '0', 10) || 0;
+            const engagement = parseInt(task.result_engagement || '0', 10) || 0;
+            const conversions =
+              parseInt(task.result_conversions || '0', 10) || 0;
+
+            totalViews += views;
+            totalEngagement += engagement;
+            totalConversions += conversions;
+          }
+        });
+
+        return {
+          ...profile,
+          statistics: statistics?.find((s) => s.user_id === profile.id),
+          payments: payments?.filter((p) => p.user_id === profile.id),
+          realStats: {
+            total_tasks: totalTasks,
+            published_tasks: publishedTasks,
+            total_views: totalViews,
+            total_engagement: totalEngagement,
+            total_conversions: totalConversions,
+          },
+        };
+      });
+
+      setUsers(usersWithData as any);
 
       // Fetch emails for all users (wait for completion before showing table)
-      setLoadingEmails(true)
-      await fetchUserEmails(profiles?.map((p) => p.id) || [])
-      setLoadingEmails(false)
+      setLoadingEmails(true);
+      await fetchUserEmails(profiles?.map((p) => p.id) || []);
+      setLoadingEmails(false);
     } catch (error: any) {
       toast.error('Greška pri učitavanju korisnika', {
         description: error.message,
-      })
-      setLoadingEmails(false)
+      });
+      setLoadingEmails(false);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchUserEmails = async (userIds: string[]) => {
     // Fetch emails and confirmation status in batches to avoid overwhelming the API
-    const batchSize = 5
-    const emailMap: Record<string, string> = {}
-    const confirmationMap: Record<string, boolean> = {}
+    const batchSize = 5;
+    const emailMap: Record<string, string> = {};
+    const confirmationMap: Record<string, boolean> = {};
 
     for (let i = 0; i < userIds.length; i += batchSize) {
-      const batch = userIds.slice(i, i + batchSize)
+      const batch = userIds.slice(i, i + batchSize);
       await Promise.all(
         batch.map(async (userId) => {
           try {
-            const response = await fetch(`/api/admin/users/${userId}/get`)
+            const response = await fetch(`/api/admin/users/${userId}/get`);
             if (response.ok) {
-              const data = await response.json()
+              const data = await response.json();
               if (data.email) {
-                emailMap[userId] = data.email
+                emailMap[userId] = data.email;
               }
               if (data.email_confirmed !== undefined) {
-                confirmationMap[userId] = data.email_confirmed
+                confirmationMap[userId] = data.email_confirmed;
               }
             }
           } catch (error) {
-            console.error(`Error fetching email for user ${userId}:`, error)
+            console.error(`Error fetching email for user ${userId}:`, error);
           }
         })
-      )
+      );
     }
 
-    setUserEmails((prev) => ({ ...prev, ...emailMap }))
-    setEmailConfirmations((prev) => ({ ...prev, ...confirmationMap }))
-  }
+    setUserEmails((prev) => ({ ...prev, ...emailMap }));
+    setEmailConfirmations((prev) => ({ ...prev, ...confirmationMap }));
+  };
 
   const fetchUserRealStatistics = async (userId: string) => {
-    setLoadingStatistics(true)
+    setLoadingStatistics(true);
     try {
-      // Fetch all tasks for this user
+      // Fetch all tasks for this user (excluding admin case studies)
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
-        .select('id, status, result_views, result_engagement, result_conversions')
-        .eq('user_id', userId)
+        .select(
+          'id, status, result_views, result_engagement, result_conversions, is_admin_case_study'
+        )
+        .eq('user_id', userId);
 
-      if (tasksError) throw tasksError
+      if (tasksError) throw tasksError;
+
+      // Filter out admin case studies - only count user's own tasks
+      const userTasks = tasks?.filter((t) => !t.is_admin_case_study) || [];
 
       // Calculate real statistics from tasks
-      const totalTasks = tasks?.length || 0
-      const publishedTasks = tasks?.filter((t) => t.status === 'published').length || 0
+      const totalTasks = userTasks.length;
+      const publishedTasks =
+        userTasks.filter((t) => t.status === 'published').length || 0;
 
       // Sum up views, engagement, and conversions from published tasks
-      let totalViews = 0
-      let totalEngagement = 0
-      let totalConversions = 0
+      let totalViews = 0;
+      let totalEngagement = 0;
+      let totalConversions = 0;
 
-      tasks?.forEach((task) => {
+      userTasks.forEach((task) => {
         if (task.status === 'published') {
           // Parse numeric values from strings, defaulting to 0 if null or invalid
-          const views = parseInt(task.result_views || '0', 10) || 0
-          const engagement = parseInt(task.result_engagement || '0', 10) || 0
-          const conversions = parseInt(task.result_conversions || '0', 10) || 0
+          const views = parseInt(task.result_views || '0', 10) || 0;
+          const engagement = parseInt(task.result_engagement || '0', 10) || 0;
+          const conversions = parseInt(task.result_conversions || '0', 10) || 0;
 
-          totalViews += views
-          totalEngagement += engagement
-          totalConversions += conversions
+          totalViews += views;
+          totalEngagement += engagement;
+          totalConversions += conversions;
         }
-      })
+      });
 
       setUserRealStatistics({
         total_tasks: totalTasks,
@@ -185,16 +273,16 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
         total_views: totalViews.toString(),
         total_engagement: totalEngagement.toString(),
         total_conversions: totalConversions.toString(),
-      })
+      });
     } catch (error: any) {
       toast.error('Greška pri učitavanju statistika', {
         description: error.message,
-      })
-      setUserRealStatistics(null)
+      });
+      setUserRealStatistics(null);
     } finally {
-      setLoadingStatistics(false)
+      setLoadingStatistics(false);
     }
-  }
+  };
 
   // const handleTierChange = async (userId: string, newTier: 'pro' | 'admin') => {
   //   setUpdatingTierId(userId)
@@ -223,7 +311,21 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
   // }
 
   // Define columns for TanStack Table
-  const columns = useMemo<ColumnDef<Profile & { statistics?: UserStatistics; payments?: Payment[] }>[]>(
+  const columns = useMemo<
+    ColumnDef<
+      Profile & {
+        statistics?: UserStatistics;
+        payments?: Payment[];
+        realStats?: {
+          total_tasks: number;
+          published_tasks: number;
+          total_views: number;
+          total_engagement: number;
+          total_conversions: number;
+        };
+      }
+    >[]
+  >(
     () => [
       {
         accessorKey: 'business_name',
@@ -233,7 +335,9 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
         header: ({ column }) => {
           return (
             <button
-              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+              onClick={() =>
+                column.toggleSorting(column.getIsSorted() === 'asc')
+              }
               className="flex items-center gap-2 hover:text-white transition-colors text-slate-400 text-sm font-medium"
             >
               Korisnik
@@ -245,11 +349,11 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                 <ArrowUpDown size={14} />
               )}
             </button>
-          )
+          );
         },
         cell: ({ row }) => {
-          const user = row.original
-          const email = userEmails[user.id]
+          const user = row.original;
+          const email = userEmails[user.id];
           return (
             <div className="min-w-[250px]">
               <div className="text-white font-medium flex items-center gap-2">
@@ -268,7 +372,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                 )}
               </div>
             </div>
-          )
+          );
         },
       },
       {
@@ -277,7 +381,9 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
         header: ({ column }) => {
           return (
             <button
-              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+              onClick={() =>
+                column.toggleSorting(column.getIsSorted() === 'asc')
+              }
               className="flex items-center gap-2 hover:text-white transition-colors text-slate-400 text-sm font-medium"
             >
               Tier
@@ -289,34 +395,38 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                 <ArrowUpDown size={14} />
               )}
             </button>
-          )
+          );
         },
         cell: ({ row }) => {
-          const user = row.original
+          const user = row.original;
           return (
             <span
-              className={`px-2 py-1 rounded text-xs font-bold ${user.tier === 'admin'
-                ? 'bg-yellow-900/30 text-yellow-300'
-                : user.tier === 'pro'
-                  ? 'bg-purple-900/30 text-purple-300'
-                  : 'bg-slate-800 text-slate-400'
-                }`}
+              className={`px-2 py-1 rounded text-xs font-bold ${
+                user.tier === 'admin'
+                  ? 'bg-yellow-900/30 text-yellow-300'
+                  : user.tier === 'pro'
+                    ? 'bg-purple-900/30 text-purple-300'
+                    : 'bg-slate-800 text-slate-400'
+              }`}
             >
               {user.tier?.toUpperCase() || 'PRO'}
             </span>
-          )
+          );
         },
       },
       {
         id: 'tasks',
-        size: 120,
+        size: 100,
         header: ({ column }) => {
           return (
             <button
-              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+              onClick={() =>
+                column.toggleSorting(column.getIsSorted() === 'asc')
+              }
               className="flex items-center gap-2 hover:text-white transition-colors text-slate-400 text-sm font-medium"
             >
-              Zadaci
+              <span className="hidden md:inline">Zadaci</span>
+              <span className="md:hidden">Zad.</span>
               {column.getIsSorted() === 'asc' ? (
                 <ArrowUp size={14} />
               ) : column.getIsSorted() === 'desc' ? (
@@ -325,28 +435,38 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                 <ArrowUpDown size={14} />
               )}
             </button>
-          )
+          );
         },
-        accessorFn: (row) => row.statistics?.total_tasks || 0,
+        accessorFn: (row) => row.realStats?.total_tasks || 0,
         cell: ({ row }) => {
-          const user = row.original
+          const user = row.original;
+          const totalTasks = user.realStats?.total_tasks || 0;
+          const publishedTasks = user.realStats?.published_tasks || 0;
           return (
-            <span className="text-slate-300">
-              {user.statistics?.total_tasks || 0} / {user.statistics?.published_tasks || 0}
+            <span className="text-slate-300 text-sm">
+              <span className="hidden md:inline">
+                {totalTasks} / {publishedTasks}
+              </span>
+              <span className="md:hidden">
+                {totalTasks}/{publishedTasks}
+              </span>
             </span>
-          )
+          );
         },
       },
       {
         id: 'views',
-        size: 120,
+        size: 100,
         header: ({ column }) => {
           return (
             <button
-              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+              onClick={() =>
+                column.toggleSorting(column.getIsSorted() === 'asc')
+              }
               className="flex items-center gap-2 hover:text-white transition-colors text-slate-400 text-sm font-medium"
             >
-              Pregledi
+              <span className="hidden md:inline">Pregledi</span>
+              <span className="md:hidden">Preg.</span>
               {column.getIsSorted() === 'asc' ? (
                 <ArrowUp size={14} />
               ) : column.getIsSorted() === 'desc' ? (
@@ -355,66 +475,86 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                 <ArrowUpDown size={14} />
               )}
             </button>
-          )
+          );
         },
-        accessorFn: (row) => parseInt(row.statistics?.total_views || '0', 10) || 0,
+        accessorFn: (row) => row.realStats?.total_views || 0,
         cell: ({ row }) => {
-          const user = row.original
-          return <span className="text-slate-300">{user.statistics?.total_views || '0'}</span>
+          const user = row.original;
+          const views = user.realStats?.total_views || 0;
+          const shortViews =
+            views >= 1000 ? `${(views / 1000).toFixed(1)}k` : views.toString();
+          return (
+            <span className="text-slate-300 text-sm">
+              <span className="hidden md:inline">{views.toLocaleString()}</span>
+              <span className="md:hidden">{shortViews}</span>
+            </span>
+          );
         },
       },
       {
         id: 'actions',
-        size: 400,
-        header: 'Akcije',
+        size: 80,
+        header: '',
         cell: ({ row }) => {
-          const user = row.original
+          const user = row.original;
+          const isOpen = openActionMenu === user.id;
           return (
-            <div className="flex gap-2 flex-wrap">
-              {/* <select
-                value={user.tier || 'pro'}
-                onChange={(e) => {
-                  handleTierChange(user.id, e.target.value as 'pro' | 'admin')
-                }}
-                disabled={updatingTierId === user.id}
-                className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-white disabled:opacity-50"
-              >
-                <option value="pro">Pro</option>
-                <option value="admin">Admin</option>
-              </select> */}
-              <Button variant="outline" size="sm" onClick={() => setSelectedUser(user)}>
-                Detalji
-              </Button>
+            <div className="relative">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setUserToUpdate(user)
-                  setIsUpdateModalOpen(true)
-                }}
-                className="flex items-center gap-1"
+                onClick={() => setOpenActionMenu(isOpen ? null : user.id)}
+                className="p-1.5"
               >
-                <Edit size={14} /> Ažuriraj
+                <MoreVertical size={16} />
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setUserToDelete(user)
-                  setIsDeleteModalOpen(true)
-                }}
-                className="flex items-center gap-1 text-red-400 hover:text-red-300 hover:border-red-500"
-              >
-                <Trash2 size={14} /> Obriši
-              </Button>
+              {isOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setOpenActionMenu(null)}
+                  />
+                  <div className="absolute right-0 top-8 z-20 bg-slate-800 border border-slate-700 rounded-lg shadow-xl min-w-[160px]">
+                    <button
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setOpenActionMenu(null);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors flex items-center gap-2"
+                    >
+                      Detalji
+                    </button>
+                    <button
+                      onClick={() => {
+                        setUserToUpdate(user);
+                        setIsUpdateModalOpen(true);
+                        setOpenActionMenu(null);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors flex items-center gap-2"
+                    >
+                      <Edit size={14} /> Ažuriraj
+                    </button>
+                    <button
+                      onClick={() => {
+                        setUserToDelete(user);
+                        setIsDeleteModalOpen(true);
+                        setOpenActionMenu(null);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700 hover:text-red-300 transition-colors flex items-center gap-2"
+                    >
+                      <Trash2 size={14} /> Obriši
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
-          )
+          );
         },
         enableSorting: false,
       },
     ],
-    [userEmails, emailConfirmations, updatingTierId]
-  )
+    [userEmails, emailConfirmations, updatingTierId, openActionMenu]
+  );
 
   const table = useReactTable({
     data: users,
@@ -426,14 +566,14 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     globalFilterFn: (row, columnId, filterValue) => {
-      const user = row.original
-      const search = filterValue.toLowerCase()
+      const user = row.original;
+      const search = filterValue.toLowerCase();
       return (
         user.business_name?.toLowerCase().includes(search) ||
         user.id.toLowerCase().includes(search) ||
         userEmails[user.id]?.toLowerCase().includes(search) ||
         false
-      )
+      );
     },
     state: {
       sorting,
@@ -444,63 +584,71 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
         pageSize: 10,
       },
     },
-  })
+  });
 
   if (loading || loadingEmails) {
-    return <Loader fullScreen text="Učitavanje korisnika..." />
+    return <Loader fullScreen text="Učitavanje korisnika..." />;
   }
 
   return (
-    <div className="space-y-6">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+    <div className="space-y-4">
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold text-white mb-2 flex items-center gap-2 justify-center">
           <Shield className="text-yellow-400" size={24} /> Admin Dashboard
         </h1>
-        <p className="text-slate-400">Upravljanje korisnicima, statistikama i platama</p>
+        <p className="text-slate-400 text-center text-sm">
+          Upravljanje korisnicima, statistikama i šablonima
+        </p>
       </header>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-slate-700">
+      <div className="flex gap-y-2 gap-x-0 border-b border-slate-700 flex-wrap justify-center">
         <button
           onClick={() => setActiveTab('users')}
-          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'users'
-            ? 'text-white border-b-2 border-blue-500'
-            : 'text-slate-400 hover:text-white'
-            }`}
+          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'users'
+              ? 'text-white border-b-2 border-blue-500'
+              : 'text-slate-400 hover:text-white'
+          }`}
         >
           <Users size={16} /> Korisnici
         </button>
-        <button
+        {/* <button
           onClick={() => setActiveTab('templates')}
-          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'templates'
-            ? 'text-white border-b-2 border-blue-500'
-            : 'text-slate-400 hover:text-white'
-            }`}
+          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'templates'
+              ? 'text-white border-b-2 border-blue-500'
+              : 'text-slate-400 hover:text-white'
+          }`}
         >
           <FileText size={16} /> Šabloni
         </button>
         <button
           onClick={() => setActiveTab('case-studies')}
-          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'case-studies'
-            ? 'text-white border-b-2 border-blue-500'
-            : 'text-slate-400 hover:text-white'
-            }`}
+          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'case-studies'
+              ? 'text-white border-b-2 border-blue-500'
+              : 'text-slate-400 hover:text-white'
+          }`}
         >
           <ClipboardList size={16} /> Studije Slučaja
-        </button>
+        </button> */}
         <button
           onClick={() => setActiveTab('sanity')}
-          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'sanity'
-            ? 'text-white border-b-2 border-blue-500'
-            : 'text-slate-400 hover:text-white'
-            }`}
+          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'sanity'
+              ? 'text-white border-b-2 border-blue-500'
+              : 'text-slate-400 hover:text-white'
+          }`}
         >
           <Database size={16} /> Sanity CMS
         </button>
       </div>
 
       {activeTab === 'templates' && <AdminTemplateManagement userId={userId} />}
-      {activeTab === 'case-studies' && <AdminCaseStudyCreation userId={userId} />}
+      {activeTab === 'case-studies' && (
+        <AdminCaseStudyCreation userId={userId} />
+      )}
 
       {activeTab === 'sanity' && (
         <div className="space-y-6">
@@ -518,49 +666,68 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                 <div className="bg-slate-800 p-4 rounded-lg">
                   <h3 className="text-white font-medium mb-2">Sanity Studio</h3>
                   <p className="text-slate-400 text-sm mb-4">
-                    Prijavite se na Sanity.io da biste kreirali i uređivali šablone i studije slučaja.
+                    Prijavite se na Sanity.io da biste kreirali i uređivali
+                    šablone i studije slučaja.
                   </p>
                   <Button
-                    onClick={() => window.open('https://www.sanity.io/manage', '_blank')}
+                    onClick={() =>
+                      window.open('https://www.sanity.io/manage', '_blank')
+                    }
                     className="bg-blue-600 hover:bg-blue-700"
                   >
                     <Database size={16} className="mr-2" /> Otvori Sanity Studio
                   </Button>
                   <p className="text-slate-500 text-xs mt-2">
-                    Ili direktno: <a href="https://www.sanity.io/manage" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">sanity.io/manage</a>
+                    Ili direktno:{' '}
+                    <a
+                      href="https://www.sanity.io/manage"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:underline"
+                    >
+                      sanity.io/manage
+                    </a>
                   </p>
                 </div>
 
                 <div className="bg-slate-800 p-4 rounded-lg">
-                  <h3 className="text-white font-medium mb-2">Sinhronizacija sa Supabase</h3>
+                  <h3 className="text-white font-medium mb-2">
+                    Sinhronizacija sa Supabase
+                  </h3>
                   <p className="text-slate-400 text-sm mb-4">
-                    Sinhronizujte sadržaj iz Sanity CMS-a u Supabase bazu podataka.
+                    Sinhronizujte sadržaj iz Sanity CMS-a u Supabase bazu
+                    podataka.
                   </p>
                   <div className="flex gap-3">
                     <Button
                       onClick={async () => {
-                        setSyncingTemplates(true)
+                        setSyncingTemplates(true);
                         try {
-                          const response = await fetch('/api/sanity/sync-templates', {
-                            method: 'POST',
-                          })
-                          const data = await response.json()
+                          const response = await fetch(
+                            '/api/sanity/sync-templates',
+                            {
+                              method: 'POST',
+                            }
+                          );
+                          const data = await response.json();
                           if (response.ok) {
                             toast.success('Šabloni uspešno sinhronizovani', {
                               description: `Sinhronizovano ${data.synced} šablona.`,
-                            })
+                            });
                             if (data.errors && data.errors.length > 0) {
-                              console.error('Sync errors:', data.errors)
+                              console.error('Sync errors:', data.errors);
                             }
                           } else {
-                            throw new Error(data.error || 'Greška pri sinhronizaciji')
+                            throw new Error(
+                              data.error || 'Greška pri sinhronizaciji'
+                            );
                           }
                         } catch (error: any) {
                           toast.error('Greška pri sinhronizaciji šablona', {
                             description: error.message,
-                          })
+                          });
                         } finally {
-                          setSyncingTemplates(false)
+                          setSyncingTemplates(false);
                         }
                       }}
                       disabled={syncingTemplates}
@@ -570,32 +737,45 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                         size={16}
                         className={`mr-2 ${syncingTemplates ? 'animate-spin' : ''}`}
                       />
-                      {syncingTemplates ? 'Sinhronizacija...' : 'Sinhronizuj Šablone'}
+                      {syncingTemplates
+                        ? 'Sinhronizacija...'
+                        : 'Sinhronizuj Šablone'}
                     </Button>
                     <Button
                       onClick={async () => {
-                        setSyncingCaseStudies(true)
+                        setSyncingCaseStudies(true);
                         try {
-                          const response = await fetch('/api/sanity/sync-case-studies', {
-                            method: 'POST',
-                          })
-                          const data = await response.json()
+                          const response = await fetch(
+                            '/api/sanity/sync-case-studies',
+                            {
+                              method: 'POST',
+                            }
+                          );
+                          const data = await response.json();
                           if (response.ok) {
-                            toast.success('Studije slučaja uspešno sinhronizovane', {
-                              description: `Sinhronizovano ${data.synced} studija slučaja.`,
-                            })
+                            toast.success(
+                              'Studije slučaja uspešno sinhronizovane',
+                              {
+                                description: `Sinhronizovano ${data.synced} studija slučaja.`,
+                              }
+                            );
                             if (data.errors && data.errors.length > 0) {
-                              console.error('Sync errors:', data.errors)
+                              console.error('Sync errors:', data.errors);
                             }
                           } else {
-                            throw new Error(data.error || 'Greška pri sinhronizaciji')
+                            throw new Error(
+                              data.error || 'Greška pri sinhronizaciji'
+                            );
                           }
                         } catch (error: any) {
-                          toast.error('Greška pri sinhronizaciji studija slučaja', {
-                            description: error.message,
-                          })
+                          toast.error(
+                            'Greška pri sinhronizaciji studija slučaja',
+                            {
+                              description: error.message,
+                            }
+                          );
                         } finally {
-                          setSyncingCaseStudies(false)
+                          setSyncingCaseStudies(false);
                         }
                       }}
                       disabled={syncingCaseStudies}
@@ -605,7 +785,9 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                         size={16}
                         className={`mr-2 ${syncingCaseStudies ? 'animate-spin' : ''}`}
                       />
-                      {syncingCaseStudies ? 'Sinhronizacija...' : 'Sinhronizuj Studije Slučaja'}
+                      {syncingCaseStudies
+                        ? 'Sinhronizacija...'
+                        : 'Sinhronizuj Studije Slučaja'}
                     </Button>
                   </div>
                 </div>
@@ -613,12 +795,30 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                 <div className="bg-slate-800 p-4 rounded-lg">
                   <h3 className="text-white font-medium mb-2">Uputstvo</h3>
                   <ol className="text-slate-400 text-sm space-y-2 list-decimal list-inside">
-                    <li>Kliknite na "Otvori Sanity Studio" ili idite na <a href="https://www.sanity.io/manage" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">sanity.io/manage</a></li>
+                    <li>
+                      Kliknite na "Otvori Sanity Studio" ili idite na{' '}
+                      <a
+                        href="https://www.sanity.io/manage"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:underline"
+                      >
+                        sanity.io/manage
+                      </a>
+                    </li>
                     <li>Prijavite se sa vašim Sanity nalogom</li>
                     <li>Izaberite vaš projekat iz liste projekata</li>
-                    <li>Kreirajte ili uredite šablone i studije slučaja u Sanity Studio-u</li>
-                    <li>Kliknite na dugme za sinhronizaciju ovde da biste preneli izmene u Supabase</li>
-                    <li>Izmene će biti dostupne u aplikaciji nakon sinhronizacije</li>
+                    <li>
+                      Kreirajte ili uredite šablone i studije slučaja u Sanity
+                      Studio-u
+                    </li>
+                    <li>
+                      Kliknite na dugme za sinhronizaciju ovde da biste preneli
+                      izmene u Supabase
+                    </li>
+                    <li>
+                      Izmene će biti dostupne u aplikaciji nakon sinhronizacije
+                    </li>
                   </ol>
                 </div>
               </div>
@@ -630,71 +830,219 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
       {activeTab === 'users' && (
         <>
           {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             <Card className="bg-slate-900 border-slate-700">
-              <CardHeader className="pb-2">
-                <CardDescription className="text-slate-400">Ukupno Korisnika</CardDescription>
-                <CardTitle className="text-2xl text-white">{users.length}</CardTitle>
+              <CardHeader className="p-3 md:p-4">
+                <CardDescription className="text-slate-400 text-sm">
+                  <span className="md:inline">Ukupno korisnika</span>
+                </CardDescription>
+                <CardTitle className="text-xl md:text-2xl text-white">
+                  {users.length}
+                </CardTitle>
               </CardHeader>
             </Card>
             <Card className="bg-slate-900 border-slate-700">
-              <CardHeader className="pb-2">
-                <CardDescription className="text-slate-400">Pro Korisnici</CardDescription>
-                <CardTitle className="text-2xl text-white">
+              <CardHeader className="p-3 md:p-4">
+                <CardDescription className="text-slate-400 text-sm">
+                  <span className="md:inline">Pro korisnici</span>
+                </CardDescription>
+                <CardTitle className="text-xl md:text-2xl text-white">
                   {users.filter((u) => u.tier === 'pro').length}
                 </CardTitle>
               </CardHeader>
             </Card>
             <Card className="bg-slate-900 border-slate-700">
-              <CardHeader className="pb-2">
-                <CardDescription className="text-slate-400">Ukupno Zadataka</CardDescription>
-                <CardTitle className="text-2xl text-white">
-                  {users.reduce((sum, u) => sum + (u.statistics?.total_tasks || 0), 0)}
+              <CardHeader className="p-3 md:p-4">
+                <CardDescription className="text-slate-400 text-sm">
+                  <span className="md:inline">Ukupno zadataka</span>
+                </CardDescription>
+                <CardTitle className="text-xl md:text-2xl text-white">
+                  {users.reduce(
+                    (sum, u) => sum + (u.realStats?.total_tasks || 0),
+                    0
+                  )}
                 </CardTitle>
               </CardHeader>
             </Card>
             <Card className="bg-slate-900 border-slate-700">
-              <CardHeader className="pb-2">
-                <CardDescription className="text-slate-400">Ukupno Pregleda</CardDescription>
-                <CardTitle className="text-2xl text-white">
-                  {users.reduce((sum, u) => {
-                    const views = parseInt(u.statistics?.total_views || '0', 10) || 0
-                    return sum + views
-                  }, 0)}
+              <CardHeader className="p-3 md:p-4">
+                <CardDescription className="text-slate-400 text-sm">
+                  <span className="md:inline">Ukupno pregleda</span>
+                </CardDescription>
+                <CardTitle className="text-xl md:text-2xl text-white">
+                  {(() => {
+                    const total = users.reduce((sum, u) => {
+                      return sum + (u.realStats?.total_views || 0);
+                    }, 0);
+                    return total >= 1000
+                      ? `${(total / 1000).toFixed(1)}k`
+                      : total.toString();
+                  })()}
                 </CardTitle>
               </CardHeader>
             </Card>
           </div>
 
           {/* Search and Create User */}
-          <div className="flex gap-4 justify-between items-center">
+          <div className="flex flex-col sm:flex-row gap-2 justify-between items-stretch sm:items-center">
             <Input
               placeholder="Pretraži korisnike..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md bg-slate-800 border-slate-700 text-white"
+              className="w-full sm:max-w-md bg-slate-800 border-slate-700 text-white rounded-md"
             />
             <Button
               onClick={() => setIsCreateModalOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+              className="bg-blue-600 hover:bg-blue-700 flex items-center gap-1 rounded-md justify-center sm:justify-start"
             >
-              <Plus size={16} /> Kreiraj Korisnika
+              <Plus size={16} color="white" />
+              <span className="sm:inline text-white">Kreiraj korisnika</span>
             </Button>
           </div>
 
           {/* Users Table */}
           <Card className="bg-slate-900 border-slate-700">
-            <CardHeader>
+            <CardHeader className="p-4">
               <CardTitle className="text-white flex items-center gap-2">
-                <Users size={20} /> Svi Korisnici
+                <Users size={18} /> Svi korisnici
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
+            <CardContent className="p-4 pt-0">
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3">
+                {table.getRowModel().rows.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500">
+                    Nema korisnika za prikaz
+                  </div>
+                ) : (
+                  table.getRowModel().rows.map((row) => {
+                    const user = row.original;
+                    const email = userEmails[user.id];
+                    const isOpen = openActionMenu === user.id;
+                    return (
+                      <Card
+                        key={row.id}
+                        className="bg-slate-800 border-slate-700 p-4"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-white font-medium flex items-center gap-2 mb-1">
+                              <span className="truncate">
+                                {user.business_name || 'Nema imena'}
+                              </span>
+                              {emailConfirmations[user.id] === false && (
+                                <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-yellow-900/30 text-yellow-300 border border-yellow-800 flex-shrink-0">
+                                  Email Nije Potvrđen
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-400 min-h-[16px] truncate">
+                              {email || (
+                                <span className="invisible">Loading...</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="relative ml-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setOpenActionMenu(isOpen ? null : user.id)
+                              }
+                              className="p-1.5"
+                            >
+                              <MoreVertical size={16} />
+                            </Button>
+                            {isOpen && (
+                              <>
+                                <div
+                                  className="fixed inset-0 z-10"
+                                  onClick={() => setOpenActionMenu(null)}
+                                />
+                                <div className="absolute right-0 top-8 z-20 bg-slate-800 border border-slate-700 rounded-lg shadow-xl min-w-[160px]">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedUser(user);
+                                      setOpenActionMenu(null);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors flex items-center gap-2"
+                                  >
+                                    Detalji
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setUserToUpdate(user);
+                                      setIsUpdateModalOpen(true);
+                                      setOpenActionMenu(null);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors flex items-center gap-2"
+                                  >
+                                    <Edit size={14} /> Ažuriraj
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setUserToDelete(user);
+                                      setIsDeleteModalOpen(true);
+                                      setOpenActionMenu(null);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700 hover:text-red-300 transition-colors flex items-center gap-2"
+                                  >
+                                    <Trash2 size={14} /> Obriši
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div>
+                            <div className="text-slate-400 mb-1">Tier</div>
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-bold inline-block ${
+                                user.tier === 'admin'
+                                  ? 'bg-yellow-900/30 text-yellow-300'
+                                  : user.tier === 'pro'
+                                    ? 'bg-purple-900/30 text-purple-300'
+                                    : 'bg-slate-700 text-slate-400'
+                              }`}
+                            >
+                              {user.tier?.toUpperCase() || 'PRO'}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-slate-400 mb-1">Zadaci</div>
+                            <div className="text-slate-300 font-medium">
+                              {user.realStats?.total_tasks || 0}/
+                              {user.realStats?.published_tasks || 0}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-slate-400 mb-1">Pregledi</div>
+                            <div className="text-slate-300 font-medium">
+                              {(() => {
+                                const views = user.realStats?.total_views || 0;
+                                return views >= 1000
+                                  ? `${(views / 1000).toFixed(1)}k`
+                                  : views.toString();
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     {table.getHeaderGroups().map((headerGroup) => (
-                      <tr key={headerGroup.id} className="border-b border-slate-700">
+                      <tr
+                        key={headerGroup.id}
+                        className="border-b border-slate-700"
+                      >
                         {headerGroup.headers.map((header) => (
                           <th
                             key={header.id}
@@ -707,7 +1055,10 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                           >
                             {header.isPlaceholder
                               ? null
-                              : flexRender(header.column.columnDef.header, header.getContext())}
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
                           </th>
                         ))}
                       </tr>
@@ -716,13 +1067,19 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                   <tbody>
                     {table.getRowModel().rows.length === 0 ? (
                       <tr>
-                        <td colSpan={columns.length} className="p-8 text-center text-slate-500">
+                        <td
+                          colSpan={columns.length}
+                          className="p-8 text-center text-slate-500"
+                        >
                           Nema korisnika za prikaz
                         </td>
                       </tr>
                     ) : (
                       table.getRowModel().rows.map((row) => (
-                        <tr key={row.id} className="border-b border-slate-800 hover:bg-slate-800/50">
+                        <tr
+                          key={row.id}
+                          className="border-b border-slate-800 hover:bg-slate-800/50"
+                        >
                           {row.getVisibleCells().map((cell) => (
                             <td
                               key={cell.id}
@@ -733,7 +1090,10 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                                 maxWidth: cell.column.columnDef.maxSize,
                               }}
                             >
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
                             </td>
                           ))}
                         </tr>
@@ -744,11 +1104,16 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-between mt-4">
-                <div className="text-sm text-slate-400">
-                  Prikazano {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} -{' '}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+                <div className="text-xs sm:text-sm text-slate-400 text-center sm:text-left">
+                  Prikazano{' '}
+                  {table.getState().pagination.pageIndex *
+                    table.getState().pagination.pageSize +
+                    1}{' '}
+                  -{' '}
                   {Math.min(
-                    (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                    (table.getState().pagination.pageIndex + 1) *
+                      table.getState().pagination.pageSize,
                     table.getFilteredRowModel().rows.length
                   )}{' '}
                   od {table.getFilteredRowModel().rows.length} korisnika
@@ -759,19 +1124,24 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                     size="sm"
                     onClick={() => table.previousPage()}
                     disabled={!table.getCanPreviousPage()}
+                    className="text-xs sm:text-sm"
                   >
-                    Prethodna
+                    <span className="hidden sm:inline">Prethodna</span>
+                    <span className="sm:hidden">Preth.</span>
                   </Button>
-                  <div className="text-sm text-slate-400">
-                    Strana {table.getState().pagination.pageIndex + 1} od {table.getPageCount()}
+                  <div className="text-xs sm:text-sm text-slate-400">
+                    {table.getState().pagination.pageIndex + 1} /{' '}
+                    {table.getPageCount()}
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => table.nextPage()}
                     disabled={!table.getCanNextPage()}
+                    className="text-xs sm:text-sm"
                   >
-                    Sledeća
+                    <span className="hidden sm:inline">Sledeća</span>
+                    <span className="sm:hidden">Sled.</span>
                   </Button>
                 </div>
               </div>
@@ -785,7 +1155,9 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className="text-white">{selectedUser.business_name || 'Korisnik'}</CardTitle>
+                      <CardTitle className="text-white">
+                        {selectedUser.business_name || 'Korisnik'}
+                      </CardTitle>
                       <CardDescription className="text-slate-400">
                         ID: {selectedUser.id}
                       </CardDescription>
@@ -812,7 +1184,10 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                         </div>
                       )}
                     </div>
-                    <Button variant="ghost" onClick={() => setSelectedUser(null)}>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setSelectedUser(null)}
+                    >
                       ×
                     </Button>
                   </div>
@@ -821,45 +1196,71 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                   <div>
                     <h3 className="text-white font-bold mb-2">Statistike</h3>
                     {loadingStatistics ? (
-                      <div className="text-slate-400 text-sm">Učitavanje statistika...</div>
+                      <div className="text-slate-400 text-sm">
+                        Učitavanje statistika...
+                      </div>
                     ) : (
                       <div className="grid grid-cols-2 gap-4">
                         <div className="bg-slate-800 p-3 rounded">
-                          <div className="text-slate-400 text-sm">Ukupno Zadataka</div>
-                          <div className="text-white font-bold">{userRealStatistics?.total_tasks || 0}</div>
+                          <div className="text-slate-400 text-sm">
+                            Ukupno Zadataka
+                          </div>
+                          <div className="text-white font-bold">
+                            {userRealStatistics?.total_tasks || 0}
+                          </div>
                         </div>
                         <div className="bg-slate-800 p-3 rounded">
-                          <div className="text-slate-400 text-sm">Objavljeno</div>
-                          <div className="text-white font-bold">{userRealStatistics?.published_tasks || 0}</div>
+                          <div className="text-slate-400 text-sm">
+                            Objavljeno
+                          </div>
+                          <div className="text-white font-bold">
+                            {userRealStatistics?.published_tasks || 0}
+                          </div>
                         </div>
                         <div className="bg-slate-800 p-3 rounded">
                           <div className="text-slate-400 text-sm">Pregledi</div>
-                          <div className="text-white font-bold">{userRealStatistics?.total_views || '0'}</div>
+                          <div className="text-white font-bold">
+                            {userRealStatistics?.total_views || '0'}
+                          </div>
                         </div>
                         <div className="bg-slate-800 p-3 rounded">
                           <div className="text-slate-400 text-sm">Angažman</div>
-                          <div className="text-white font-bold">{userRealStatistics?.total_engagement || '0'}</div>
+                          <div className="text-white font-bold">
+                            {userRealStatistics?.total_engagement || '0'}
+                          </div>
                         </div>
                         <div className="bg-slate-800 p-3 rounded">
-                          <div className="text-slate-400 text-sm">Konverzije</div>
-                          <div className="text-white font-bold">{userRealStatistics?.total_conversions || '0'}</div>
+                          <div className="text-slate-400 text-sm">
+                            Konverzije
+                          </div>
+                          <div className="text-white font-bold">
+                            {userRealStatistics?.total_conversions || '0'}
+                          </div>
                         </div>
                       </div>
                     )}
                   </div>
 
                   <div>
-                    <h3 className="text-white font-bold mb-2">Platni Istorija</h3>
+                    <h3 className="text-white font-bold mb-2">
+                      Platni Istorija
+                    </h3>
                     <div className="space-y-2">
-                      {selectedUser.payments && selectedUser.payments.length > 0 ? (
+                      {selectedUser.payments &&
+                      selectedUser.payments.length > 0 ? (
                         selectedUser.payments.map((payment) => (
-                          <div key={payment.id} className="bg-slate-800 p-3 rounded flex justify-between">
+                          <div
+                            key={payment.id}
+                            className="bg-slate-800 p-3 rounded flex justify-between"
+                          >
                             <div>
                               <div className="text-white font-medium">
                                 ${payment.amount} - {payment.status}
                               </div>
                               <div className="text-slate-400 text-sm">
-                                {new Date(payment.created_at).toLocaleDateString()}
+                                {new Date(
+                                  payment.created_at
+                                ).toLocaleDateString()}
                               </div>
                             </div>
                             <div className="text-slate-400 text-sm">
@@ -868,7 +1269,9 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                           </div>
                         ))
                       ) : (
-                        <div className="text-slate-500 text-sm">Nema platnih podataka</div>
+                        <div className="text-slate-500 text-sm">
+                          Nema platnih podataka
+                        </div>
                       )}
                     </div>
                   </div>
@@ -888,17 +1291,17 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
           <DeleteUserModal
             isOpen={isDeleteModalOpen}
             onClose={() => {
-              setIsDeleteModalOpen(false)
-              setUserToDelete(null)
+              setIsDeleteModalOpen(false);
+              setUserToDelete(null);
             }}
             onUserDeleted={fetchAllUsers}
             user={
               userToDelete
                 ? {
-                  id: userToDelete.id,
-                  email: userEmails[userToDelete.id],
-                  business_name: userToDelete.business_name || undefined,
-                }
+                    id: userToDelete.id,
+                    email: userEmails[userToDelete.id],
+                    business_name: userToDelete.business_name || undefined,
+                  }
                 : null
             }
           />
@@ -907,22 +1310,22 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
           <UpdateUserModal
             isOpen={isUpdateModalOpen}
             onClose={() => {
-              setIsUpdateModalOpen(false)
-              setUserToUpdate(null)
+              setIsUpdateModalOpen(false);
+              setUserToUpdate(null);
             }}
             onUserUpdated={fetchAllUsers}
             user={
               userToUpdate
                 ? {
-                  ...userToUpdate,
-                  email: userEmails[userToUpdate.id],
-                  email_confirmed: emailConfirmations[userToUpdate.id],
-                }
+                    ...userToUpdate,
+                    email: userEmails[userToUpdate.id],
+                    email_confirmed: emailConfirmations[userToUpdate.id],
+                  }
                 : null
             }
           />
         </>
       )}
     </div>
-  )
+  );
 }

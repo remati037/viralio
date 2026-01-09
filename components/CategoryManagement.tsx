@@ -205,16 +205,6 @@ export default function CategoryManagement({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
-          <Tag size={18} className="text-blue-400" />
-          Kategorije skripti
-        </h3>
-        <p className="text-sm text-slate-400 mb-4">
-          Organizujte svoje skripte pomoću kategorija. Maksimalno 20 kategorija.
-        </p>
-      </div>
-
       {/* Add new category */}
       <div className="flex gap-2">
         <input
@@ -235,7 +225,7 @@ export default function CategoryManagement({
           disabled={
             isAdding || categories.length >= 20 || !newCategoryName.trim()
           }
-          className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-md font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500 flex items-center gap-2"
+          className="px-12 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-md font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500 flex items-center gap-2"
         >
           <Plus size={16} />
           Dodaj

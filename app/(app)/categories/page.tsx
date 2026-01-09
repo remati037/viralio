@@ -1,0 +1,32 @@
+'use client';
+
+import CategoryManagement from '@/components/CategoryManagement';
+import Loader from '@/components/ui/loader';
+import { useUserId } from '@/components/UserContext';
+import { Tag } from 'lucide-react';
+
+export default function CategoriesPage() {
+  const userId = useUserId();
+
+  if (!userId) {
+    return <Loader fullScreen text="Učitavanje..." />;
+  }
+
+  return (
+    <>
+      <header className="mb-4 md:mb-8">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+            <Tag className="text-blue-400" size={28} />
+            Kategorije
+          </h1>
+          <p className="text-slate-400 text-sm text-balance">
+            Organizujte svoje skripte pomoću kategorija. Maksimalno 20
+            kategorija.
+          </p>
+        </div>
+      </header>
+      <CategoryManagement userId={userId} />
+    </>
+  );
+}

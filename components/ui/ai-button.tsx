@@ -128,21 +128,37 @@ Based on the Topic, choose the best structure automatically:
 ### GENERATE SCRIPT BODY NOW FOR TOPIC: ${context?.title}`;
   },
   cta: (context, currentContent) => {
-    const hasContent = currentContent.trim().length > 0;
-    const categoryInfo = context?.categoryName
-      ? ` Kategorija: ${context.categoryName}.`
-      : '';
-    const toneInfo = getToneInfo(context?.tone);
-    const audienceInfo = context?.targetAudience
-      ? ` Ciljna publika: ${context.targetAudience}.`
-      : '';
-    return `Kreiraj jasan i akcijski poziv na akciju (CTA) koji će motivisati gledaoce da reaguju. ${
-      hasContent
-        ? `Trenutni sadržaj: ${currentContent.substring(0, 200)}. `
-        : ''
-    }Format: ${context?.format || 'Kratka Forma'}. Niša: ${
-      context?.niche || 'marketing'
-    }.${categoryInfo}${toneInfo}${audienceInfo}`;
+    return `### ROLE & OBJECTIVE
+You are a Conversion Rate Optimization (CRO) Expert for social media.
+Your task is to take a User's DRAFT CTA and rewrite it into 3 high-converting variations.
+
+### INPUT DATA
+- *User's Draft:* ${context?.cta || currentContent} (The raw idea)
+- *Topic:* ${context?.title} (Context for relevance)
+
+### ANALYSIS LOGIC
+1.  *Identify the Goal:* Determine what the user wants (Follow, Comment, Share, Save, or Click Link) based on their draft.
+2.  *Respect the Goal:* Do NOT change the action type. If they ask for a "Comment", do not write a "Follow" CTA.
+3.  *Upgrade the Phrasing:*
+    - Remove "Please" or begging tones.
+    - Add a "Benefit" (Why should they do it?).
+    - Add "Urgency" or "FOMO" (Fear Of Missing Out).
+
+### STRICT RULES
+1.  *Language:* Serbian (Latin script). Informal "Ti".
+2.  *Length:* Short and punchy (max 8-10 words).
+3.  *Tone:* Confident and directive.
+
+### OUTPUT FORMAT
+Provide the output specifically formatted like this:
+
+1. A polished, stronger version of their exact words.
+2. The action + the specific benefit they get. 
+3. Uses curiosity, FOMO, or reverse psychology.
+
+### GENERATE CTA UPGRADES NOW.
+USER DRAFT: "${context?.cta || currentContent}"
+TOPIC: "${context?.title}"`;
   },
   title: (context, currentContent) => {
     const hasContent = currentContent.trim().length > 0;
@@ -197,43 +213,67 @@ export default function AIButton({
   const handleGenerate = async () => {
     if (isLoading) return;
 
-    // Check if title is provided
-    if (!taskContext?.title || !taskContext.title.trim()) {
-      toast.error('Naslov je obavezan', {
-        description: 'Molimo unesite naslov pre korišćenja AI generatora.',
-        duration: 5000,
-      });
-      return;
-    }
+    // Special validation for CTA generator - ONLY requires title and CTA, nothing else
+    if (fieldType === 'cta') {
+      const hasTitle =
+        taskContext?.title && taskContext.title.trim().length > 0;
+      const hasCTA = taskContext?.cta && taskContext.cta.trim().length > 0;
 
-    // Check if category is selected
-    if (!taskContext?.categoryId) {
-      toast.error('Kategorija je obavezna', {
-        description:
-          'Molimo izaberite kategoriju pre korišćenja AI generatora.',
-        duration: 5000,
-      });
-      return;
-    }
+      if (!hasTitle) {
+        toast.error('Naslov je obavezan', {
+          description:
+            'CTA generator zahteva unos Naslova (Naziv) pre korišćenja.',
+          duration: 5000,
+        });
+        return;
+      }
+      if (!hasCTA) {
+        toast.error('CTA je obavezan', {
+          description: 'CTA generator zahteva unos CTA polja pre korišćenja.',
+          duration: 5000,
+        });
+        return;
+      }
+    } else {
+      // Standard validation for other generators
+      // Check if title is provided
+      if (!taskContext?.title || !taskContext.title.trim()) {
+        toast.error('Naslov je obavezan', {
+          description: 'Molimo unesite naslov pre korišćenja AI generatora.',
+          duration: 5000,
+        });
+        return;
+      }
 
-    // Check if tone is selected
-    if (!taskContext?.tone) {
-      toast.error('Ton je obavezan', {
-        description: 'Molimo izaberite ton pre korišćenja AI generatora.',
-        duration: 5000,
-      });
-      return;
-    }
-    console.log(taskContext);
+      // Check if category is selected
+      if (!taskContext?.categoryId) {
+        toast.error('Kategorija je obavezna', {
+          description:
+            'Molimo izaberite kategoriju pre korišćenja AI generatora.',
+          duration: 5000,
+        });
+        return;
+      }
 
-    // Check if target audience is provided
-    if (!taskContext?.targetAudience || !taskContext.targetAudience.trim()) {
-      toast.error('Ciljna publika je obavezna', {
-        description:
-          'Molimo unesite ciljnu publiku pre korišćenja AI generatora.',
-        duration: 5000,
-      });
-      return;
+      // Check if tone is selected
+      if (!taskContext?.tone) {
+        toast.error('Ton je obavezan', {
+          description: 'Molimo izaberite ton pre korišćenja AI generatora.',
+          duration: 5000,
+        });
+        return;
+      }
+      console.log(taskContext);
+
+      // Check if target audience is provided
+      if (!taskContext?.targetAudience || !taskContext.targetAudience.trim()) {
+        toast.error('Ciljna publika je obavezna', {
+          description:
+            'Molimo unesite ciljnu publiku pre korišćenja AI generatora.',
+          duration: 5000,
+        });
+        return;
+      }
     }
 
     // Check if user has credits
@@ -401,16 +441,38 @@ export default function AIButton({
     fullScript: 'Scenario',
   };
 
+  // Special condition for CTA generator: ONLY requires title and CTA
+  const hasTitle = taskContext?.title && taskContext.title.trim().length > 0;
+  const hasCTA = taskContext?.cta && taskContext.cta.trim().length > 0;
+
   const isDisabled =
     isLoading ||
     !hasCredits ||
-    !taskContext?.title?.trim() ||
-    !taskContext?.categoryId ||
-    !taskContext?.tone ||
-    !taskContext?.targetAudience?.trim();
+    (fieldType === 'cta'
+      ? !hasTitle || !hasCTA
+      : !taskContext?.title?.trim() ||
+        !taskContext?.categoryId ||
+        !taskContext?.tone ||
+        !taskContext?.targetAudience?.trim());
   console.log(taskContext);
 
   const getTooltipText = () => {
+    if (!hasCredits) {
+      return `Nema AI kredita. Preostalo: ${credits?.credits_remaining || 0}/${credits?.max_credits || 500}`;
+    }
+
+    // Special tooltip for CTA generator
+    if (fieldType === 'cta') {
+      if (!hasTitle) {
+        return 'Unesite naslov (Naziv) pre korišćenja CTA generatora';
+      }
+      if (!hasCTA) {
+        return 'Unesite CTA pre korišćenja CTA generatora';
+      }
+      return `Generiši ${fieldLabels[fieldType]} pomoću AI (1 kredit)`;
+    }
+
+    // Standard tooltips for other generators
     if (!taskContext?.title?.trim()) {
       return 'Unesite naslov pre korišćenja AI generatora';
     }
@@ -422,9 +484,6 @@ export default function AIButton({
     }
     if (!taskContext?.targetAudience?.trim()) {
       return 'Unesite ciljnu publiku pre korišćenja AI generatora';
-    }
-    if (!hasCredits) {
-      return `Nema AI kredita. Preostalo: ${credits?.credits_remaining || 0}/${credits?.max_credits || 500}`;
     }
     return `Generiši ${fieldLabels[fieldType]} pomoću AI (1 kredit)`;
   };
@@ -454,6 +513,18 @@ export default function AIButton({
           </>
         )}
       </button>
+      {/* Notification for CTA generator requirements */}
+      {fieldType === 'cta' && !isLoading && (!hasTitle || !hasCTA) && (
+        <p className="text-xs text-red-400 font-medium">
+          {!hasTitle && !hasCTA
+            ? '⚠️ CTA generator zahteva unos Naslova (Naziv) i CTA polja'
+            : !hasTitle
+              ? '⚠️ CTA generator zahteva unos Naslova (Naziv). Unesite Naslov pre korišćenja CTA generatora.'
+              : !hasCTA
+                ? '⚠️ CTA generator zahteva unos CTA polja. Unesite CTA polje pre korišćenja CTA generatora.'
+                : ''}
+        </p>
+      )}
     </div>
   );
 }

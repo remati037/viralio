@@ -226,9 +226,9 @@ export default function UserStatisticsComponent({
   return (
     <div className="space-y-3">
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <Card className="bg-slate-800 border-slate-700">
-          <CardContent className="py-4 px-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-md text-slate-400 mb-2">Ukupno skripti</p>
@@ -242,7 +242,7 @@ export default function UserStatisticsComponent({
         </Card>
 
         <Card className="bg-slate-800 border-slate-700">
-          <CardContent className="py-4 px-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-md text-slate-400 mb-2">Objavljeno</p>
@@ -258,7 +258,7 @@ export default function UserStatisticsComponent({
         </Card>
 
         <Card className="bg-slate-800 border-slate-700">
-          <CardContent className="py-4 px-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-md text-slate-400 mb-2">Ukupno pregleda</p>
@@ -274,7 +274,7 @@ export default function UserStatisticsComponent({
         </Card>
 
         <Card className="bg-slate-800 border-slate-700">
-          <CardContent className="py-4 px-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-md text-slate-400 mb-2">Engagement</p>
@@ -293,13 +293,13 @@ export default function UserStatisticsComponent({
       {/* Performance Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Card className="bg-slate-800 border-slate-700">
-          <CardHeader className="py-4 px-6">
+          <CardHeader className="p-4">
             <CardTitle className="text-white flex items-center gap-2 text-lg">
               <TrendingUp className="text-green-400" size={20} />
               Engagement Rate
             </CardTitle>
           </CardHeader>
-          <CardContent className="py-4 pb-4 pt-0">
+          <CardContent className="p-4 pt-0">
             <div className="text-3xl font-bold text-white mb-2">
               {engagementRate}%
             </div>
@@ -311,13 +311,13 @@ export default function UserStatisticsComponent({
         </Card>
 
         <Card className="bg-slate-800 border-slate-700">
-          <CardHeader className="py-4 px-6">
+          <CardHeader className="p-4">
             <CardTitle className="text-white flex items-center gap-2 text-lg">
               <Zap className="text-yellow-400" size={20} />
               Conversion Rate
             </CardTitle>
           </CardHeader>
-          <CardContent className="py-4 pb-4 pt-0">
+          <CardContent className="p-4 pt-0">
             <div className="text-3xl font-bold text-white mb-2">
               {conversionRate}%
             </div>
@@ -329,13 +329,13 @@ export default function UserStatisticsComponent({
         </Card>
 
         <Card className="bg-slate-800 border-slate-700">
-          <CardHeader className="py-4 px-6">
+          <CardHeader className="p-4">
             <CardTitle className="text-white flex items-center gap-2 text-lg">
               <Activity className="text-blue-400" size={20} />
               Ukupno Konverzija
             </CardTitle>
           </CardHeader>
-          <CardContent className="py-4 pb-4 pt-0">
+          <CardContent className="p-4 pt-0">
             <div className="text-3xl font-bold text-white mb-2">
               {formatNumber(displayTotalConversions)}
             </div>
@@ -348,7 +348,7 @@ export default function UserStatisticsComponent({
 
       {/* Task Status Breakdown */}
       <Card className="bg-slate-800 border-slate-700">
-        <CardHeader className="py-4 px-6">
+        <CardHeader className="p-4">
           <CardTitle className="text-white flex items-center gap-2">
             <BarChart3 className="text-blue-400" size={20} />
             Status zadataka
@@ -357,11 +357,11 @@ export default function UserStatisticsComponent({
             Pregled zadataka po statusu
           </CardDescription>
         </CardHeader>
-        <CardContent className="py-4 pb-4 pt-0">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <CardContent className="p-4 pt-0">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-1">
             <div className="bg-slate-900 p-3 rounded-md border border-slate-700">
               <div className="flex items-center gap-2 mb-2">
-                <FileText className="text-slate-400" size={16} />
+                <FileText className="text-slate-400" size={14} />
                 <span className="text-sm text-slate-400">Ideje</span>
               </div>
               <div className="text-2xl font-bold text-white">{ideaTasks}</div>
@@ -375,7 +375,7 @@ export default function UserStatisticsComponent({
 
             <div className="bg-slate-900 p-3 rounded-md border border-slate-700">
               <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="text-green-400" size={16} />
+                <CheckCircle className="text-green-400" size={14} />
                 <span className="text-sm text-slate-400">Spremno</span>
               </div>
               <div className="text-2xl font-bold text-white">{readyTasks}</div>
@@ -389,7 +389,7 @@ export default function UserStatisticsComponent({
 
             <div className="bg-slate-900 p-3 rounded-md border border-slate-700">
               <div className="flex items-center gap-2 mb-2">
-                <Clock className="text-yellow-400" size={16} />
+                <Clock className="text-yellow-400" size={14} />
                 <span className="text-sm text-slate-400">Zakazano</span>
               </div>
               <div className="text-2xl font-bold text-white">
@@ -405,7 +405,7 @@ export default function UserStatisticsComponent({
 
             <div className="bg-slate-900 p-3 rounded-md border border-slate-700">
               <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="text-blue-400" size={16} />
+                <CheckCircle className="text-blue-400" size={14} />
                 <span className="text-sm text-slate-400">Objavljeno</span>
               </div>
               <div className="text-2xl font-bold text-white">
@@ -425,13 +425,13 @@ export default function UserStatisticsComponent({
       {/* Format Distribution */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Card className="bg-slate-800 border-slate-700">
-          <CardHeader className="py-4 px-6">
+          <CardHeader className="p-4">
             <CardTitle className="text-white flex items-center gap-2">
               <Video className="text-red-400" size={20} />
               Kratka forma
             </CardTitle>
           </CardHeader>
-          <CardContent className="py-4 pb-4 pt-0">
+          <CardContent className="p-4 pt-0">
             <div className="text-3xl font-bold text-white mb-2">
               {shortFormTasks}
             </div>
@@ -453,13 +453,13 @@ export default function UserStatisticsComponent({
         </Card>
 
         <Card className="bg-slate-800 border-slate-700">
-          <CardHeader className="py-4 px-6">
+          <CardHeader className="p-4">
             <CardTitle className="text-white flex items-center gap-2">
               <Youtube className="text-green-400" size={20} />
               Duga forma
             </CardTitle>
           </CardHeader>
-          <CardContent className="py-4 pb-4 pt-0">
+          <CardContent className="p-4 pt-0">
             <div className="text-3xl font-bold text-white mb-2">
               {longFormTasks}
             </div>
@@ -481,78 +481,80 @@ export default function UserStatisticsComponent({
         </Card>
       </div>
 
-      {/* Monthly Statistics */}
-      <Card className="bg-slate-800 border-slate-700">
-        <CardHeader className="py-4 px-6">
-          <CardTitle className="text-white flex items-center gap-2">
-            <Calendar className="text-purple-400" size={20} />
-            Statistika za tekući mesec
-          </CardTitle>
-          <CardDescription className="text-slate-400 capitalize">
-            {new Date().toLocaleDateString('sr-Latn-RS', {
-              month: 'long',
-              year: 'numeric',
-            })}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="py-4 pb-4 pt-0">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-slate-900 p-4 rounded-md border border-slate-700">
-              <div className="text-sm text-slate-400 mb-1">
-                Kreirane skripte
-              </div>
-              <div className="text-2xl font-bold text-white">
-                {tasksThisMonth}
-              </div>
-            </div>
-            <div className="bg-slate-900 p-4 rounded-md border border-slate-700">
-              <div className="text-sm text-slate-400 mb-1">
-                Objavljene skripte
-              </div>
-              <div className="text-2xl font-bold text-white">
-                {publishedThisMonth}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Top Categories */}
-      {topCategories.length > 0 && (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Monthly Statistics */}
         <Card className="bg-slate-800 border-slate-700">
-          <CardHeader className="py-4 px-6">
+          <CardHeader className="p-4">
             <CardTitle className="text-white flex items-center gap-2">
-              <Target className="text-orange-400" size={16} />
-              Najčešće kategorije
+              <Calendar className="text-purple-400" size={20} />
+              Statistika za tekući mesec
             </CardTitle>
-            <CardDescription className="text-slate-400">
-              Top 5 kategorija po broju zadataka
+            <CardDescription className="text-slate-400 capitalize">
+              {new Date().toLocaleDateString('sr-Latn-RS', {
+                month: 'long',
+                year: 'numeric',
+              })}
             </CardDescription>
           </CardHeader>
-          <CardContent className="py-4 pb-4 pt-0">
-            <div className="space-y-3">
-              {topCategories.map(([category, count], index) => (
-                <div
-                  key={category}
-                  className="flex items-center justify-between bg-slate-900 p-3 rounded-md border border-slate-700"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold text-sm">
-                      {index + 1}
-                    </div>
-                    <span className="text-white font-medium capitalize">
-                      {category}
-                    </span>
-                  </div>
-                  <div className="text-white font-bold">
-                    {formatTaskCount(count)}
-                  </div>
+          <CardContent className="p-4 pt-0">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-slate-900 p-4 rounded-md border border-slate-700">
+                <div className="text-sm text-slate-400 mb-1">
+                  Kreirane skripte
                 </div>
-              ))}
+                <div className="text-2xl font-bold text-white">
+                  {tasksThisMonth}
+                </div>
+              </div>
+              <div className="bg-slate-900 p-4 rounded-md border border-slate-700">
+                <div className="text-sm text-slate-400 mb-1">
+                  Objavljene skripte
+                </div>
+                <div className="text-2xl font-bold text-white">
+                  {publishedThisMonth}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
-      )}
+
+        {/* Top Categories */}
+        {topCategories.length > 0 && (
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader className="p-4">
+              <CardTitle className="text-white flex items-center gap-2">
+                <Target className="text-orange-400" size={16} />
+                Najčešće kategorije
+              </CardTitle>
+              <CardDescription className="text-slate-400">
+                Top 5 kategorija po broju zadataka
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="space-y-3">
+                {topCategories.map(([category, count], index) => (
+                  <div
+                    key={category}
+                    className="flex items-center justify-between bg-slate-900 p-2 rounded-md border border-slate-700"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold text-xs">
+                        {index + 1}
+                      </div>
+                      <span className="text-white font-medium capitalize text-sm">
+                        {category}
+                      </span>
+                    </div>
+                    <div className="text-slate-400 font-medium text-sm">
+                      {formatTaskCount(count)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
