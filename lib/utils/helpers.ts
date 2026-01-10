@@ -16,7 +16,6 @@ export function getYoutubeThumbnail(url: string) {
 // Function to parse profile details from URL and name
 export function parseProfileDetails(url: string, name: string) {
   let iconUrl = `https://placehold.co/40x40/4f46e5/FFFFFF?text=${name.substring(0, 2).toUpperCase()}`
-  let nicheId = 'marketing'
 
   if (url.includes('youtube.com') || url.includes('youtu.be')) {
     iconUrl = 'https://placehold.co/40x40/FF0000/FFFFFF?text=YT'
@@ -26,15 +25,8 @@ export function parseProfileDetails(url: string, name: string) {
     iconUrl = 'https://placehold.co/40x40/000000/FFFFFF?text=TK'
   }
 
-  if (name.toLowerCase().includes('nekretnine') || name.toLowerCase().includes('real estate')) {
-    nicheId = 'realestate'
-  } else if (name.toLowerCase().includes('fitness') || name.toLowerCase().includes('zdravlje')) {
-    nicheId = 'fitness'
-  }
-
   return {
     icon: iconUrl,
-    niche: nicheId,
   }
 }
 

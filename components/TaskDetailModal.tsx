@@ -1133,7 +1133,7 @@ export default function TaskDetailModal({
                     Broj pregleda
                   </label>
                   <input
-                    type="text"
+                    type="number"
                     value={editedTask.result_views || ''}
                     onChange={(e) =>
                       handleUpdate('result_views', e.target.value)
@@ -1146,7 +1146,7 @@ export default function TaskDetailModal({
                     Engagement
                   </label>
                   <input
-                    type="text"
+                    type="number"
                     value={editedTask.result_engagement || ''}
                     onChange={(e) =>
                       handleUpdate('result_engagement', e.target.value)
@@ -1159,7 +1159,7 @@ export default function TaskDetailModal({
                     Broj konverzija
                   </label>
                   <input
-                    type="text"
+                    type="number"
                     value={editedTask.result_conversions || ''}
                     onChange={(e) =>
                       handleUpdate('result_conversions', e.target.value)

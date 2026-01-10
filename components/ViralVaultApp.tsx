@@ -37,7 +37,6 @@ import AdminDashboard from './AdminDashboard';
 import CalendarView from './CalendarView';
 import CaseStudyDetailModal from './CaseStudyDetailModal';
 import CaseStudyView from './CaseStudyView';
-import CompetitorFeedModal from './CompetitorFeedModal';
 import CompetitorsView from './CompetitorsView';
 import GoalProgressDashboard from './GoalProgressDashboard';
 import KanbanBoard from './KanbanBoard';
@@ -58,8 +57,6 @@ export default function ViralioApp({ userId }: { userId: string }) {
   const [isNewIdeaWizardOpen, setIsNewIdeaWizardOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedCaseStudy, setSelectedCaseStudy] = useState<Task | null>(null);
-  const [selectedCompetitor, setSelectedCompetitor] =
-    useState<Competitor | null>(null);
 
   const {
     profile,
@@ -717,7 +714,6 @@ export default function ViralioApp({ userId }: { userId: string }) {
           {currentView === 'competitors' && (
             <CompetitorsView
               competitors={competitors}
-              onCompetitorClick={setSelectedCompetitor}
               onAddCompetitor={async (comp) => {
                 const result = await createCompetitor(comp);
                 if (result.error) {
@@ -809,12 +805,6 @@ export default function ViralioApp({ userId }: { userId: string }) {
         />
       )}
 
-      {selectedCompetitor && (
-        <CompetitorFeedModal
-          competitor={selectedCompetitor}
-          onClose={() => setSelectedCompetitor(null)}
-        />
-      )}
     </div>
   );
 }
