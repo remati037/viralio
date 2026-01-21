@@ -34,6 +34,7 @@ export default function ForgotPasswordForm() {
     setLoading(true);
     setError(null);
     setSuccess(false);
+    console.log(window.location.origin);
 
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
