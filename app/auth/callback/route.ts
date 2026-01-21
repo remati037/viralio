@@ -50,9 +50,10 @@ export async function GET(request: Request) {
     }
 
     // If this is an invite or recovery flow, user needs to set password
+    // Session is already established, so we don't need to pass the code again
     if (type === 'invite' || type === 'recovery') {
       return NextResponse.redirect(
-        new URL(`/auth/set-password?code=${code}&type=${type}`, origin)
+        new URL(`/auth/set-password?type=${type}`, origin)
       )
     }
 
