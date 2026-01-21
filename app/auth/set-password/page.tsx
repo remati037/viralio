@@ -1,5 +1,5 @@
-import HashTokenHandler from '@/components/HashTokenHandler';
-import SetPasswordForm from '@/components/SetPasswordForm';
+import AuthLayout from '@/components/auth/AuthLayout';
+import SetPasswordForm from '@/components/auth/SetPasswordForm';
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
@@ -112,14 +112,11 @@ export default async function SetPasswordPage({
   // HashTokenHandler will catch any hash tokens that Supabase might send
 
   return (
-    <div className="h-screen bg-slate-950 flex items-center justify-center p-4">
-      <HashTokenHandler />
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl">
-        <Suspense fallback={<SetPasswordFormSkeleton />}>
-          <SetPasswordForm />
-        </Suspense>
-      </div>
-    </div>
+    <AuthLayout>
+      <Suspense fallback={<SetPasswordFormSkeleton />}>
+        <SetPasswordForm />
+      </Suspense>
+    </AuthLayout>
   );
 }
 

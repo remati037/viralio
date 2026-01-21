@@ -1,6 +1,12 @@
+/**
+ * Forgot Password Form Component
+ * Handles password reset email requests
+ */
+
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { requestPasswordResetAction } from '@/lib/auth/actions';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -13,8 +19,6 @@ export default function ForgotPasswordForm() {
   const [success, setSuccess] = useState(false);
   const [mounted, setMounted] = useState(false);
   const searchParams = useSearchParams();
-
-  const supabase = createClient();
 
   useEffect(() => {
     setMounted(true);
@@ -34,18 +38,12 @@ export default function ForgotPasswordForm() {
     setLoading(true);
     setError(null);
     setSuccess(false);
-    console.log(window.location.origin);
 
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        email,
-        {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        }
-      );
+      const { error: resetError } = await requestPasswordResetAction(email);
 
       if (resetError) {
-        throw resetError;
+        throw new Error(resetError);
       }
 
       setSuccess(true);

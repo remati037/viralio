@@ -1,6 +1,6 @@
-import ForgotPasswordForm from '@/components/ForgotPasswordForm';
-import HashTokenHandler from '@/components/HashTokenHandler';
-import { getUser } from '@/lib/utils/auth';
+import AuthLayout from '@/components/auth/AuthLayout';
+import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
+import { getCurrentUser } from '@/lib/auth/utils';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ForgotPasswordPage() {
-  const user = await getUser();
+  const user = await getCurrentUser();
 
   // If user is already logged in, redirect to home
   if (user) {
@@ -22,11 +22,8 @@ export default async function ForgotPasswordPage() {
   }
 
   return (
-    <div className="h-screen bg-slate-950 flex items-center justify-center p-4">
-      <HashTokenHandler />
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl">
-        <ForgotPasswordForm />
-      </div>
-    </div>
+    <AuthLayout>
+      <ForgotPasswordForm />
+    </AuthLayout>
   );
 }

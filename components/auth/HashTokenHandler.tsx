@@ -1,13 +1,14 @@
+/**
+ * Handles authentication tokens passed in URL hash (fragment)
+ * Supabase sometimes redirects with tokens in the hash instead of query params
+ */
+
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-/**
- * Handles authentication tokens passed in URL hash (fragment)
- * Supabase sometimes redirects with tokens in the hash instead of query params
- */
 export default function HashTokenHandler() {
   const router = useRouter();
   const supabase = createClient();
@@ -175,4 +176,3 @@ export default function HashTokenHandler() {
   // This component doesn't render anything
   return null;
 }
-

@@ -1,6 +1,13 @@
+/**
+ * Set Password Form Component
+ * Handles password setting for recovery and invite flows
+ */
+
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { updatePasswordAction } from '@/lib/auth/actions';
+import { validatePassword } from '@/lib/auth/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -239,8 +246,9 @@ export default function SetPasswordForm() {
     setError(null);
 
     // Validation
-    if (password.length < 6) {
-      setError('Lozinka mora imati najmanje 6 karaktera');
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      setError(passwordValidation.error || 'Invalid password');
       setLoading(false);
       return;
     }
@@ -252,41 +260,13 @@ export default function SetPasswordForm() {
     }
 
     try {
-      // Verify we have a valid session
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError || !session) {
-        throw new Error('Nedostaje sesija. Molimo koristite link iz emaila.');
-      }
-
-      // Update the password
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password,
+      const { error: updateError } = await updatePasswordAction({
+        password,
+        confirmPassword,
       });
 
       if (updateError) {
-        throw updateError;
-      }
-
-      // Verify session is still valid after password update
-      const {
-        data: { session: updatedSession },
-      } = await supabase.auth.getSession();
-
-      if (!updatedSession) {
-        // Try to refresh session
-        const {
-          data: { session: refreshedSession },
-        } = await supabase.auth.refreshSession();
-
-        if (!refreshedSession) {
-          throw new Error(
-            'Neuspešno kreiranje sesije. Molimo pokušajte ponovo.'
-          );
-        }
+        throw new Error(updateError);
       }
 
       toast.success('Lozinka uspešno postavljena!', {

@@ -1,11 +1,18 @@
+/**
+ * Login and Sign Up Form Component
+ * Handles both user login and registration
+ */
+
 'use client';
 
 import { BUSINESS_CATEGORIES } from '@/lib/constants';
 import { createClient } from '@/lib/supabase/client';
+import { signUpAction, signInAction } from '@/lib/auth/actions';
+import { validatePassword } from '@/lib/auth/utils';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import Select from './ui/select';
+import Select from '../ui/select';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -21,6 +28,15 @@ export default function LoginForm() {
 
   useEffect(() => {
     setMounted(true);
+    
+    // Check for error in URL (e.g., from auth callback)
+    const errorParam = new URLSearchParams(window.location.search).get('error');
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+      toast.error('Greška', {
+        description: decodeURIComponent(errorParam),
+      });
+    }
   }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -40,33 +56,27 @@ export default function LoginForm() {
           return;
         }
 
-        const { data, error: signUpError } = await supabase.auth.signUp({
+        // Validate password
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.valid) {
+          setError(passwordValidation.error || 'Invalid password');
+          toast.error('Greška', {
+            description: passwordValidation.error,
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Sign up
+        const { error: signUpError, user } = await signUpAction({
           email,
           password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-            data: {
-              business_name: businessName.trim(),
-            },
-          },
+          businessName,
+          businessCategory,
         });
 
-        if (signUpError) throw signUpError;
-
-        // Update profile with business name and category immediately after signup
-        if (data.user) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({
-              business_name: businessName.trim(),
-              business_category: businessCategory || null,
-            })
-            .eq('id', data.user.id);
-
-          if (profileError) {
-            console.error('Error updating profile:', profileError);
-            // Don't fail signup if profile update fails, but log it
-          }
+        if (signUpError) {
+          throw new Error(signUpError);
         }
 
         // Profile will be automatically created by database trigger
@@ -78,17 +88,17 @@ export default function LoginForm() {
         setBusinessName('');
         setBusinessCategory('');
       } else {
-        const { data, error: signInError } =
-          await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
+        // Sign in
+        const { error: signInError, session } = await signInAction({
+          email,
+          password,
+        });
 
         if (signInError) {
-          throw signInError;
+          throw new Error(signInError);
         }
 
-        if (!data.session) {
+        if (!session) {
           setError('Failed to create session. Please try again.');
           toast.error('Greška pri prijavljivanju', {
             description: 'Neuspešno kreiranje sesije. Pokušajte ponovo.',
@@ -102,7 +112,6 @@ export default function LoginForm() {
         });
 
         // Wait for cookies to be set by the updated @supabase/ssr package
-        // The new version handles cookies better
         await new Promise((resolve) => setTimeout(resolve, 400));
 
         // Use full page reload to ensure cookies are sent
@@ -229,9 +238,6 @@ export default function LoginForm() {
                 placeholder="Unesite naziv firme ili lično ime i prezime"
                 autoComplete="name"
               />
-              {/* <p className="mt-1 text-xs text-slate-500">
-                This will be used to identify your account
-              </p> */}
             </div>
 
             <div>
@@ -248,9 +254,6 @@ export default function LoginForm() {
                 placeholder="Odaberite kategoriju Vašeg biznisa"
                 className="w-full"
               />
-              {/* <p className="mt-1 text-xs text-slate-500">
-                Help us personalize your experience
-              </p> */}
             </div>
           </>
         )}
@@ -270,16 +273,6 @@ export default function LoginForm() {
           )}
         </button>
       </form>
-
-      {/* <div className="mt-6 text-center">
-        <button
-          onClick={() => setIsSignUp(!isSignUp)}
-          className="text-sm text-blue-400 hover:text-blue-300"
-          type="button"
-        >
-          {isSignUp ? 'Već imate nalog? Prijavite se' : "Nemate nalog? Registrujte se"}
-        </button>
-      </div> */}
     </>
   );
 }
