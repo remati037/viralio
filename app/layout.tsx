@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { Toaster } from "sonner";
 import PWALoadingScreen from "@/components/PWALoadingScreen";
+import HashTokenHandler from "@/components/HashTokenHandler";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://viralio.com'
@@ -149,6 +150,7 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased" suppressHydrationWarning>
+        <HashTokenHandler />
         <PWALoadingScreen />
         {children}
         <Toaster

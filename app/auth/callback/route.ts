@@ -93,7 +93,10 @@ export async function GET(request: Request) {
   }
 
   // If no code or token, redirect to login with error
-  console.warn('Auth callback received but no code or token found')
+  console.warn('Auth callback received but no code or token found', {
+    url: requestUrl.toString(),
+    searchParams: Object.fromEntries(requestUrl.searchParams),
+  })
   return NextResponse.redirect(
     new URL(`/login?error=${encodeURIComponent('Invalid or missing authentication parameters')}`, origin)
   )

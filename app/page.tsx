@@ -5,8 +5,24 @@ import { redirect } from 'next/navigation';
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ session_id?: string; canceled?: string }>
+  searchParams: Promise<{ 
+    session_id?: string; 
+    canceled?: string;
+    token?: string;
+    token_hash?: string;
+    type?: string;
+  }>
 }) {
+  const params = await searchParams;
+  
+  // Handle password reset/invite tokens from Supabase verify redirect
+  // Supabase might redirect to root with token parameters
+  if (params.token || params.token_hash) {
+    const token = params.token || params.token_hash;
+    const type = params.type || 'recovery';
+    redirect(`/auth/set-password?token=${token}&type=${type}`);
+  }
+
   // The middleware proxy has already refreshed the session
   // So we can safely check for user here
   const user = await getUser()
@@ -21,7 +37,6 @@ export default async function Home({
   const subscriptionStatus = await checkSubscriptionStatus(user.id)
 
   // Handle Stripe checkout success
-  const params = await searchParams
   let finalSubscriptionStatus = subscriptionStatus
   
   if (params.session_id) {
