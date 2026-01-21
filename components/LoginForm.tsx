@@ -178,12 +178,22 @@ export default function LoginForm() {
         </div>
 
         <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-slate-300 mb-2"
-          >
-            Lozinka
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-slate-300"
+            >
+              Lozinka
+            </label>
+            {!isSignUp && (
+              <a
+                href="/forgot-password"
+                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                Zaboravili ste lozinku?
+              </a>
+            )}
+          </div>
           <input
             id="password"
             type="password"

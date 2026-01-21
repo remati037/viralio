@@ -37,8 +37,8 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
 
-  // Allow access to login, auth callback, set-password, static files, and API routes without authentication
-  const publicPaths = ['/login', '/auth/callback', '/auth/set-password', '/_next', '/api', '/favicon.ico']
+  // Allow access to login, auth callback, set-password, forgot-password, static files, and API routes without authentication
+  const publicPaths = ['/login', '/auth/callback', '/auth/set-password', '/forgot-password', '/_next', '/api', '/favicon.ico']
   const isPublicPath = publicPaths.some((path) => request.nextUrl.pathname.startsWith(path))
 
   // If user is authenticated and on login page, redirect to planner
