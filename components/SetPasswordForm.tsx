@@ -82,7 +82,27 @@ export default function SetPasswordForm() {
       }
 
       // Handle PKCE code flow
+      // Note: Code exchange should happen server-side in the page component
+      // This is a fallback for cases where server-side exchange didn't happen
       if (code) {
+        // First check if we already have a session (server-side exchange may have succeeded)
+        const {
+          data: { session: existingSession },
+        } = await supabase.auth.getSession();
+        
+        if (existingSession) {
+          // Session already exists, server-side exchange worked
+          // If type is invite/recovery, user needs to set password
+          if (type === 'invite' || type === 'recovery') {
+            setInitializing(false);
+            return;
+          }
+          // Otherwise, redirect to dashboard
+          router.push('/planner');
+          return;
+        }
+
+        // No session exists, try client-side exchange as fallback
         const { data: sessionData, error: exchangeError } =
           await supabase.auth.exchangeCodeForSession(code);
 
