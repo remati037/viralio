@@ -66,21 +66,36 @@ export default function HashTokenHandler() {
       if ((type === 'invite' || type === 'recovery') && accessToken) {
         console.log('HashTokenHandler: Found recovery/invite tokens in hash, redirecting to set-password', { type, hasAccessToken: !!accessToken });
         
+        const refreshToken = hashParams.get('refresh_token') || '';
+        
         // If we're already on set-password page, just update the URL with tokens
         if (window.location.pathname === '/auth/set-password') {
-          const refreshToken = hashParams.get('refresh_token') || '';
           const newUrl = new URL(window.location.href);
           newUrl.searchParams.set('access_token', accessToken);
           newUrl.searchParams.set('refresh_token', refreshToken);
           newUrl.searchParams.set('type', type);
+          // Clear hash
           window.history.replaceState(null, '', newUrl.toString());
           setHandled(true);
           return;
         }
         
         // Otherwise redirect to set-password with tokens
-        const redirectUrl = `/auth/set-password?access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(hashParams.get('refresh_token') || '')}&type=${type}`;
+        const redirectUrl = `/auth/set-password?access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(refreshToken)}&type=${type}`;
         console.log('HashTokenHandler: Redirecting to', redirectUrl);
+        // Clear hash before redirecting
+        window.history.replaceState(null, '', window.location.pathname);
+        router.push(redirectUrl);
+        setHandled(true);
+        return;
+      }
+      
+      // If we have access_token but no type, and we're on root or login, 
+      // it might be a recovery flow - redirect to set-password
+      if (accessToken && !type && (window.location.pathname === '/' || window.location.pathname === '/login')) {
+        console.log('HashTokenHandler: Found access_token without type, assuming recovery flow');
+        const refreshToken = hashParams.get('refresh_token') || '';
+        const redirectUrl = `/auth/set-password?access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(refreshToken)}&type=recovery`;
         window.history.replaceState(null, '', window.location.pathname);
         router.push(redirectUrl);
         setHandled(true);

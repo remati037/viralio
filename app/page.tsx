@@ -13,9 +13,18 @@ export default async function Home({
     type?: string;
     access_token?: string;
     refresh_token?: string;
+    code?: string;
   }>
 }) {
   const params = await searchParams;
+  
+  // Handle PKCE code from Supabase (password reset, email verification, etc.)
+  // Supabase may redirect to root URL with code parameter instead of callback
+  if (params.code) {
+    const type = params.type || 'recovery';
+    // Redirect to callback route which will handle code exchange
+    redirect(`/auth/callback?code=${params.code}${type ? `&type=${type}` : ''}`);
+  }
   
   // Handle password reset/invite tokens from Supabase verify redirect (query params)
   // Hash parameters are handled by HashTokenHandler in layout

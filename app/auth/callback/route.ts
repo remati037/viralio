@@ -19,24 +19,19 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error('Error exchanging code for session:', error)
+      console.error('Code:', code, 'Type:', type)
 
-      // If this is an invite/recovery flow, redirect to set-password even on error
-      // The set-password page will handle the error appropriately
-      if (type === 'invite' || type === 'recovery') {
+      // For recovery/invite flows, always redirect to set-password even on error
+      // The set-password page can try to handle the code again or show error
+      if (type === 'invite' || type === 'recovery' || !type) {
+        // If type is missing, assume it's recovery (password reset)
         const redirectUrl = new URL('/auth/set-password', origin)
         redirectUrl.searchParams.set('code', code)
-        redirectUrl.searchParams.set('type', type)
-        redirectUrl.searchParams.set('error', error.message)
-        return NextResponse.redirect(redirectUrl)
-      }
-
-      // If type is missing but this might be a recovery flow, try to redirect to set-password
-      // This handles cases where type parameter might be missing
-      if (!type) {
-        // Check if user needs to set password (recovery/invite flows typically require password setup)
-        // Redirect to set-password with code so it can handle the exchange
-        const redirectUrl = new URL('/auth/set-password', origin)
-        redirectUrl.searchParams.set('code', code)
+        if (type) {
+          redirectUrl.searchParams.set('type', type)
+        } else {
+          redirectUrl.searchParams.set('type', 'recovery')
+        }
         redirectUrl.searchParams.set('error', error.message)
         return NextResponse.redirect(redirectUrl)
       }
@@ -50,19 +45,17 @@ export async function GET(request: Request) {
     const { data: { session } } = await supabase.auth.getSession()
 
     if (!session) {
+      console.error('Session not created after code exchange')
       // Session not created - might need password setup
-      if (type === 'invite' || type === 'recovery') {
+      // For recovery/invite flows, redirect to set-password with code
+      if (type === 'invite' || type === 'recovery' || !type) {
         const redirectUrl = new URL('/auth/set-password', origin)
         redirectUrl.searchParams.set('code', code)
-        redirectUrl.searchParams.set('type', type)
-        return NextResponse.redirect(redirectUrl)
-      }
-
-      // If no type but session creation failed, might be recovery flow
-      // Redirect to set-password to let it handle the code
-      if (!type) {
-        const redirectUrl = new URL('/auth/set-password', origin)
-        redirectUrl.searchParams.set('code', code)
+        if (type) {
+          redirectUrl.searchParams.set('type', type)
+        } else {
+          redirectUrl.searchParams.set('type', 'recovery')
+        }
         return NextResponse.redirect(redirectUrl)
       }
 
@@ -76,6 +69,16 @@ export async function GET(request: Request) {
     if (type === 'invite' || type === 'recovery') {
       const redirectUrl = new URL('/auth/set-password', origin)
       redirectUrl.searchParams.set('type', type)
+      return NextResponse.redirect(redirectUrl)
+    }
+
+    // If type is missing but we have a session, check if it's a recovery flow
+    // by checking if user needs to set password (password might be null for recovery)
+    if (!type && session.user) {
+      // For password reset, Supabase might not always include type
+      // Redirect to set-password to be safe - it will check if password needs to be set
+      const redirectUrl = new URL('/auth/set-password', origin)
+      redirectUrl.searchParams.set('type', 'recovery')
       return NextResponse.redirect(redirectUrl)
     }
 

@@ -87,14 +87,15 @@ export default async function SetPasswordPage({
       }
 
       // If this is not a recovery/invite flow, redirect to planner
-      if (type !== 'recovery' && type !== 'invite') {
+      if (type && type !== 'recovery' && type !== 'invite') {
         redirect('/planner');
       }
 
-      // For recovery/invite flows, continue to show the password form
+      // For recovery/invite flows (or if type is missing, assume recovery), continue to show the password form
       // The session is now established, so the form can proceed
       // Remove the code from URL to prevent re-processing
-      redirect('/auth/set-password' + (type ? `?type=${type}` : ''));
+      const finalType = type || 'recovery';
+      redirect(`/auth/set-password?type=${finalType}`);
     } catch (err: any) {
       console.error('Error in code exchange:', err);
       const errorParams = new URLSearchParams();
