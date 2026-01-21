@@ -7,6 +7,7 @@
 import { createClient } from '@/lib/supabase/server';
 import type { SignUpData, SignInData, SetPasswordData } from './types';
 import { parseAuthError } from './utils';
+import { validatePassword } from './validation';
 
 /**
  * Sign up a new user

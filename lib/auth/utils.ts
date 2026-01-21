@@ -1,5 +1,6 @@
 /**
- * Authentication utility functions
+ * Server-side authentication utility functions
+ * These functions use server-only APIs and cannot be imported in client components
  */
 
 import { createClient } from '@/lib/supabase/server';
@@ -38,22 +39,4 @@ export function parseAuthError(error: any): string {
   if (typeof error === 'string') return error;
   if (error?.message) return error.message;
   return 'Došlo je do greške. Pokušajte ponovo.';
-}
-
-/**
- * Validate password strength
- */
-export function validatePassword(password: string): { valid: boolean; error?: string } {
-  if (password.length < 6) {
-    return { valid: false, error: 'Lozinka mora imati najmanje 6 karaktera' };
-  }
-  return { valid: true };
-}
-
-/**
- * Validate email format
- */
-export function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
 }

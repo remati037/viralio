@@ -8,7 +8,7 @@
 import { BUSINESS_CATEGORIES } from '@/lib/constants';
 import { createClient } from '@/lib/supabase/client';
 import { signUpAction, signInAction } from '@/lib/auth/actions';
-import { validatePassword } from '@/lib/auth/utils';
+import { validatePassword } from '@/lib/auth/validation';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
