@@ -23,9 +23,11 @@ export async function GET(request: Request) {
       // If this is an invite/recovery flow, redirect to set-password even on error
       // The set-password page will handle the error appropriately
       if (type === 'invite' || type === 'recovery') {
-        return NextResponse.redirect(
-          new URL(`/auth/set-password?code=${code}&type=${type}&error=${encodeURIComponent(error.message)}`, origin)
-        )
+        const redirectUrl = new URL('/auth/set-password', origin)
+        redirectUrl.searchParams.set('code', code)
+        redirectUrl.searchParams.set('type', type)
+        redirectUrl.searchParams.set('error', error.message)
+        return NextResponse.redirect(redirectUrl)
       }
 
       // If type is missing but this might be a recovery flow, try to redirect to set-password
@@ -33,14 +35,15 @@ export async function GET(request: Request) {
       if (!type) {
         // Check if user needs to set password (recovery/invite flows typically require password setup)
         // Redirect to set-password with code so it can handle the exchange
-        return NextResponse.redirect(
-          new URL(`/auth/set-password?code=${code}&error=${encodeURIComponent(error.message)}`, origin)
-        )
+        const redirectUrl = new URL('/auth/set-password', origin)
+        redirectUrl.searchParams.set('code', code)
+        redirectUrl.searchParams.set('error', error.message)
+        return NextResponse.redirect(redirectUrl)
       }
 
-      return NextResponse.redirect(
-        new URL(`/login?error=${encodeURIComponent(error.message)}`, origin)
-      )
+      const redirectUrl = new URL('/login', origin)
+      redirectUrl.searchParams.set('error', error.message)
+      return NextResponse.redirect(redirectUrl)
     }
 
     // Verify session was created
@@ -49,30 +52,31 @@ export async function GET(request: Request) {
     if (!session) {
       // Session not created - might need password setup
       if (type === 'invite' || type === 'recovery') {
-        return NextResponse.redirect(
-          new URL(`/auth/set-password?code=${code}&type=${type}`, origin)
-        )
+        const redirectUrl = new URL('/auth/set-password', origin)
+        redirectUrl.searchParams.set('code', code)
+        redirectUrl.searchParams.set('type', type)
+        return NextResponse.redirect(redirectUrl)
       }
 
       // If no type but session creation failed, might be recovery flow
       // Redirect to set-password to let it handle the code
       if (!type) {
-        return NextResponse.redirect(
-          new URL(`/auth/set-password?code=${code}`, origin)
-        )
+        const redirectUrl = new URL('/auth/set-password', origin)
+        redirectUrl.searchParams.set('code', code)
+        return NextResponse.redirect(redirectUrl)
       }
 
-      return NextResponse.redirect(
-        new URL(`/login?error=${encodeURIComponent('Session creation failed')}`, origin)
-      )
+      const redirectUrl = new URL('/login', origin)
+      redirectUrl.searchParams.set('error', 'Session creation failed')
+      return NextResponse.redirect(redirectUrl)
     }
 
     // If this is an invite or recovery flow, user needs to set password
     // Session is already established, so we don't need to pass the code again
     if (type === 'invite' || type === 'recovery') {
-      return NextResponse.redirect(
-        new URL(`/auth/set-password?type=${type}`, origin)
-      )
+      const redirectUrl = new URL('/auth/set-password', origin)
+      redirectUrl.searchParams.set('type', type)
+      return NextResponse.redirect(redirectUrl)
     }
 
     // For regular OAuth/signup flows, ensure profile is set up
