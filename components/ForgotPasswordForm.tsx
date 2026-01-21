@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -11,12 +12,22 @@ export default function ForgotPasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const searchParams = useSearchParams();
 
   const supabase = createClient();
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    
+    // Check for error in URL (e.g., from expired OTP)
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+      toast.error('Greška', {
+        description: decodeURIComponent(errorParam),
+      });
+    }
+  }, [searchParams]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();

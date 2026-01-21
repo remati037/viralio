@@ -33,6 +33,33 @@ export default function HashTokenHandler() {
       const type = hashParams.get('type');
       const token = hashParams.get('token');
       const tokenHash = hashParams.get('token_hash');
+      
+      // Check for errors in hash (e.g., expired OTP)
+      const error = hashParams.get('error');
+      const errorCode = hashParams.get('error_code');
+      const errorDescription = hashParams.get('error_description');
+      
+      if (error) {
+        console.log('HashTokenHandler: Error detected in hash', { error, errorCode, errorDescription });
+        
+        // If OTP expired or access denied, redirect to forgot-password with error
+        if (errorCode === 'otp_expired' || error === 'access_denied') {
+          const errorMessage = errorCode === 'otp_expired' 
+            ? 'Link za resetovanje lozinke je istekao. Molimo zatražite novi link.'
+            : errorDescription || 'Greška pri pristupu. Molimo zatražite novi link.';
+          
+          window.history.replaceState(null, '', window.location.pathname);
+          router.push(`/forgot-password?error=${encodeURIComponent(errorMessage)}`);
+          setHandled(true);
+          return;
+        }
+        
+        // For other errors, redirect to login with error
+        window.history.replaceState(null, '', window.location.pathname);
+        router.push(`/login?error=${encodeURIComponent(errorDescription || error)}`);
+        setHandled(true);
+        return;
+      }
 
       // If this is an invitation or recovery, redirect to set-password
       // User needs to set password first before we can use the session
