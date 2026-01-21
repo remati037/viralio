@@ -11,16 +11,23 @@ export default async function Home({
     token?: string;
     token_hash?: string;
     type?: string;
+    access_token?: string;
+    refresh_token?: string;
   }>
 }) {
   const params = await searchParams;
   
-  // Handle password reset/invite tokens from Supabase verify redirect
-  // Supabase might redirect to root with token parameters
+  // Handle password reset/invite tokens from Supabase verify redirect (query params)
+  // Hash parameters are handled by HashTokenHandler in layout
   if (params.token || params.token_hash) {
     const token = params.token || params.token_hash;
     const type = params.type || 'recovery';
     redirect(`/auth/set-password?token=${token}&type=${type}`);
+  }
+
+  // Handle access_token in query params (less common)
+  if (params.access_token && params.refresh_token && params.type === 'recovery') {
+    redirect(`/auth/set-password?access_token=${params.access_token}&refresh_token=${params.refresh_token}&type=recovery`);
   }
 
   // The middleware proxy has already refreshed the session

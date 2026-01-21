@@ -20,6 +20,8 @@ export default function HashTokenHandler() {
     const handleHashTokens = async () => {
       // Check if there are tokens in the URL hash
       const hash = window.location.hash;
+      console.log('HashTokenHandler: Checking hash', { hash, pathname: window.location.pathname });
+      
       if (!hash || hash.length <= 1) {
         setHandled(true);
         return;
@@ -35,6 +37,8 @@ export default function HashTokenHandler() {
       // If this is an invitation or recovery, redirect to set-password
       // User needs to set password first before we can use the session
       if ((type === 'invite' || type === 'recovery') && accessToken) {
+        console.log('HashTokenHandler: Found recovery/invite tokens in hash, redirecting to set-password', { type, hasAccessToken: !!accessToken });
+        
         // If we're already on set-password page, just update the URL with tokens
         if (window.location.pathname === '/auth/set-password') {
           const refreshToken = hashParams.get('refresh_token') || '';
@@ -49,6 +53,7 @@ export default function HashTokenHandler() {
         
         // Otherwise redirect to set-password with tokens
         const redirectUrl = `/auth/set-password?access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(hashParams.get('refresh_token') || '')}&type=${type}`;
+        console.log('HashTokenHandler: Redirecting to', redirectUrl);
         window.history.replaceState(null, '', window.location.pathname);
         router.push(redirectUrl);
         setHandled(true);
