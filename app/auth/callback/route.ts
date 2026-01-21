@@ -28,6 +28,16 @@ export async function GET(request: Request) {
         )
       }
 
+      // If type is missing but this might be a recovery flow, try to redirect to set-password
+      // This handles cases where type parameter might be missing
+      if (!type) {
+        // Check if user needs to set password (recovery/invite flows typically require password setup)
+        // Redirect to set-password with code so it can handle the exchange
+        return NextResponse.redirect(
+          new URL(`/auth/set-password?code=${code}&error=${encodeURIComponent(error.message)}`, origin)
+        )
+      }
+
       return NextResponse.redirect(
         new URL(`/login?error=${encodeURIComponent(error.message)}`, origin)
       )
@@ -41,6 +51,14 @@ export async function GET(request: Request) {
       if (type === 'invite' || type === 'recovery') {
         return NextResponse.redirect(
           new URL(`/auth/set-password?code=${code}&type=${type}`, origin)
+        )
+      }
+
+      // If no type but session creation failed, might be recovery flow
+      // Redirect to set-password to let it handle the code
+      if (!type) {
+        return NextResponse.redirect(
+          new URL(`/auth/set-password?code=${code}`, origin)
         )
       }
 
