@@ -7,7 +7,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { updatePasswordAction } from '@/lib/auth/actions';
-import { mapAuthErrorToSerbian } from '@/lib/auth/utils';
+import { mapAuthErrorToSerbian } from '@/lib/auth/error-messages';
 import { validatePassword } from '@/lib/auth/validation';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
