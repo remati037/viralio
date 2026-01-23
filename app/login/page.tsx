@@ -1,13 +1,13 @@
 import AuthLayout from '@/components/auth/AuthLayout';
-import LoginForm from '@/components/auth/LoginForm';
+import { LoginForm } from '@/components/login-form';
 import { getCurrentUser } from '@/lib/auth/utils';
-import type { Metadata } from 'next';
+import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
   title: 'Prijava',
   description:
-    'Prijavite se na Viralio i počnite da planirate svoj viralni kontent. Kreirajte nalog ili se prijavite sa postojećim nalogom.',
+    'Prijavi se na Viralio i počni da planiraš svoj viralni kontent. Kreiraj nalog ili se prijavi sa postojećim.',
   robots: {
     index: false,
     follow: false,
@@ -16,12 +16,9 @@ export const metadata: Metadata = {
 
 export default async function LoginPage() {
   const user = await getCurrentUser();
-
-  // If user is already logged in, redirect to home
   if (user) {
-    redirect('/');
+    redirect('/planner');
   }
-
   return (
     <AuthLayout>
       <LoginForm />

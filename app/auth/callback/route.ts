@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { parseAuthError } from '@/lib/auth/utils'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
@@ -32,12 +33,12 @@ export async function GET(request: Request) {
         } else {
           redirectUrl.searchParams.set('type', 'recovery')
         }
-        redirectUrl.searchParams.set('error', error.message)
+        redirectUrl.searchParams.set('error', parseAuthError(error))
         return NextResponse.redirect(redirectUrl)
       }
 
       const redirectUrl = new URL('/login', origin)
-      redirectUrl.searchParams.set('error', error.message)
+      redirectUrl.searchParams.set('error', parseAuthError(error))
       return NextResponse.redirect(redirectUrl)
     }
 
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
       }
 
       const redirectUrl = new URL('/login', origin)
-      redirectUrl.searchParams.set('error', 'Session creation failed')
+      redirectUrl.searchParams.set('error', 'Neuspešno kreiranje sesije. Pokušajte ponovo.')
       return NextResponse.redirect(redirectUrl)
     }
 
@@ -123,7 +124,7 @@ export async function GET(request: Request) {
     searchParams: Object.fromEntries(requestUrl.searchParams),
   })
   return NextResponse.redirect(
-    new URL(`/login?error=${encodeURIComponent('Invalid or missing authentication parameters')}`, origin)
+    new URL(`/login?error=${encodeURIComponent('Neispravni ili nedostaju parametri za autentifikaciju')}`, origin)
   )
 }
 

@@ -1,5 +1,6 @@
 import AuthLayout from '@/components/auth/AuthLayout';
 import SetPasswordForm from '@/components/auth/SetPasswordForm';
+import { parseAuthError } from '@/lib/auth/utils';
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
@@ -66,7 +67,7 @@ export default async function SetPasswordPage({
         console.error('Error exchanging code for session:', error);
         // Redirect with error - client will handle displaying it
         const errorParams = new URLSearchParams();
-        errorParams.set('error', error.message);
+        errorParams.set('error', parseAuthError(error));
         if (type) {
           errorParams.set('type', type);
         }
@@ -99,7 +100,7 @@ export default async function SetPasswordPage({
     } catch (err: any) {
       console.error('Error in code exchange:', err);
       const errorParams = new URLSearchParams();
-      errorParams.set('error', err.message || 'Došlo je do greške. Pokušajte ponovo.');
+      errorParams.set('error', parseAuthError(err));
       if (type) {
         errorParams.set('type', type);
       }

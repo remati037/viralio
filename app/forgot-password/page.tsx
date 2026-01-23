@@ -1,5 +1,5 @@
 import AuthLayout from '@/components/auth/AuthLayout';
-import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
+import { ForgotPasswordForm } from '@/components/forgot-password-form';
 import { getCurrentUser } from '@/lib/auth/utils';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';

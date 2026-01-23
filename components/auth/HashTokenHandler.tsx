@@ -13,10 +13,15 @@ export default function HashTokenHandler() {
   const router = useRouter();
   const supabase = createClient();
   const [handled, setHandled] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Only run on client side
-    if (typeof window === 'undefined' || handled) return;
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    // Only run on client side after mount
+    if (!mounted || typeof window === 'undefined' || handled) return;
 
     const handleHashTokens = async () => {
       // Check if there are tokens in the URL hash
@@ -171,8 +176,10 @@ export default function HashTokenHandler() {
     };
 
     handleHashTokens();
-  }, [router, supabase, handled]);
+  }, [router, supabase, handled, mounted]);
 
   // This component doesn't render anything
+  // Return null to prevent hydration mismatches
+  if (!mounted) return null;
   return null;
 }

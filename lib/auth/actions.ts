@@ -5,9 +5,8 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import type { SignUpData, SignInData, SetPasswordData } from './types';
+import type { SetPasswordData, SignInData, SignUpData } from './types';
 import { parseAuthError } from './utils';
-import { validatePassword } from './validation';
 
 /**
  * Sign up a new user
@@ -32,18 +31,17 @@ export async function signUpAction(data: SignUpData) {
       return { error: parseAuthError(signUpError), user: null };
     }
 
-    // Update profile with business name and category immediately after signup
+    // Update profile with business name immediately after signup
     if (authData.user) {
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
           business_name: data.businessName.trim(),
-          business_category: data.businessCategory || null,
         })
         .eq('id', authData.user.id);
 
       if (profileError) {
-        console.error('Error updating profile:', profileError);
+        console.error('Greška pri ažuriranju profila:', profileError);
         // Don't fail signup if profile update fails, but log it
       }
     }
@@ -100,10 +98,26 @@ export async function signOutAction() {
 
 /**
  * Request password reset email
+ * Only sends email if user exists in database
  */
 export async function requestPasswordResetAction(email: string) {
   try {
     const supabase = await createClient();
+    
+    // First, check if user exists
+    const { data: userExists, error: checkError } = await supabase
+      .rpc('check_user_exists_by_email', { user_email: email });
+
+    if (checkError) {
+      console.error('Error checking user existence:', checkError);
+      // If function doesn't exist or there's an error, proceed with reset
+      // (fallback behavior for backwards compatibility)
+    } else if (userExists === false) {
+      // User doesn't exist
+      return { error: 'Korisnik sa ovim emailom ne postoji u bazi podataka.' };
+    }
+
+    // User exists, proceed with password reset
     const origin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {

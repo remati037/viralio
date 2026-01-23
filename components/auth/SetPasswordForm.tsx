@@ -7,6 +7,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { updatePasswordAction } from '@/lib/auth/actions';
+import { mapAuthErrorToSerbian } from '@/lib/auth/utils';
 import { validatePassword } from '@/lib/auth/validation';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -64,7 +65,7 @@ export default function SetPasswordForm() {
             });
 
             if (sessionError) {
-              setError(`Neispravan token: ${sessionError.message}`);
+              setError(mapAuthErrorToSerbian(sessionError.message));
               setInitializing(false);
               return;
             }
@@ -114,7 +115,7 @@ export default function SetPasswordForm() {
           await supabase.auth.exchangeCodeForSession(code);
 
         if (exchangeError) {
-          setError(`Neispravan ili istekao link: ${exchangeError.message}`);
+          setError(mapAuthErrorToSerbian(exchangeError.message));
           setInitializing(false);
           return;
         }
@@ -172,8 +173,9 @@ export default function SetPasswordForm() {
 
         if (!verified) {
           setError(
-            lastError?.message ||
-              'Neispravan ili istekao token. Molimo zatražite novi link.'
+            lastError?.message
+              ? mapAuthErrorToSerbian(lastError.message)
+              : 'Neispravan ili istekao token. Molimo zatražite novi link.'
           );
           setInitializing(false);
           return;

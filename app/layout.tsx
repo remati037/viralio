@@ -1,14 +1,14 @@
-import type { Metadata } from "next";
-import Script from "next/script";
-import { Toaster } from "sonner";
-import PWALoadingScreen from "@/components/PWALoadingScreen";
-import HashTokenHandler from "@/components/auth/HashTokenHandler";
-import "./globals.css";
+import HashTokenHandler from '@/components/auth/HashTokenHandler';
+import type { Metadata } from 'next';
+import Script from 'next/script';
+import { Toaster } from 'sonner';
+import './globals.css';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://viralio.com'
-const siteName = 'Viralio'
-const defaultTitle = 'Viralio'
-const defaultDescription = 'Viralio je platforma za planiranje i upravljanje viralnim kontentom. Kreirajte ideje, organizujte zadatke, pratite rezultate i postanite viralni sa našim AI asistentom za generisanje kontenta.'
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://viralio.com';
+const siteName = 'Viralio';
+const defaultTitle = 'Viralio';
+const defaultDescription =
+  'Viralio je platforma za planiranje i upravljanje viralnim kontentom. Kreirajte ideje, organizujte zadatke, pratite rezultate i postanite viralni sa našim AI asistentom za generisanje kontenta.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -40,25 +40,25 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  manifest: "/manifest.json",
-  themeColor: "#2563eb",
+  manifest: '/manifest.json',
+  themeColor: '#2563eb',
   colorScheme: 'dark',
   icons: {
     icon: [
-      { url: "/viralio-icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/viralio-icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: '/viralio-icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/viralio-icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [
-      { url: "/viralio-icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: '/viralio-icon-192.png', sizes: '192x192', type: 'image/png' },
     ],
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
-    title: "Viralio",
+    statusBarStyle: 'default',
+    title: 'Viralio',
   },
   viewport: {
-    width: "device-width",
+    width: 'device-width',
     initialScale: 1,
     maximumScale: 1,
     userScalable: false,
@@ -121,8 +121,27 @@ export default function RootLayout({
         <meta name="msapplication-TileColor" content="#2563eb" />
         <meta name="msapplication-TileImage" content="/viralio-icon-192.png" />
         {/* Preload critical resources for faster PWA startup */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link
+          rel="preload"
+          href="/fonts/Satoshi-Regular.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/fonts/Satoshi-Medium.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/fonts/Satoshi-Bold.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
         <link rel="preload" href="/viralio-icon-192.png" as="image" />
         <script
           type="application/ld+json"
@@ -149,21 +168,21 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased" suppressHydrationWarning>
+      <body className="antialiased font-sans" suppressHydrationWarning>
         <HashTokenHandler />
-        <PWALoadingScreen />
+        {/* <PWALoadingScreen /> */}
         {children}
         <Toaster
-          position="bottom-right"
+          position="top-right"
           richColors
-          closeButton
-          toastOptions={{
-            style: {
-              background: '#1e293b',
-              border: '1px solid #334155',
-              color: '#e2e8f0',
-            },
-          }}
+          duration={3000}
+          // toastOptions={{
+          //   style: {
+          //     background: '#1e293b',
+          //     border: '1px solid #334155',
+          //     color: '#e2e8f0',
+          //   },
+          // }}
         />
         {/* Microsoft Clarity Analytics */}
         {process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID && (
@@ -212,4 +231,3 @@ export default function RootLayout({
     </html>
   );
 }
-
