@@ -108,7 +108,10 @@ export default function GoalProgressDashboard({
           <div className="space-y-1.5 min-w-0">
             <div className="flex justify-between items-center gap-2 min-w-0">
               <span className="text-sm md:text-base font-medium text-muted-foreground flex items-center gap-1.5 shrink-0 truncate">
-                <Video size={20} className="text-chart-5 shrink-0" />
+                <Video
+                  size={16}
+                  className="text-chart-5 shrink-0 md:w-5 md:h-5"
+                />
                 Kratka forma
               </span>
               <span className="text-xs md:text-sm font-semibold tabular-nums shrink-0">
@@ -131,7 +134,10 @@ export default function GoalProgressDashboard({
           <div className="space-y-1.5 min-w-0">
             <div className="flex justify-between items-center gap-2 min-w-0">
               <span className="text-sm md:text-base font-medium text-muted-foreground flex items-center gap-1.5 shrink-0 truncate">
-                <Youtube size={20} className="text-chart-2 shrink-0" />
+                <Youtube
+                  size={16}
+                  className="text-chart-2 shrink-0 md:w-5 md:h-5"
+                />
                 Duga forma
               </span>
               <span className="text-xs md:text-sm font-semibold tabular-nums shrink-0">

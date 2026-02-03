@@ -251,7 +251,7 @@ export default function AppLayout({
 
           <div className="flex h-full">
             {/* Main Content */}
-            <main className="flex-1 p-4 lg:p-8 lg:pt-2 overflow-x-hidden h-full overflow-y-auto">
+            <main className="flex-1 p-4 lg:p-8 lg:pt-2 pb-0 overflow-x-hidden h-full overflow-y-auto">
               {children}
             </main>
           </div>

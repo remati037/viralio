@@ -212,6 +212,22 @@ export default function ViralioApp({ userId }: { userId: string }) {
     setMovingTaskId(null);
   };
 
+  const handleCalendarUpdatePublishDate = async (
+    taskId: string,
+    publishDate: string
+  ) => {
+    const result = await updateTask(taskId, { publish_date: publishDate });
+    if (result.error) {
+      toast.error('Greška pri promeni datuma', {
+        description: result.error,
+      });
+    } else {
+      toast.success('Datum ažuriran', {
+        description: 'Datum objave je promenjen.',
+      });
+    }
+  };
+
   const [isUpdatingTask, setIsUpdatingTask] = useState(false);
 
   const handleUpdateTask = async (updates: TaskUpdate) => {
@@ -705,7 +721,11 @@ export default function ViralioApp({ userId }: { userId: string }) {
                   onNewIdea={() => setIsNewIdeaWizardOpen(true)}
                 />
               ) : (
-                <CalendarView tasks={tasks} onTaskClick={setSelectedTask} />
+                <CalendarView
+                  tasks={tasks}
+                  onTaskClick={setSelectedTask}
+                  onUpdatePublishDate={handleCalendarUpdatePublishDate}
+                />
               )}
             </>
           )}

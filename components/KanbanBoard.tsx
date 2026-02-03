@@ -111,7 +111,7 @@ export default function KanbanBoard({
                     >
                       {task.category && (
                         <span
-                          className="text-[10px] uppercase tracking-wider font-bold bg-muted px-2 py-1 rounded pointer-events-none"
+                          className="text-[10px] uppercase tracking-wider font-bold bg-muted px-2 py-0.5 md:py-1 rounded pointer-events-none"
                           style={{
                             color: task.category.color,
                             border: `1px solid ${task.category.color}40`,
@@ -145,35 +145,36 @@ export default function KanbanBoard({
                         />
                       </div>
                     </div>
-                    <h4 className="font-bold text-card-foreground text-md mb-3 leading-snug pointer-events-none">
+                    <h4 className="font-bold text-card-foreground text-lg mb-3 leading-snug pointer-events-none">
                       {task.title}
                     </h4>
 
                     <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
-                      <span
-                        className={`px-2 py-0.5 text-[10px] rounded-sm font-bold pointer-events-none ${
-                          task.format === 'Kratka Forma'
-                            ? 'bg-destructive/20 text-destructive'
-                            : 'bg-chart-2/20 text-chart-2'
-                        }`}
-                      >
-                        {task.format}
-                      </span>
-
-                      {task.publish_date && (
-                        <span className="text-xs text-muted-foreground pointer-events-none">
-                          Planirano za:{' '}
-                          {new Date(task.publish_date).toLocaleDateString(
-                            'sr-RS',
-                            {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                            }
-                          )}
+                      <div className="flex flex-col md:flex-row items-start gap-2 md:items-center md:gap-3">
+                        <span
+                          className={`px-2 py-0.5 text-[10px] rounded-sm font-bold pointer-events-none ${
+                            task.format === 'Kratka Forma'
+                              ? 'bg-destructive/20 text-destructive'
+                              : 'bg-chart-2/20 text-chart-2'
+                          }`}
+                        >
+                          {task.format}
                         </span>
-                      )}
 
+                        {task.publish_date && (
+                          <span className="text-xs text-muted-foreground pointer-events-none">
+                            Planirano za:{' '}
+                            {new Date(task.publish_date).toLocaleDateString(
+                              'sr-RS',
+                              {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                              }
+                            )}
+                          </span>
+                        )}
+                      </div>
                       <button
                         disabled={colIndex === KANBAN_COLUMNS.length - 1}
                         onClick={(e) => {

@@ -184,6 +184,22 @@ export default function PlannerPage() {
     setIsUpdatingTask(false);
   };
 
+  const handleCalendarUpdatePublishDate = async (
+    taskId: string,
+    publishDate: string
+  ) => {
+    const result = await updateTaskHook(taskId, { publish_date: publishDate });
+    if (result.error) {
+      toast.error('Greška pri promeni datuma', {
+        description: result.error,
+      });
+    } else {
+      toast.success('Datum ažuriran', {
+        description: 'Datum objave je promenjen.',
+      });
+    }
+  };
+
   const handleDeleteTask = async (taskId: string) => {
     const task = tasks.find((t) => t.id === taskId);
     setDeletingTaskId(taskId);
@@ -329,8 +345,8 @@ export default function PlannerPage() {
             </h1>
             <p className="text-muted-foreground text-xs md:text-sm text-balance max-w-xl hidden sm:block">
               {plannerView === 'kanban'
-                ? 'Prevucite kartice da promenite status ili kliknite za detalje.'
-                : 'Vizuelno planiranje objava. Objavljene skripte su zatamnjene.'}
+                ? 'Prevuci kartice da promeniš status ili klikni za više detalja.'
+                : 'Vizuelno planiraj objave. Objavljene skripte su zatamnjene.'}
             </p>
           </div>
 
@@ -419,7 +435,11 @@ export default function PlannerPage() {
               onNewIdea={openNewIdeaWizard}
             />
           ) : (
-            <CalendarView tasks={tasks} onTaskClick={setSelectedTask} />
+            <CalendarView
+              tasks={tasks}
+              onTaskClick={setSelectedTask}
+              onUpdatePublishDate={handleCalendarUpdatePublishDate}
+            />
           )}
         </div>
 
