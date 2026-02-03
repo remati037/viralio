@@ -1,3 +1,4 @@
+import { satoshi } from '@/app/fonts';
 import HashTokenHandler from '@/components/auth/HashTokenHandler';
 import type { Metadata } from 'next';
 import Script from 'next/script';
@@ -109,7 +110,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="sr" suppressHydrationWarning>
+    <html lang="sr" className={satoshi.variable} suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/viralio-icon-192.png" type="image/png" />
@@ -120,28 +121,7 @@ export default function RootLayout({
         <meta name="application-name" content="Viralio" />
         <meta name="msapplication-TileColor" content="#2563eb" />
         <meta name="msapplication-TileImage" content="/viralio-icon-192.png" />
-        {/* Preload critical resources for faster PWA startup */}
-        <link
-          rel="preload"
-          href="/fonts/Satoshi-Regular.woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preload"
-          href="/fonts/Satoshi-Medium.woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preload"
-          href="/fonts/Satoshi-Bold.woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
+        {/* Font preloads are handled by next/font */}
         <link rel="preload" href="/viralio-icon-192.png" as="image" />
         <script
           type="application/ld+json"
