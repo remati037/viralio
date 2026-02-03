@@ -67,7 +67,7 @@ export default async function Home({
         
         if (finalSubscriptionStatus.hasActiveSubscription) {
           // Redirect to clear the session_id from URL and show updated status
-          redirect('/planner')
+          redirect('/pocetna')
         }
       } else {
         // Log error but don't block the app - user can still access if they have subscription
@@ -77,7 +77,7 @@ export default async function Home({
         
         if (finalSubscriptionStatus.hasActiveSubscription) {
           // Redirect to clear the session_id from URL
-          redirect('/planner')
+          redirect('/pocetna')
         }
       }
     } catch (error) {
@@ -87,11 +87,11 @@ export default async function Home({
       finalSubscriptionStatus = await checkSubscriptionStatus(user.id)
       
       if (finalSubscriptionStatus.hasActiveSubscription) {
-        redirect('/planner')
+        redirect('/pocetna')
       }
     }
   }
 
-  // Redirect to planner by default
-  redirect('/planner')
+  // Redirect to Početna (home dashboard) by default
+  redirect('/pocetna')
 }

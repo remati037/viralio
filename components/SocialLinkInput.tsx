@@ -35,7 +35,7 @@ export default function SocialLinkInput({
 
   return (
     <div className="space-y-2">
-      <h3 className="text-lg font-bold text-slate-200">
+      <h3 className="text-sm font-semibold text-foreground">
         Linkovi ka mrežama (za AI kontekst)
       </h3>
 
@@ -45,34 +45,34 @@ export default function SocialLinkInput({
           value={linkInput}
           onChange={(e) => setLinkInput(e.target.value)}
           placeholder="Link do profila (npr. YouTube, Instagram...)"
-          className="w-full bg-slate-800 border border-slate-700 rounded-md py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+          className="w-full rounded-md border border-input bg-background py-3 px-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
         />
         <button
           onClick={handleAddLink}
           disabled={!linkInput.trim()}
-          className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-md font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500"
+          className="rounded-md bg-primary px-4 py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
         >
           Dodaj
         </button>
       </div>
 
-      <div className="space-y-2 max-h-48 overflow-y-auto">
+      <div className="max-h-48 space-y-2 overflow-y-auto">
         {socialLinks.map((item) => (
           <div
             key={item.id}
-            className="bg-slate-700/50 p-3 rounded-md flex justify-between items-center border border-slate-700"
+            className="flex items-center justify-between rounded-md border border-border bg-muted/50 p-3"
           >
             <a
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-blue-400 hover:underline truncate max-w-[80%]"
+              className="max-w-[80%] truncate text-sm text-primary hover:underline"
             >
               {item.url.replace(/^https?:\/\//, '').replace(/^www\./, '')}
             </a>
             <button
               onClick={() => handleRemoveLink(item.id)}
-              className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
+              className="shrink-0 text-muted-foreground transition-colors hover:text-destructive"
               title="Obriši link"
             >
               <Trash2 size={16} />

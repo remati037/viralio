@@ -4,31 +4,25 @@ import { useCompetitors } from '@/lib/hooks/useCompetitors';
 import { useProfile } from '@/lib/hooks/useProfile';
 import { useTasks } from '@/lib/hooks/useTasks';
 import { createClient } from '@/lib/supabase/client';
-import {
-  canCreateTask,
-  getRemainingTasks,
-  getTierLimits,
-} from '@/lib/utils/tierRestrictions';
+import { canCreateTask, getTierLimits } from '@/lib/utils/tierRestrictions';
 import type { TaskInsert, UserTier } from '@/types';
-import {
-  BarChart3,
-  ClipboardList,
-  Layout,
-  Play,
-  Plus,
-  Shield,
-  Sparkles,
-  Tag,
-  Trello,
-  User,
-} from 'lucide-react';
 import dynamic from 'next/dynamic';
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { AppSidebar } from './app-sidebar';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from './ui/breadcrumb';
 import Loader from './ui/loader';
+import { Separator } from './ui/separator';
+import { SidebarInset, SidebarProvider, SidebarTrigger } from './ui/sidebar';
 import { UserProvider } from './UserContext';
 
 // Lazy load NewIdeaWizard for faster initial load
@@ -129,289 +123,198 @@ export default function AppLayout({
 
   const isActive = (path: string) => pathname === path;
 
+  // Path segment → breadcrumb label (matches sidebar nav)
+  const SEGMENT_LABELS: Record<string, string> = {
+    pocetna: 'Početna',
+    admin: 'Admin',
+    planner: 'Planer sadržaja',
+    competitors: 'Konkurenti',
+    casestudy: 'Studije slučaja',
+    statistics: 'Statistika',
+    'ai-credits': 'AI Krediti',
+    categories: 'Kategorije',
+    profile: 'Profil',
+    settings: 'Podešavanja',
+    payments: 'Plaćanje',
+  };
+
+  const HOME_LABEL = 'Početna';
+  const HOME_HREF = '/pocetna';
+
+  // Build breadcrumb items from current pathname
+  const breadcrumbItems = (() => {
+    const segments = pathname.split('/').filter(Boolean);
+    // Homepage: single "Početna" (no duplicate)
+    if (segments.length === 0 || pathname === HOME_HREF) {
+      return [{ href: HOME_HREF, label: HOME_LABEL, isCurrent: true }];
+    }
+    const items: { href: string; label: string; isCurrent: boolean }[] = [];
+    let path = '';
+    for (let i = 0; i < segments.length; i++) {
+      path += `/${segments[i]}`;
+      const label = SEGMENT_LABELS[segments[i]] ?? segments[i];
+      items.push({
+        href: path,
+        label,
+        isCurrent: i === segments.length - 1,
+      });
+    }
+    return [{ href: HOME_HREF, label: HOME_LABEL, isCurrent: false }, ...items];
+  })();
+
   return (
-    <UserProvider userId={userId}>
-      <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30">
-        {/* Loader overlay - always rendered in same position to avoid hydration mismatch */}
-        {showLoader && (
-          <div suppressHydrationWarning>
-            <Loader fullScreen text="Učitavanje..." />
-          </div>
-        )}
-        {/* Mobile Header */}
-        <div className="lg:hidden flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
-          <div className="font-bold text-xl text-white tracking-tighter flex items-center gap-2">
-            <Image
-              src="/viralio-icon-512.png"
-              alt="Viralio"
-              width={32}
-              height={32}
-            />
-            Viralio
-          </div>
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 text-slate-400 transition-transform duration-300"
-            aria-label="Toggle menu"
-          >
-            <div className="relative w-6 h-6 flex flex-col gap-1.5 justify-center">
-              <span
-                className={`left-0 w-6 h-0.5 bg-current transition-all duration-300 ${
-                  isSidebarOpen ? 'rotate-45 translate-y-2' : 'translate-y-0'
-                }`}
-              />
-              <span
-                className={`left-0 w-6 h-0.5 bg-current transition-all duration-300 ${
-                  isSidebarOpen ? 'opacity-0' : 'opacity-100'
-                }`}
-              />
-              <span
-                className={`left-0 w-6 h-0.5 bg-current transition-all duration-300 ${
-                  isSidebarOpen ? '-rotate-45 -translate-y-2' : 'translate-y-0'
-                }`}
-              />
+    <SidebarProvider>
+      <UserProvider userId={userId}>
+        <AppSidebar />
+        <SidebarInset>
+          {/* <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30"> */}
+          {/* Loader overlay - always rendered in same position to avoid hydration mismatch */}
+          {/* {showLoader && (
+            <div suppressHydrationWarning>
+              <Loader fullScreen text="Učitavanje..." />
             </div>
-          </button>
-        </div>
-
-        {/* Backdrop overlay when sidebar is open */}
-        {isSidebarOpen && (
-          <div
-            className="fixed top-[57px] bottom-0 left-0 right-0 bg-black/50 z-30 lg:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
-
-        <div className="flex">
-          {/* Sidebar */}
-          <aside
-            className={`fixed top-[57px] bottom-0 left-0 z-40 w-full bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:h-screen lg:top-0 overflow-y-auto ${
-              isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-            }`}
-          >
-            <div className="p-6">
-              <div className="font-bold text-2xl text-white tracking-tighter items-center gap-2 mb-10 hidden lg:flex">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Play fill="white" size={16} className="text-white" />
-                </div>
-                Viralio
-              </div>
-
-              <div className="space-y-6">
-                <button
-                  onClick={handleNewIdeaClick}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mb-6 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 font-bold"
-                >
-                  <Plus size={20} />
-                  <span>Nova Ideja</span>
-                  {profile?.tier &&
-                    (() => {
-                      const userTaskCount = tasks.filter(
-                        (t) => !t.is_admin_case_study
-                      ).length;
-                      const tier = profile.tier as UserTier;
-                      const remaining = getRemainingTasks(tier, userTaskCount);
-                      return (
-                        remaining !== null && (
-                          <span className="ml-auto text-xs opacity-75">
-                            ({remaining} preostalo)
-                          </span>
-                        )
-                      );
-                    })()}
-                </button>
-
-                <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-2">
-                    Aplikacija
-                  </p>
-
-                  {profile?.role === 'admin' && (
-                    <Link
-                      href="/admin"
-                      onClick={() => setIsSidebarOpen(false)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mb-2 ${
-                        isActive('/admin')
-                          ? 'bg-yellow-600 text-white shadow-lg shadow-yellow-900/20'
-                          : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                      }`}
-                    >
-                      <Shield size={20} />
-                      <span className="font-medium">Admin</span>
-                    </Link>
-                  )}
-
-                  <Link
-                    href="/planner"
-                    onClick={() => setIsSidebarOpen(false)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mb-2 ${
-                      isActive('/planner')
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                    }`}
-                  >
-                    <Layout size={20} />
-                    <span className="font-medium">Planer sadržaja</span>
-                  </Link>
-                  <Link
-                    href="/competitors"
-                    onClick={() => setIsSidebarOpen(false)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mb-2 ${
-                      isActive('/competitors')
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                    }`}
-                  >
-                    <Trello size={20} />
-                    <span className="font-medium">Konkurenti</span>
-                  </Link>
-                  <Link
-                    href="/casestudy"
-                    onClick={() => setIsSidebarOpen(false)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mb-2 ${
-                      isActive('/casestudy')
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                    }`}
-                  >
-                    <ClipboardList size={20} />
-                    <span className="font-medium">Studije Slučaja</span>
-                  </Link>
-                  <Link
-                    href="/statistics"
-                    onClick={() => setIsSidebarOpen(false)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mb-2 ${
-                      isActive('/statistics')
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                    }`}
-                  >
-                    <BarChart3 size={20} />
-                    <span className="font-medium">Statistika</span>
-                  </Link>
-                  <Link
-                    href="/ai-credits"
-                    onClick={() => setIsSidebarOpen(false)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mb-2 ${
-                      isActive('/ai-credits')
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                    }`}
-                  >
-                    <Sparkles size={20} />
-                    <span className="font-medium">AI Krediti</span>
-                  </Link>
-                  <Link
-                    href="/categories"
-                    onClick={() => setIsSidebarOpen(false)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mb-2 ${
-                      isActive('/categories')
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                    }`}
-                  >
-                    <Tag size={20} />
-                    <span className="font-medium">Kategorije</span>
-                  </Link>
-                </div>
-              </div>
+          )} */}
+          {/* Mobile Header */}
+          <header className="flex h-16 shrink-0 items-center gap-2">
+            <div className="flex items-center gap-2 px-4">
+              <SidebarTrigger className="-ml-1" />
+              <Separator
+                orientation="vertical"
+                className="mr-2 data-[orientation=vertical]:h-4"
+              />
+              <Breadcrumb>
+                <BreadcrumbList>
+                  {breadcrumbItems.map((item, index) => (
+                    <span key={item.href + index} className="contents">
+                      <BreadcrumbItem className="flex">
+                        {item.isCurrent ? (
+                          <BreadcrumbPage>{item.label}</BreadcrumbPage>
+                        ) : (
+                          <BreadcrumbLink asChild>
+                            <Link href={item.href}>{item.label}</Link>
+                          </BreadcrumbLink>
+                        )}
+                      </BreadcrumbItem>
+                      {index < breadcrumbItems.length - 1 && (
+                        <BreadcrumbSeparator />
+                      )}
+                    </span>
+                  ))}
+                </BreadcrumbList>
+              </Breadcrumb>
             </div>
-
-            <div className="absolute bottom-0 w-full p-6 border-t border-slate-800">
-              <Link
-                href="/profile"
-                onClick={() => setIsSidebarOpen(false)}
-                className="w-full flex items-center gap-3 p-2 rounded-xl transition-all duration-200 hover:bg-slate-800"
-              >
-                <div
-                  className={`w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white ${
-                    isActive('/profile') ? 'ring-2 ring-blue-500' : ''
+          </header>
+          {/* <div className="lg:hidden flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
+            <div className="font-bold text-xl text-white tracking-tighter flex items-center gap-2">
+              <Image
+                src="/viralio-icon-512.png"
+                alt="Viralio"
+                width={32}
+                height={32}
+              />
+              Viralio
+            </div>
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 text-slate-400 transition-transform duration-300"
+              aria-label="Toggle menu"
+            >
+              <div className="relative w-6 h-6 flex flex-col gap-1.5 justify-center">
+                <span
+                  className={`left-0 w-6 h-0.5 bg-current transition-all duration-300 ${
+                    isSidebarOpen ? 'rotate-45 translate-y-2' : 'translate-y-0'
                   }`}
-                >
-                  {profile?.business_name
-                    ? profile.business_name.substring(0, 2).toUpperCase()
-                    : 'VL'}
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium text-white">
-                    {profile?.business_name || 'Moj Profil'}
-                  </p>
-                  <p className="text-xs text-slate-500">Postavke & Nalog</p>
-                </div>
-                <User size={20} className="ml-auto text-slate-400" />
-              </Link>
-              <button
-                onClick={handleSignOut}
-                className="w-full mt-2 px-4 py-2 text-sm text-red-400 hover:text-red-300 rounded-lg hover:bg-slate-800"
-              >
-                Sign Out
-              </button>
-            </div>
-          </aside>
+                />
+                <span
+                  className={`left-0 w-6 h-0.5 bg-current transition-all duration-300 ${
+                    isSidebarOpen ? 'opacity-0' : 'opacity-100'
+                  }`}
+                />
+                <span
+                  className={`left-0 w-6 h-0.5 bg-current transition-all duration-300 ${
+                    isSidebarOpen
+                      ? '-rotate-45 -translate-y-2'
+                      : 'translate-y-0'
+                  }`}
+                />
+              </div>
+            </button>
+          </div> */}
 
-          {/* Main Content */}
-          <main className="flex-1 p-4 lg:p-8 overflow-x-hidden h-full overflow-y-auto lg:ml-64">
-            {children}
-          </main>
-        </div>
+          {/* Backdrop overlay when sidebar is open */}
+          {isSidebarOpen && (
+            <div
+              className="fixed top-[57px] bottom-0 left-0 right-0 bg-black/50 z-30 lg:hidden"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
 
-        {/* Modals */}
-        {isNewIdeaWizardOpen && (
-          <NewIdeaWizard
-            userId={userId}
-            onClose={() => setIsNewIdeaWizardOpen(false)}
-            onSaveToPlan={async (taskData, inspirationLinks) => {
-              if (profile?.tier) {
-                const userTaskCount = tasks.filter(
-                  (t) => !t.is_admin_case_study
-                ).length;
-                const tier = profile.tier as UserTier;
-                const canCreate = canCreateTask(tier, userTaskCount);
-                if (!canCreate) {
-                  toast.error('Dostigli ste limit zadataka', {
-                    description: `Vaš ${tier} tier dozvoljava maksimalno ${
-                      getTierLimits(tier).maxTasks
-                    } zadataka.`,
+          <div className="flex h-full">
+            {/* Main Content */}
+            <main className="flex-1 p-4 lg:p-8 lg:pt-2 overflow-x-hidden h-full overflow-y-auto">
+              {children}
+            </main>
+          </div>
+
+          {/* Modals */}
+          {isNewIdeaWizardOpen && (
+            <NewIdeaWizard
+              userId={userId}
+              onClose={() => setIsNewIdeaWizardOpen(false)}
+              onSaveToPlan={async (taskData, inspirationLinks) => {
+                if (profile?.tier) {
+                  const userTaskCount = tasks.filter(
+                    (t) => !t.is_admin_case_study
+                  ).length;
+                  const tier = profile.tier as UserTier;
+                  const canCreate = canCreateTask(tier, userTaskCount);
+                  if (!canCreate) {
+                    toast.error('Dostigli ste limit zadataka', {
+                      description: `Vaš ${tier} tier dozvoljava maksimalno ${
+                        getTierLimits(tier).maxTasks
+                      } zadataka.`,
+                    });
+                    return;
+                  }
+                }
+
+                const result = await createTask({
+                  ...taskData,
+                  user_id: userId,
+                } as TaskInsert);
+                if (result.error) {
+                  toast.error('Greška pri kreiranju ideje', {
+                    description: result.error,
                   });
                   return;
                 }
-              }
 
-              const result = await createTask({
-                ...taskData,
-                user_id: userId,
-              } as TaskInsert);
-              if (result.error) {
-                toast.error('Greška pri kreiranju ideje', {
-                  description: result.error,
-                });
-                return;
-              }
-
-              if (
-                inspirationLinks &&
-                inspirationLinks.length > 0 &&
-                result.data
-              ) {
-                for (const linkData of inspirationLinks) {
-                  await addInspirationLink(
-                    result.data.id,
-                    linkData.link,
-                    linkData.displayUrl,
-                    linkData.type
-                  );
+                if (
+                  inspirationLinks &&
+                  inspirationLinks.length > 0 &&
+                  result.data
+                ) {
+                  for (const linkData of inspirationLinks) {
+                    await addInspirationLink(
+                      result.data.id,
+                      linkData.link,
+                      linkData.displayUrl,
+                      linkData.type
+                    );
+                  }
                 }
-              }
 
-              toast.success('Ideja sačuvana!', {
-                description: `"${taskData.title}" je dodata u planer.`,
-              });
-              setIsNewIdeaWizardOpen(false);
-            }}
-            userTier={profile?.tier as UserTier | undefined}
-          />
-        )}
-      </div>
-    </UserProvider>
+                toast.success('Ideja sačuvana!', {
+                  description: `"${taskData.title}" je dodata u planer.`,
+                });
+                setIsNewIdeaWizardOpen(false);
+              }}
+              userTier={profile?.tier as UserTier | undefined}
+            />
+          )}
+          {/* </div> */}
+        </SidebarInset>
+      </UserProvider>
+    </SidebarProvider>
   );
 }

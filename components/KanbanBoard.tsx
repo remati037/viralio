@@ -4,6 +4,8 @@ import { KANBAN_COLUMNS } from '@/lib/constants';
 import type { Task } from '@/types';
 import { ChevronRight, Move, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { Badge } from './ui/badge';
+import { Card } from './ui/card';
 
 interface KanbanBoardProps {
   tasks: Task[];
@@ -46,53 +48,61 @@ export default function KanbanBoard({
 
   return (
     <div className="h-full overflow-x-auto pb-4">
-      <div className="flex gap-2 min-w-[1000px] h-full">
+      <div className="flex gap-2 min-w-0 w-full h-full">
         {KANBAN_COLUMNS.map((column, colIndex) => {
           const columnTasks = tasks.filter((t) => t.status === column.id);
           return (
-            <div
+            <Card
               key={column.id}
-              className="min-w-[calc(100vw-120px)] md:min-w-80 flex flex-col h-auto flex-1"
+              className="min-w-[260px] sm:min-w-72 md:min-w-80 max-w-[calc(100vw-2rem)] flex flex-col flex-1 shrink-0 h-full"
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, column.id)}
             >
               <div
-                className={`flex items-center justify-between gap-2 p-3 rounded-t-lg border-t border-x border-slate-700/50 ${column.color} bg-opacity-10`}
+                className={`flex items-center justify-between gap-2 p-2 md:p-3 rounded-t-lg ${column.color} bg-muted`}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
                   {column.icon && (
-                    <column.icon className={column.iconColor} size={18} />
+                    <column.icon
+                      className={`${column.iconColor} shrink-0`}
+                      size={16}
+                    />
                   )}
-                  <span className="font-bold text-md">{column.title}</span>
+                  <span className="font-bold text-sm md:text-base truncate">
+                    {column.title}
+                  </span>
                 </div>
-                <span className="bg-slate-900/50 px-2 py-0.5 rounded text-xs opacity-70">
+                <Badge
+                  className="px-2 md:px-3 py-0.5 md:py-1 rounded-md md:rounded-lg text-xs border bg-background shrink-0"
+                  variant="outline"
+                >
                   {columnTasks.length}
-                </span>
+                </Badge>
               </div>
 
               <div
-                className={`flex-1 bg-slate-900/30 border-x border-b border-slate-800 rounded-b-lg p-3 space-y-3 overflow-y-auto min-h-[500px] transition-colors ${
+                className={`flex-1 rounded-b-lg p-2 md:p-3 space-y-2 md:space-y-3 overflow-y-auto min-h-[280px] sm:min-h-[400px] md:min-h-[500px] transition-colors ${
                   draggedTaskId
-                    ? 'bg-slate-900/50 border-dashed border-slate-700'
+                    ? 'bg-muted/50 border-2 border-dashed border-border'
                     : ''
                 }`}
               >
                 {column.id === 'idea' && (
                   <button
                     onClick={onNewIdea}
-                    className="w-full py-2 rounded-lg border-[1px] border-dashed border-slate-700 text-slate-500 hover:text-blue-400 hover:border-blue-500/50 transition-colors flex items-center justify-center gap-2 mb-2"
+                    className="w-full py-2 rounded-lg border border-dashed border-border text-muted-foreground hover:text-chart-1 hover:border-chart-1 transition-colors flex items-center justify-center gap-2 mb-2"
                   >
-                    <Plus size={14} /> Dodajte novu skriptu
+                    <Plus size={14} /> Dodaj novu skriptu
                   </button>
                 )}
 
                 {columnTasks.map((task) => (
-                  <div
+                  <Card
                     key={task.id}
                     draggable
                     onDragStart={(e) => handleDragStart(e, task.id)}
                     onClick={() => onTaskClick(task)}
-                    className="bg-slate-800 p-2 rounded-lg border border-slate-700 shadow-sm hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-900/10 transition-all cursor-pointer group relative active:cursor-grabbing"
+                    className="bg-primary-foreground p-2 rounded-lg border border-border shadow-sm hover:border-chart-1/50 hover:shadow-lg hover:shadow-chart-1/10 transition-all cursor-pointer group relative active:cursor-grabbing"
                   >
                     <div
                       className={`flex ${
@@ -101,7 +111,7 @@ export default function KanbanBoard({
                     >
                       {task.category && (
                         <span
-                          className="text-[10px] uppercase tracking-wider font-bold bg-slate-900 px-2 py-1 rounded pointer-events-none"
+                          className="text-[10px] uppercase tracking-wider font-bold bg-muted px-2 py-1 rounded pointer-events-none"
                           style={{
                             color: task.category.color,
                             border: `1px solid ${task.category.color}40`,
@@ -123,7 +133,7 @@ export default function KanbanBoard({
                                 onDeleteTask(task.id);
                               }
                             }}
-                            className="p-1 rounded hover:bg-red-900/30 text-slate-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                            className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
                             title="Obriši zadatak"
                           >
                             <Trash2 size={14} />
@@ -131,44 +141,38 @@ export default function KanbanBoard({
                         )}
                         <Move
                           size={14}
-                          className="text-slate-600 opacity-50 pointer-events-none"
+                          className="text-muted-foreground opacity-50 pointer-events-none"
                         />
                       </div>
                     </div>
-                    <h4 className="font-bold text-white text-md mb-3 leading-snug pointer-events-none">
+                    <h4 className="font-bold text-card-foreground text-md mb-3 leading-snug pointer-events-none">
                       {task.title}
                     </h4>
 
-                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-700/50">
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
                       <span
                         className={`px-2 py-0.5 text-[10px] rounded-sm font-bold pointer-events-none ${
                           task.format === 'Kratka Forma'
-                            ? 'bg-red-900/30 text-red-300'
-                            : 'bg-green-900/30 text-green-300'
+                            ? 'bg-destructive/20 text-destructive'
+                            : 'bg-chart-2/20 text-chart-2'
                         }`}
                       >
                         {task.format}
                       </span>
 
-                      <span className="text-xs text-slate-500 pointer-events-none">
-                        {task.publish_date
-                          ? new Date(task.publish_date).toLocaleDateString(
-                              'sr-RS',
-                              {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                              }
-                            )
-                          : new Date(task.created_at).toLocaleDateString(
-                              'sr-RS',
-                              {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                              }
-                            )}
-                      </span>
+                      {task.publish_date && (
+                        <span className="text-xs text-muted-foreground pointer-events-none">
+                          Planirano za:{' '}
+                          {new Date(task.publish_date).toLocaleDateString(
+                            'sr-RS',
+                            {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                            }
+                          )}
+                        </span>
+                      )}
 
                       <button
                         disabled={colIndex === KANBAN_COLUMNS.length - 1}
@@ -176,7 +180,7 @@ export default function KanbanBoard({
                           e.stopPropagation();
                           onMoveTask(task.id, KANBAN_COLUMNS[colIndex + 1].id);
                         }}
-                        className={`p-1.5 rounded hover:bg-slate-700 text-slate-400 ${
+                        className={`p-1.5 rounded hover:bg-muted text-muted-foreground ${
                           colIndex === KANBAN_COLUMNS.length - 1
                             ? 'hidden cursor-default'
                             : ''
@@ -186,16 +190,16 @@ export default function KanbanBoard({
                         <ChevronRight size={16} />
                       </button>
                     </div>
-                  </div>
+                  </Card>
                 ))}
 
                 {columnTasks.length === 0 && column.id !== 'idea' && (
-                  <div className="text-center py-10 text-slate-600 text-sm border-2 border-dashed border-slate-800 rounded-lg pointer-events-none">
+                  <div className="text-center py-10 text-muted-foreground text-sm border-2 border-dashed border-border rounded-lg pointer-events-none">
                     Prevuci ovde
                   </div>
                 )}
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>

@@ -2,7 +2,15 @@
 
 import GoalProgressDashboard from '@/components/GoalProgressDashboard';
 import KanbanBoard from '@/components/KanbanBoard';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import Loader from '@/components/ui/loader';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useUserId } from '@/components/UserContext';
 import { useProfile } from '@/lib/hooks/useProfile';
 import { useTasks } from '@/lib/hooks/useTasks';
@@ -12,7 +20,7 @@ import {
   getTierLimits,
 } from '@/lib/utils/tierRestrictions';
 import type { Task, TaskInsert, UserTier } from '@/types';
-import { Calendar, Plus, Trello } from 'lucide-react';
+import { Calendar, Kanban, Plus } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -288,140 +296,164 @@ export default function PlannerPage() {
     return <Loader fullScreen text="Učitavanje planera..." />;
   }
 
+  const openNewIdeaWizard = () => {
+    if (profile?.tier) {
+      const userTaskCount = tasks.filter((t) => !t.is_admin_case_study).length;
+      const tier = profile.tier as UserTier;
+      const canCreate = canCreateTask(tier, userTaskCount);
+      if (!canCreate) {
+        toast.error('Dostigli ste limit zadataka', {
+          description: `Vaš ${tier} tier dozvoljava maksimalno ${
+            getTierLimits(tier).maxTasks
+          } zadataka.`,
+        });
+        return;
+      }
+    }
+    setIsNewIdeaWizardOpen(true);
+  };
+
   return (
-    <>
-      <header className="mb-4 md:mb-8 flex items-start md:items-center justify-between flex-col md:flex-row gap-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            Planer sadržaja
-          </h1>
-          <p className="text-slate-400 text-sm text-balance">
-            {plannerView === 'kanban'
-              ? 'Prevucite kartice da promenite status ili kliknite na karticu za detalje.'
-              : 'Vizuelno planiranje objava. Objavljene skripte su zatamnjene.'}
-          </p>
-        </div>
-        <div className="flex gap-3">
-          {plannerView === 'kanban' && (
-            <button
-              onClick={() => {
-                if (profile?.tier) {
-                  const userTaskCount = tasks.filter(
-                    (t) => !t.is_admin_case_study
-                  ).length;
-                  const tier = profile.tier as UserTier;
-                  const canCreate = canCreateTask(tier, userTaskCount);
-                  if (!canCreate) {
-                    toast.error('Dostigli ste limit zadataka', {
-                      description: `Vaš ${tier} tier dozvoljava maksimalno ${
-                        getTierLimits(tier).maxTasks
-                      } zadataka.`,
-                    });
-                    return;
-                  }
-                }
-                setIsNewIdeaWizardOpen(true);
-              }}
-              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition-colors flex items-center gap-2"
+    <TooltipProvider>
+      <div className="space-y-4 md:space-y-6 min-w-0 overflow-x-hidden h-full">
+        <header className="flex flex-col gap-4 md:gap-6 md:flex-row md:items-start md:justify-between min-w-0">
+          <div className="space-y-0.5 min-w-0">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 md:gap-3 tracking-tight truncate">
+              Planer sadržaja
+              <Badge
+                variant="outline"
+                className="ml-2 px-2.5 py-0.5 md:px-3 md:py-1 font-medium text-sm md:text-sm md:font-semibold rounded-lg text-muted-foreground border-border bg-muted/50 shadow-sm"
+              >
+                {tasks.length} idej{tasks.length === 1 ? 'a' : 'e'}
+              </Badge>
+            </h1>
+            <p className="text-muted-foreground text-xs md:text-sm text-balance max-w-xl hidden sm:block">
+              {plannerView === 'kanban'
+                ? 'Prevucite kartice da promenite status ili kliknite za detalje.'
+                : 'Vizuelno planiranje objava. Objavljene skripte su zatamnjene.'}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 md:gap-3 shrink-0">
+            <Button
+              onClick={openNewIdeaWizard}
+              size="lg"
+              className="h-8 md:h-9 px-3 md:px-4"
             >
-              <Plus size={16} /> Nova ideja
-            </button>
+              <Plus size={14} className="md:w-4 md:h-4" />
+              Nova skripta
+            </Button>
+            <div className="flex bg-muted/80 rounded-lg p-0.5 md:p-1 border border-border">
+              <Button
+                variant={plannerView === 'kanban' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setPlannerView('kanban')}
+                className={`md:h-9 md:px-4 md:py-2 md:text-sm ${
+                  plannerView === 'kanban'
+                    ? 'bg-chart-1 hover:bg-chart-1/90 text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Kanban size={16} />
+                Kanban
+              </Button>
+              {profile?.tier &&
+                canUseView(profile.tier as UserTier, 'calendar') && (
+                  <Button
+                    variant={plannerView === 'calendar' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setPlannerView('calendar')}
+                    className={`md:h-9 md:px-4 md:py-2 md:text-sm ${
+                      plannerView === 'calendar'
+                        ? 'bg-chart-1 hover:bg-chart-1/90 text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Calendar size={16} />
+                    Kalendar
+                  </Button>
+                )}
+              {profile?.tier &&
+                !canUseView(profile.tier as UserTier, 'calendar') && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled
+                          className="opacity-50 cursor-not-allowed md:h-9 md:px-4 md:py-2 md:text-sm"
+                        >
+                          <Calendar size={16} />
+                          Kalendar 🔒
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-[200px]">
+                      Kalendar je dostupan samo za Starter i Pro pretplatu
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+            </div>
+          </div>
+        </header>
+
+        {profile && (
+          <GoalProgressDashboard
+            progress={calculateProgress}
+            goals={{
+              monthlyGoalShort: profile.monthly_goal_short || 0,
+              monthlyGoalLong: profile.monthly_goal_long || 0,
+            }}
+          />
+        )}
+
+        <div key={plannerView} className="w-full overflow-x-auto h-full">
+          {plannerView === 'kanban' ? (
+            <KanbanBoard
+              tasks={tasks}
+              onMoveTask={handleMoveTask}
+              onDeleteTask={handleDeleteTask}
+              onTaskClick={setSelectedTask}
+              onTaskDrop={handleTaskDrop}
+              onNewIdea={openNewIdeaWizard}
+            />
+          ) : (
+            <CalendarView tasks={tasks} onTaskClick={setSelectedTask} />
           )}
-          <div className="bg-slate-800 px-4 py-2 rounded-lg text-sm text-slate-400 border border-slate-700 hidden md:flex items-center">
-            Ukupno ideja:{' '}
-            <span className="text-white font-bold ml-1">{tasks.length}</span>
-          </div>
-          <div className="flex bg-slate-800 rounded-lg p-1 border border-slate-700">
-            <button
-              onClick={() => setPlannerView('kanban')}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
-                plannerView === 'kanban'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-400 hover:bg-slate-700'
-              }`}
-            >
-              <Trello size={16} /> Kanban
-            </button>
-            {profile?.tier &&
-              canUseView(profile.tier as UserTier, 'calendar') && (
-                <button
-                  onClick={() => setPlannerView('calendar')}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
-                    plannerView === 'calendar'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-400 hover:bg-slate-700'
-                  }`}
-                >
-                  <Calendar size={16} /> Kalendar
-                </button>
-              )}
-            {profile?.tier &&
-              !canUseView(profile.tier as UserTier, 'calendar') && (
-                <button
-                  disabled
-                  className="px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 cursor-not-allowed opacity-50"
-                  title="Kalendar view je dostupan samo za Starter i Pro tier"
-                >
-                  <Calendar size={16} /> Kalendar 🔒
-                </button>
-              )}
-          </div>
         </div>
-      </header>
 
-      {profile && (
-        <GoalProgressDashboard
-          progress={calculateProgress}
-          goals={{
-            monthlyGoalShort: profile.monthly_goal_short || 0,
-            monthlyGoalLong: profile.monthly_goal_long || 0,
-          }}
-        />
-      )}
+        {isNewIdeaWizardOpen && userId && (
+          <NewIdeaWizard
+            onClose={() => setIsNewIdeaWizardOpen(false)}
+            onSaveToPlan={handleSaveToPlan}
+            userTier={profile?.tier as UserTier | undefined}
+            userId={userId}
+          />
+        )}
 
-      {plannerView === 'kanban' ? (
-        <KanbanBoard
-          tasks={tasks}
-          onMoveTask={handleMoveTask}
-          onDeleteTask={handleDeleteTask}
-          onTaskClick={setSelectedTask}
-          onTaskDrop={handleTaskDrop}
-          onNewIdea={() => setIsNewIdeaWizardOpen(true)}
-        />
-      ) : (
-        <CalendarView tasks={tasks} onTaskClick={setSelectedTask} />
-      )}
-
-      {isNewIdeaWizardOpen && userId && (
-        <NewIdeaWizard
-          onClose={() => setIsNewIdeaWizardOpen(false)}
-          onSaveToPlan={handleSaveToPlan}
-          userTier={profile?.tier as UserTier | undefined}
-          userId={userId}
-        />
-      )}
-
-      {selectedTask && (
-        <TaskDetailModal
-          task={selectedTask}
-          onClose={() => setSelectedTask(null)}
-          onDelete={handleDeleteTask}
-          onUpdate={handleUpdateTask}
-          onAddInspirationLink={handleAddInspirationLink as any}
-          onRemoveInspirationLink={async (linkId) => {
-            const result = await removeInspirationLinkHook(linkId);
-            if (result.error) {
-              toast.error('Greška pri uklanjanju linka', {
-                description: result.error,
-              });
-            } else {
-              toast.success('Link uklonjen', {
-                description: 'Link za inspiraciju je uklonjen.',
-              });
-            }
-          }}
-        />
-      )}
-    </>
+        {selectedTask && (
+          <TaskDetailModal
+            task={selectedTask}
+            onClose={() => setSelectedTask(null)}
+            onDelete={handleDeleteTask}
+            onUpdate={handleUpdateTask}
+            onAddInspirationLink={handleAddInspirationLink as any}
+            onRemoveInspirationLink={async (linkId) => {
+              const result = await removeInspirationLinkHook(linkId);
+              if (result.error) {
+                toast.error('Greška pri uklanjanju linka', {
+                  description: result.error,
+                });
+              } else {
+                toast.success('Link uklonjen', {
+                  description: 'Link za inspiraciju je uklonjen.',
+                });
+              }
+            }}
+          />
+        )}
+      </div>
+    </TooltipProvider>
   );
 }

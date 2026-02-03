@@ -2,9 +2,19 @@
 
 import { parseProfileDetails } from '@/lib/utils/helpers';
 import type { Competitor, CompetitorFeed } from '@/types';
-import { ExternalLink, Plus, Trash2, Trello } from 'lucide-react';
+import { ExternalLink, Plus, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Avatar, AvatarFallback } from './ui/avatar';
+import { Button } from './ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from './ui/card';
+import { Input } from './ui/input';
 import Loader from './ui/loader';
 
 interface CompetitorsViewProps {
@@ -13,6 +23,27 @@ interface CompetitorsViewProps {
     competitor: Omit<Competitor, 'id' | 'user_id' | 'created_at' | 'updated_at'>
   ) => Promise<void>;
   onRemoveCompetitor: (competitorId: string) => Promise<void>;
+}
+
+const AVATAR_COLORS = [
+  '#6366f1',
+  '#8b5cf6',
+  '#ec4899',
+  '#f43f5e',
+  '#f97316',
+  '#eab308',
+  '#22c55e',
+  '#14b8a6',
+  '#3b82f6',
+  '#0ea5e9',
+];
+
+function getAvatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
 export default function CompetitorsView({
@@ -24,6 +55,7 @@ export default function CompetitorsView({
   const [nameInput, setNameInput] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const handleAdd = async () => {
     if (!linkInput.trim() || !nameInput.trim()) {
@@ -68,6 +100,10 @@ export default function CompetitorsView({
 
       setLinkInput('');
       setNameInput('');
+      setIsAddModalOpen(false);
+      toast.success('Konkurent dodat', {
+        description: `${nameInput.trim()} je uspešno dodat na listu.`,
+      });
     } finally {
       setIsAdding(false);
     }
@@ -75,74 +111,45 @@ export default function CompetitorsView({
 
   return (
     <>
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-          <Trello className="text-blue-400" size={24} /> Konkurenti
-        </h1>
-        <p className="text-slate-400 max-w-2xl">
-          Pratite i analizirajte najuspešnije objave vaših konkurenata da biste
-          pronašli nove virale šablone.
-        </p>
-      </header>
-
-      <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl mb-8 space-y-4">
-        <h3 className="text-xl font-bold text-white">Dodaj Novog Konkurenta</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <input
-            type="text"
-            value={nameInput}
-            onChange={(e) => setNameInput(e.target.value)}
-            placeholder="Ime Konkurenta (npr. Digital Guru)"
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all md:col-span-1"
-            suppressHydrationWarning
-          />
-          <input
-            type="url"
-            value={linkInput}
-            onChange={(e) => setLinkInput(e.target.value)}
-            placeholder="Link ka Profilu (YouTube, TikTok, Instagram...)"
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all md:col-span-1"
-            suppressHydrationWarning
-          />
-          <button
-            onClick={handleAdd}
-            disabled={!linkInput.trim() || !nameInput.trim() || isAdding}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500 md:col-span-1 flex items-center justify-center gap-2"
-          >
-            {isAdding ? (
-              <>
-                <Loader size="sm" />
-                <span>Dodavanje...</span>
-              </>
-            ) : (
-              <>
-                <Plus size={18} /> Dodaj Listi
-              </>
-            )}
-          </button>
+      <header className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
+            Konkurenti
+          </h1>
+          <p className="text-muted-foreground max-w-2xl">
+            Prati i analiziraj najuspešnije objave tvojih konkurenata.
+          </p>
         </div>
-      </div>
+        <Button onClick={() => setIsAddModalOpen(true)} className="shrink-0">
+          <Plus size={18} className="mr-2" />
+          Dodaj konkurenta
+        </Button>
+      </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {competitors.length === 0 ? (
-          <div className="col-span-full py-10 text-center border-2 border-dashed border-slate-800 rounded-xl">
-            <p className="text-slate-500">Nema dodatih konkurenata na listi.</p>
+          <div className="col-span-full py-10 text-center border-2 border-dashed border-border rounded-lg">
+            <p className="text-muted-foreground">
+              Nema dodatih konkurenata na listi.
+            </p>
           </div>
         ) : (
           competitors.map((comp) => (
-            <div
-              key={comp.id}
-              className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col gap-3"
-            >
+            <Card key={comp.id} className="p-4 flex flex-col gap-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <img
-                    src={comp.icon || 'https://placehold.co/40x40'}
-                    alt={comp.name}
-                    className="w-10 h-10 rounded-full object-cover shrink-0"
-                  />
+                  <Avatar>
+                    <AvatarFallback
+                      className="text-white font-semibold text-sm"
+                      style={{ backgroundColor: getAvatarColor(comp.name) }}
+                    >
+                      {comp.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-white truncate">{comp.name}</p>
+                    <p className="font-bold text-card-foreground truncate">
+                      {comp.name}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -155,7 +162,7 @@ export default function CompetitorsView({
                     }
                   }}
                   disabled={removingId === comp.id}
-                  className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-slate-700 rounded-lg disabled:opacity-50 shrink-0"
+                  className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-muted rounded-lg disabled:opacity-50 shrink-0 transition-colors"
                   title="Obriši"
                 >
                   {removingId === comp.id ? (
@@ -169,15 +176,111 @@ export default function CompetitorsView({
                 href={comp.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-slate-400 hover:text-blue-400 transition-colors truncate"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-chart-1 transition-colors truncate"
               >
                 <ExternalLink size={14} className="shrink-0" />
                 <span className="truncate">{comp.url}</span>
               </a>
-            </div>
+            </Card>
           ))
         )}
       </div>
+
+      {isAddModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => !isAdding && setIsAddModalOpen(false)}
+        >
+          <Card
+            className="w-full max-w-md shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>Dodaj konkurenta</CardTitle>
+                  <CardDescription>
+                    Unesite ime i link ka profilu konkurenta
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => !isAdding && setIsAddModalOpen(false)}
+                  disabled={isAdding}
+                >
+                  <X size={20} />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAdd();
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Ime konkurenta *
+                  </label>
+                  <Input
+                    type="text"
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    placeholder="npr. Digital Guru"
+                    disabled={isAdding}
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Link ka profilu *
+                  </label>
+                  <Input
+                    type="url"
+                    value={linkInput}
+                    onChange={(e) => setLinkInput(e.target.value)}
+                    placeholder="YouTube, TikTok, Instagram..."
+                    disabled={isAdding}
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => !isAdding && setIsAddModalOpen(false)}
+                    className="flex-1"
+                    disabled={isAdding}
+                  >
+                    Otkaži
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1"
+                    disabled={
+                      !linkInput.trim() || !nameInput.trim() || isAdding
+                    }
+                  >
+                    {isAdding ? (
+                      <>
+                        <Loader size="sm" className="mr-2" />
+                        Dodavanje...
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={18} className="mr-2" />
+                        Dodaj
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </>
   );
 }

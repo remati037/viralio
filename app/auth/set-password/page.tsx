@@ -45,23 +45,26 @@ export default async function SetPasswordPage({
   // This ensures cookies are properly set
   if (code) {
     const supabase = await createClient();
-    
+
     try {
       // First check if we already have a valid session
-      const { data: { session: existingSession } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session: existingSession },
+      } = await supabase.auth.getSession();
+
       // If we already have a session and it's a recovery/invite flow, just clean up the URL
       if (existingSession && (type === 'recovery' || type === 'invite')) {
         redirect('/auth/set-password' + (type ? `?type=${type}` : ''));
       }
-      
+
       // If we have a session but it's not recovery/invite, redirect to planner
       if (existingSession && type !== 'recovery' && type !== 'invite') {
         redirect('/planner');
       }
-      
+
       // Exchange code for session
-      const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code);
+      const { data: sessionData, error } =
+        await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
         console.error('Error exchanging code for session:', error);
@@ -75,12 +78,17 @@ export default async function SetPasswordPage({
       }
 
       // Verify session was created
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
       if (!session) {
         // Session not created - redirect with error
         const errorParams = new URLSearchParams();
-        errorParams.set('error', 'Neuspešno kreiranje sesije. Molimo zatražite novi link.');
+        errorParams.set(
+          'error',
+          'Neuspešno kreiranje sesije. Molimo zatražite novi link.'
+        );
         if (type) {
           errorParams.set('type', type);
         }
@@ -120,4 +128,3 @@ export default async function SetPasswordPage({
     </AuthLayout>
   );
 }
-

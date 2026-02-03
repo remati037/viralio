@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
 
 export default function PWALoadingScreen() {
   const [progress, setProgress] = useState(0);
@@ -10,8 +10,8 @@ export default function PWALoadingScreen() {
   useEffect(() => {
     // Check if app is running as PWA (standalone mode)
     const isStandalone =
-      (window.matchMedia('(display-mode: standalone)').matches) ||
-      ((window.navigator as any).standalone === true) ||
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true ||
       document.referrer.includes('android-app://');
 
     // Only show loading screen in standalone/PWA mode

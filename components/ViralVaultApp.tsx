@@ -11,7 +11,6 @@ import {
   getTierLimits,
 } from '@/lib/utils/tierRestrictions';
 import type {
-  Competitor,
   SocialLink,
   Task,
   TaskInsert,
@@ -804,7 +803,6 @@ export default function ViralioApp({ userId }: { userId: string }) {
           onClose={() => setSelectedCaseStudy(null)}
         />
       )}
-
     </div>
   );
 }

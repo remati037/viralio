@@ -5,10 +5,10 @@
 
 'use client';
 
-import { createClient } from '@/lib/supabase/client';
 import { updatePasswordAction } from '@/lib/auth/actions';
 import { mapAuthErrorToSerbian } from '@/lib/auth/error-messages';
 import { validatePassword } from '@/lib/auth/validation';
+import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -97,7 +97,7 @@ export default function SetPasswordForm() {
         const {
           data: { session: existingSession },
         } = await supabase.auth.getSession();
-        
+
         if (existingSession) {
           // Session already exists, server-side exchange worked
           // If type is invite/recovery, user needs to set password

@@ -18,7 +18,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
           <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#0E172A] text-[#CA8A03]">
             <Rocket className="size-5" />
           </div>
-          Viralio App
+          Viralio AI
         </div>
         {children}
       </div>
