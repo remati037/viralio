@@ -72,7 +72,7 @@ function NavCardLink({ card }: { card: NavCard }) {
     <Link href={card.href} className="block h-full group">
       <Card
         className={cn(
-          'h-full transition-all duration-200',
+          'h-full transition-all duration-200 bg-gradient-to-b from-background to-muted',
           'hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5',
           'focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background'
         )}

@@ -28,11 +28,6 @@ import { NavSecondary } from './nav-secondary';
 import { NavUser } from './nav-user';
 
 const data = {
-  user: {
-    name: 'Remati',
-    email: 'marko2000.dev@gmail.com',
-    avatar: '/avatars/shadcn.jpg',
-  },
   navMain: [
     {
       title: 'Početna',
@@ -84,7 +79,12 @@ const data = {
   ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  user,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  user: { name: string; email: string; avatar?: string };
+}) {
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
@@ -105,7 +105,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarSeparator />
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>
   );

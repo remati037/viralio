@@ -179,30 +179,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (hasUnlimitedFree) {
-      // Set to PRO tier with unlimited free subscription
+      // Set to PRO tier with unlimited free subscription (no Stripe; admin-granted)
       profileUpdate.tier = 'pro'
       profileUpdate.has_unlimited_free = true
     } else {
-      // Set to PRO tier for 7-day trial - after trial, user will be prompted to subscribe
-      profileUpdate.tier = 'pro'
+      // Classic user: free tier until they complete Stripe checkout (7-day trial, then €19/month)
+      profileUpdate.tier = 'free'
       profileUpdate.has_unlimited_free = false
-
-      // Create a 7-day trial payment record
-      const trialStart = new Date()
-      const trialEnd = new Date()
-      trialEnd.setDate(trialEnd.getDate() + 7)
-
-      await adminClient.from('payments').insert({
-        user_id: userId,
-        amount: 0,
-        currency: 'USD',
-        status: 'completed',
-        payment_method: 'trial',
-        subscription_period_start: trialStart.toISOString(),
-        subscription_period_end: trialEnd.toISOString(),
-        next_payment_date: trialEnd.toISOString(),
-        tier_at_payment: 'pro',
-      })
+      // No payment record: user must open payment modal and complete Stripe checkout
     }
 
     const { error: updateError } = await adminClient

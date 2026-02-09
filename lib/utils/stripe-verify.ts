@@ -47,10 +47,49 @@ export async function verifyCheckoutSession(
     const isTrialing = subscriptionData.status === 'trialing'
     const tier = session.metadata?.tier || 'pro'
 
-    // If it's a trial, we don't create a payment record yet
-    // Payment will be created when invoice.payment_succeeded fires
+    // If it's a trial, create a payment record with stripe_subscription_id so subscription check passes on redirect
     if (isTrialing) {
-      // Just update the tier, don't create payment record
+      const trialEnd = subscriptionData.trial_end
+      const periodStart = subscriptionData.current_period_start
+      const periodEnd = trialEnd ?? subscriptionData.current_period_end
+      const periodStartDate = periodStart
+        ? new Date((typeof periodStart === 'number' ? periodStart : parseInt(String(periodStart))) * 1000)
+        : new Date()
+      const periodEndDate = periodEnd
+        ? new Date((typeof periodEnd === 'number' ? periodEnd : parseInt(String(periodEnd))) * 1000)
+        : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+      // Avoid duplicate: check if we already have a payment record for this subscription
+      const { data: existing } = await supabase
+        .from('payments')
+        .select('id')
+        .eq('stripe_subscription_id', subscriptionId)
+        .limit(1)
+        .single()
+
+      if (!existing) {
+        const { error: paymentError } = await supabase.from('payments').insert({
+          user_id: userId,
+          amount: 0,
+          currency: subscription.currency || 'eur',
+          status: 'completed',
+          payment_method: 'stripe',
+          subscription_period_start: periodStartDate.toISOString(),
+          subscription_period_end: periodEndDate.toISOString(),
+          next_payment_date: periodEndDate.toISOString(),
+          tier_at_payment: tier,
+          stripe_subscription_id: subscriptionId,
+        })
+
+        if (paymentError) {
+          console.error('Error creating trial payment record on redirect:', paymentError)
+          return {
+            success: false,
+            error: `Failed to create payment record: ${paymentError.message}`,
+          }
+        }
+      }
+
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ tier: tier })

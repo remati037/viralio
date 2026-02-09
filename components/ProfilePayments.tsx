@@ -2,10 +2,11 @@
 
 import { createClient } from '@/lib/supabase/client';
 import type { Payment, Profile } from '@/types';
-import { Calendar, CreditCard, X } from 'lucide-react';
+import { Calendar, CreditCard, ExternalLink, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import CancelSubscriptionModal from './CancelSubscriptionModal';
+import Loader from './ui/loader';
 import {
   Card,
   CardContent,
@@ -27,6 +28,7 @@ export default function ProfilePayments({
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<{
     isCancelled: boolean;
     hasActiveSubscription: boolean;
@@ -84,6 +86,28 @@ export default function ProfilePayments({
   const nextPayment = payments.find(
     (p) => p.next_payment_date && new Date(p.next_payment_date) > new Date()
   );
+
+  const openStripePortal = async () => {
+    setPortalLoading(true);
+    try {
+      const response = await fetch('/api/stripe/create-portal-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to open Stripe portal');
+      }
+      if (data.url) {
+        window.open(data.url, '_blank', 'noopener,noreferrer');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Greška';
+      toast.error('Greška pri otvaranju Stripe portala', { description: message });
+    } finally {
+      setPortalLoading(false);
+    }
+  };
 
   if (!profile) return null;
 
@@ -231,7 +255,7 @@ export default function ProfilePayments({
                 )}
 
                 {profile?.tier === 'pro' && nextPayment && (
-                  <div className="mt-6 pt-6 border-t border-border">
+                  <div className="mt-6 pt-6 border-t border-border space-y-3">
                     {subscriptionStatus?.isCancelled ? (
                       <div className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-border bg-muted px-4 py-2 font-medium text-muted-foreground">
                         <X size={16} />
@@ -240,16 +264,25 @@ export default function ProfilePayments({
                     ) : (
                       <>
                         <button
-                          onClick={() => setShowCancelModal(true)}
-                          disabled={loadingStatus}
-                          className="flex w-full items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:cursor-not-allowed disabled:opacity-50"
+                          onClick={openStripePortal}
+                          disabled={loadingStatus || portalLoading}
+                          className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 font-medium text-primary transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <X size={16} />
-                          Otkaži Pretplatu
+                          {portalLoading ? (
+                            <>
+                              <Loader size="sm" />
+                              <span>Učitavanje...</span>
+                            </>
+                          ) : (
+                            <>
+                              <ExternalLink size={16} />
+                              Upravljaj pretplatom na Stripe
+                            </>
+                          )}
                         </button>
-                        <p className="text-muted-foreground text-center text-xs mt-2">
-                          Sve funkcionalnosti će biti dostupne do datuma isteka
-                          pretplate
+                        <p className="text-muted-foreground text-center text-xs">
+                          Na Stripe stranici možete otkazati pretplatu, promeniti
+                          karticu ili pogledati račune. Povratak na: Plaćanje.
                         </p>
                       </>
                     )}

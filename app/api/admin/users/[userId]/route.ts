@@ -1,6 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import Stripe from 'stripe'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+
+let stripe: Stripe | null = null
+try {
+  if (process.env.STRIPE_SECRET_KEY) {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+  }
+} catch {
+  // Stripe optional for admin route
+}
 
 // Create admin client for user management operations
 function getAdminClient() {
@@ -58,6 +68,28 @@ export async function PUT(
     const body = await request.json()
 
     const adminClient = getAdminClient()
+
+    // When granting unlimited free: cancel user's Stripe subscription so they are not charged
+    if (body.has_unlimited_free === true && stripe) {
+      const { data: payment } = await adminClient
+        .from('payments')
+        .select('stripe_subscription_id')
+        .eq('user_id', userId)
+        .not('stripe_subscription_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      const subscriptionId = (payment as any)?.stripe_subscription_id
+      if (subscriptionId) {
+        try {
+          await stripe.subscriptions.cancel(subscriptionId)
+        } catch (err) {
+          console.error('Error cancelling Stripe subscription for unlimited free:', err)
+          // Continue with profile update
+        }
+      }
+    }
 
     // Update profile
     const { error: profileError } = await adminClient

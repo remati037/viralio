@@ -81,8 +81,10 @@ export default function SubscriptionModal({ isOpen, onClose, userId }: Subscript
 
   const plan = {
     name: 'Pro',
-    price: '$29',
-    period: 'month',
+    trial: '7 dana besplatno',
+    price: '€19',
+    period: 'mesečno',
+    afterTrial: 'Nakon probnog perioda 19€ mesečno do otkazivanja.',
     features: [
       'Unlimited tasks',
       'Kanban board view',
@@ -117,10 +119,12 @@ export default function SubscriptionModal({ isOpen, onClose, userId }: Subscript
             <div className="relative p-6 rounded-xl border-2 border-blue-600 bg-blue-600/10">
               <div className="mb-4">
                 <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
+                <p className="text-emerald-400 text-sm font-medium mb-1">{plan.trial}</p>
                 <div className="flex items-baseline gap-1">
                   <span className="text-3xl font-bold text-white">{plan.price}</span>
                   <span className="text-slate-400">/{plan.period}</span>
                 </div>
+                <p className="text-slate-400 text-xs mt-1">{plan.afterTrial}</p>
               </div>
               <ul className="space-y-2">
                 {plan.features.map((feature, index) => (
@@ -147,13 +151,13 @@ export default function SubscriptionModal({ isOpen, onClose, userId }: Subscript
             ) : (
               <>
                 <CreditCard size={20} />
-                <span>Subscribe with Stripe</span>
+                <span>Plaćanje putem Stripe (0€ tokom probnog perioda)</span>
               </>
             )}
           </button>
 
           <p className="text-xs text-slate-500 text-center mt-4">
-            Secure payment powered by Stripe. Cancel anytime.
+            Plaćanje obezbeđuje Stripe. Možete otkazati pretplatu u bilo kom trenutku.
           </p>
         </div>
       </div>

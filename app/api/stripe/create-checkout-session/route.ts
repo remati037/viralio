@@ -1,4 +1,4 @@
-import { getUser } from '@/lib/utils/auth'
+import { getCurrentUser } from '@/lib/auth/utils'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user is authenticated
-    const user = await getUser()
+    const user = await getCurrentUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid tier' }, { status: 400 })
     }
 
-    // Get Pro price ID from environment variables
+    // Pro plan: €19/month, 7-day trial set below (STRIPE_PRO_PRICE_ID or STRIPE_STARTER_PRICE_ID = Price ID for €19/month recurring)
     const priceId = process.env.STRIPE_PRO_PRICE_ID || process.env.STRIPE_STARTER_PRICE_ID
 
     if (!priceId) {
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         tier: tier,
       },
       success_url: `${request.nextUrl.origin}/?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${request.nextUrl.origin}/?canceled=true`,
+      cancel_url: `${request.nextUrl.origin}/pocetna?canceled=true`,
     })
 
     // Return both session ID and URL for compatibility

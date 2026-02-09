@@ -41,10 +41,18 @@ const TaskDetailModal = dynamic(() => import('@/components/TaskDetailModal'), {
   ssr: false,
 });
 
+/** Serbian plural form of "skripta": 1 skripta, 2–4 skripte, 5+ skripti (e.g. 21 skripta, 22 skripte, 25 skripti). */
+function skriptaForm(n: number): string {
+  if (n % 10 === 1 && n % 100 !== 11) return 'skripta';
+  if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20))
+    return 'skripte';
+  return 'skripti';
+}
+
 export default function PlannerPage() {
   const userId = useUserId();
   const [plannerView, setPlannerView] = useState<'kanban' | 'calendar'>(
-    'kanban'
+    'kanban',
   );
   const [isNewIdeaWizardOpen, setIsNewIdeaWizardOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -70,7 +78,7 @@ export default function PlannerPage() {
       link: string;
       displayUrl?: string;
       type?: string;
-    }>
+    }>,
   ) => {
     if (profile?.tier) {
       const userTaskCount = tasks.filter((t) => !t.is_admin_case_study).length;
@@ -105,7 +113,7 @@ export default function PlannerPage() {
           result.data.id,
           linkData.link,
           linkData.displayUrl,
-          linkData.type
+          linkData.type,
         );
         if (linkResult.error) {
           toast.error('Greška pri dodavanju linka', {
@@ -186,7 +194,7 @@ export default function PlannerPage() {
 
   const handleCalendarUpdatePublishDate = async (
     taskId: string,
-    publishDate: string
+    publishDate: string,
   ) => {
     const result = await updateTaskHook(taskId, { publish_date: publishDate });
     if (result.error) {
@@ -223,7 +231,7 @@ export default function PlannerPage() {
     taskId: string,
     link: string,
     displayUrl?: string,
-    type?: string
+    type?: string,
   ): Promise<{ data: any | null; error: string | null }> => {
     const result = await addInspirationLinkHook(taskId, link, displayUrl, type);
     if (result.error) {
@@ -256,27 +264,27 @@ export default function PlannerPage() {
 
     const publishedTasks = tasks.filter((t) => t.status === 'published');
     const completedShort = publishedTasks.filter(
-      (t) => t.format === 'Kratka Forma'
+      (t) => t.format === 'Kratka Forma',
     ).length;
     const completedLong = publishedTasks.filter(
-      (t) => t.format === 'Duga Forma'
+      (t) => t.format === 'Duga Forma',
     ).length;
 
     const now = new Date();
     const daysInMonth = new Date(
       now.getFullYear(),
       now.getMonth() + 1,
-      0
+      0,
     ).getDate();
     const dayOfMonth = now.getDate();
     const daysElapsed = dayOfMonth;
 
     const completionRatio = daysElapsed / daysInMonth;
     const requiredShort = Math.ceil(
-      (profile.monthly_goal_short || 0) * completionRatio
+      (profile.monthly_goal_short || 0) * completionRatio,
     );
     const requiredLong = Math.ceil(
-      (profile.monthly_goal_long || 0) * completionRatio
+      (profile.monthly_goal_long || 0) * completionRatio,
     );
 
     let notification: string | null = null;
@@ -308,9 +316,9 @@ export default function PlannerPage() {
     };
   }, [tasks, profile]);
 
-  if (profileLoading || tasksLoading) {
-    return <Loader fullScreen text="Učitavanje planera..." />;
-  }
+  // if (profileLoading || tasksLoading) {
+  //   return <Loader fullScreen text="Učitavanje planera..." />;
+  // }
 
   const openNewIdeaWizard = () => {
     if (profile?.tier) {
@@ -340,7 +348,7 @@ export default function PlannerPage() {
                 variant="outline"
                 className="ml-2 px-2.5 py-0.5 md:px-3 md:py-1 font-medium text-sm md:text-sm md:font-semibold rounded-lg text-muted-foreground border-border bg-muted/50 shadow-sm"
               >
-                {tasks.length} idej{tasks.length === 1 ? 'a' : 'e'}
+                {tasks.length} {skriptaForm(tasks.length)}
               </Badge>
             </h1>
             <p className="text-muted-foreground text-xs md:text-sm text-balance max-w-xl hidden sm:block">

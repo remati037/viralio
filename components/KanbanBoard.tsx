@@ -102,7 +102,7 @@ export default function KanbanBoard({
                     draggable
                     onDragStart={(e) => handleDragStart(e, task.id)}
                     onClick={() => onTaskClick(task)}
-                    className="bg-primary-foreground p-2 rounded-lg border border-border shadow-sm hover:border-chart-1/50 hover:shadow-lg hover:shadow-chart-1/10 transition-all cursor-pointer group relative active:cursor-grabbing"
+                    className="bg-gradient-to-b from-background to-muted p-2 rounded-lg border border-border shadow-sm hover:border-chart-1/50 hover:shadow-lg hover:shadow-chart-1/10 transition-all cursor-pointer group relative active:cursor-grabbing"
                   >
                     <div
                       className={`flex ${

@@ -71,21 +71,8 @@ export async function checkSubscriptionStatus(userId: string): Promise<Subscript
     subscriptionId = (payments[0] as any).stripe_subscription_id
   }
 
-  // If user has 'pro' tier but no payment record, they might be in trial
-  // In this case, we'll allow access since the webhook sets tier to 'pro' when trial starts
-  // This is a fallback for trial users who don't have a payment record yet
-  if (!subscriptionId && profile?.tier === 'pro') {
-    // User has pro tier but no payment record - likely in trial
-    // Allow access and return a reasonable end date (we'll get actual date from Stripe if possible)
-    // For now, return true to allow access - the subscription-status API will provide accurate dates
-    return {
-      hasActiveSubscription: true,
-      subscriptionEndDate: null, // Will be determined by subscription-status API
-      tier: 'pro',
-      isAdmin: false,
-    }
-  }
-
+  // No subscriptionId and not admin/unlimited: require paid subscription or Stripe trial.
+  // New signups have tier 'free' and see the payment modal; trial users have a payment record with stripe_subscription_id from webhook.
   // If we have a subscription ID, check Stripe directly
   if (subscriptionId && stripe) {
     try {
@@ -139,10 +126,8 @@ export async function checkSubscriptionStatus(userId: string): Promise<Subscript
       isAdmin: false,
     }
   }
-  console.log(paymentRecords);
 
   const latestPayment = paymentRecords[0]
-  console.log(latestPayment);
 
   // Check if subscription is still active (end date is in the future)
   if (latestPayment.subscription_period_end) {

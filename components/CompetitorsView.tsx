@@ -135,7 +135,10 @@ export default function CompetitorsView({
           </div>
         ) : (
           competitors.map((comp) => (
-            <Card key={comp.id} className="p-4 flex flex-col gap-3">
+            <Card
+              key={comp.id}
+              className="p-4 flex flex-col gap-3 bg-gradient-to-b from-background to-muted"
+            >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <Avatar>

@@ -33,9 +33,11 @@ const NewIdeaWizard = dynamic(() => import('./NewIdeaWizard'), {
 
 export default function AppLayout({
   userId,
+  user,
   children,
 }: {
   userId: string;
+  user: { name: string; email: string; avatar?: string };
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -165,7 +167,7 @@ export default function AppLayout({
   return (
     <SidebarProvider>
       <UserProvider userId={userId}>
-        <AppSidebar />
+        <AppSidebar user={user} />
         <SidebarInset>
           {/* <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30"> */}
           {/* Loader overlay - always rendered in same position to avoid hydration mismatch */}

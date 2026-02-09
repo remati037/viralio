@@ -57,11 +57,36 @@ export async function POST(request: NextRequest) {
         const isTrial = sub.status === 'trialing' || (sub.trial_end && sub.trial_end > Math.floor(Date.now() / 1000))
 
         if (isTrial) {
-          // For trial subscriptions, only update the profile tier
-          // Don't create a payment record until actual payment occurs
+          // Update profile tier and create a payment record with stripe_subscription_id so subscription check finds it
           console.log(`✅ Trial started for user ${userId}, tier: ${tier}`)
 
-          // Update user tier in profile
+          const trialEnd = sub.trial_end
+          const periodStart = sub.current_period_start
+          const periodEnd = trialEnd || sub.current_period_end
+          const periodStartDate = periodStart
+            ? new Date(typeof periodStart === 'number' ? periodStart * 1000 : parseInt(String(periodStart)) * 1000)
+            : new Date()
+          const periodEndDate = periodEnd
+            ? new Date(typeof periodEnd === 'number' ? periodEnd * 1000 : parseInt(String(periodEnd)) * 1000)
+            : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+          const { error: paymentError } = await supabase.from('payments').insert({
+            user_id: userId,
+            amount: 0,
+            currency: 'eur',
+            status: 'completed',
+            payment_method: 'stripe',
+            subscription_period_start: periodStartDate.toISOString(),
+            subscription_period_end: periodEndDate.toISOString(),
+            next_payment_date: periodEndDate.toISOString(),
+            tier_at_payment: tier,
+            stripe_subscription_id: subscriptionId,
+          })
+
+          if (paymentError) {
+            console.error('Error creating trial payment record:', paymentError)
+          }
+
           const { error: profileError } = await supabase
             .from('profiles')
             .update({ tier: tier })
@@ -184,19 +209,13 @@ export async function POST(request: NextRequest) {
           .limit(1)
           .single()
 
-        if (!existingPayment) {
-          // Try to get user from invoice customer metadata or customer email
-          const customerId = typeof subscription.customer === 'string'
-            ? subscription.customer
-            : (subscription.customer as Stripe.Customer).id
+        let userId: string | null = existingPayment?.user_id ?? (sub.metadata?.userId as string) ?? null
+        const tier = (existingPayment?.tier_at_payment || sub.metadata?.tier || 'pro') as string
 
-          // If we can't find user, log and skip
+        if (!userId) {
           console.log('Could not find user for subscription:', subscriptionId)
           break
         }
-
-        const userId = existingPayment.user_id
-        const tier = existingPayment.tier_at_payment || 'pro'
 
         // Check if this is the first payment (trial just ended) or a renewal
         const currentPeriodStart = sub.current_period_start
@@ -241,6 +260,11 @@ export async function POST(request: NextRequest) {
           console.error('Error creating payment record from invoice:', paymentError)
         } else {
           console.log(`✅ Payment record created from invoice for user ${userId}, amount: ${amount} ${currency}`)
+          // Ensure profile tier is set (e.g. first payment after trial when userId came from metadata)
+          await supabase
+            .from('profiles')
+            .update({ tier: tier })
+            .eq('id', userId)
         }
       } catch (error) {
         console.error('Error processing invoice payment:', error)

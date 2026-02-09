@@ -48,7 +48,6 @@ export default function SubscriptionGate({
       setShowModal(true);
     }
   }, [hasActiveSubscription, searchParams]);
-  console.log(hasActiveSubscription);
 
   if (!hasActiveSubscription) {
     return (
