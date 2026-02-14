@@ -5,6 +5,8 @@ import { useAICredits } from '@/lib/hooks/useAICredits';
 import { fetchWithCacheBust } from '@/lib/sanity/client-client';
 import { getPublishedTemplatesByNicheQuery } from '@/lib/sanity/template-query';
 import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
+import { isLongFormHidden } from '@/lib/utils/featureFlags';
 import { getYoutubeThumbnail } from '@/lib/utils/helpers';
 import type { TaskInsert, UserTier } from '@/types';
 import {
@@ -16,7 +18,6 @@ import {
   Link,
   Plus,
   Trash2,
-  X,
   Youtube,
   Zap,
 } from 'lucide-react';
@@ -30,6 +31,7 @@ import DatePicker from './ui/date-picker';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import Loader from './ui/loader';
+import Modal, { modalInputClass, modalPrimaryButtonClass } from './ui/modal';
 import RichTextEditor from './ui/rich-text-editor';
 import Skeleton from './ui/skeleton';
 import ToneSelect, { type Tone } from './ui/tone-select';
@@ -42,7 +44,7 @@ interface NewIdeaWizardProps {
       link: string;
       displayUrl?: string;
       type?: string;
-    }>
+    }>,
   ) => Promise<void>;
   userTier?: UserTier;
   userId: string;
@@ -58,7 +60,7 @@ export default function NewIdeaWizard({
 }: NewIdeaWizardProps) {
   const supabase = createClient();
   const [step, setStep] = useState<'start' | 'template_select' | 'script_edit'>(
-    'start'
+    'start',
   );
   const [selectedNiche, setSelectedNiche] = useState('marketing');
   const [sanityTemplates, setSanityTemplates] = useState<any[]>([]);
@@ -66,7 +68,7 @@ export default function NewIdeaWizard({
   const [categories, setCategories] = useState<TaskCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    null
+    null,
   );
   const [formData, setFormData] = useState({
     title: '',
@@ -151,7 +153,7 @@ export default function NewIdeaWizard({
         '🔍 Fetching templates for niche:',
         nicheName,
         '(selectedNiche:',
-        selectedNiche + ')'
+        selectedNiche + ')',
       );
       console.log('🔍 Using Sanity niche:', sanityNiche);
 
@@ -160,14 +162,14 @@ export default function NewIdeaWizard({
       const templates = await fetchWithCacheBust<any[]>(
         getPublishedTemplatesByNicheQuery,
         { niche: sanityNiche },
-        { forceFresh: true } // Always force fresh to see latest edits
+        { forceFresh: true }, // Always force fresh to see latest edits
       );
 
       console.log(
         '✅ Sanity templates fetched:',
         templates?.length || 0,
         'templates for niche:',
-        nicheName
+        nicheName,
       );
       console.log('Sanity templates data:', templates);
       setSanityTemplates(templates || []);
@@ -178,11 +180,11 @@ export default function NewIdeaWizard({
       if (error.name === 'SanityCORSError' || error.message?.includes('CORS')) {
         toast.error(
           'Sanity CORS Error: Your domain needs to be added to Sanity CORS origins. Check console for instructions.',
-          { duration: 10000 }
+          { duration: 10000 },
         );
       } else {
         toast.error(
-          'Failed to fetch templates from Sanity. Please try again later.'
+          'Failed to fetch templates from Sanity. Please try again later.',
         );
       }
 
@@ -192,24 +194,25 @@ export default function NewIdeaWizard({
     }
   };
 
-  // Only use Sanity templates
-  const activeTemplates = useMemo(
-    () =>
-      sanityTemplates.map((t) => ({
-        id: t._id,
-        title: t.title,
-        format: t.format,
-        concept: t.concept || '',
-        structure: {
-          hook: t.structure?.hook || '',
-          body: t.structure?.body || '',
-          cta: t.structure?.cta || '',
-        },
-        vlads_tip: t.vladsTip || '',
-        source: 'sanity' as const,
-      })),
-    [sanityTemplates]
-  );
+  // Only use Sanity templates; filter out Duga Forma when flag is on
+  const activeTemplates = useMemo(() => {
+    const mapped = sanityTemplates.map((t) => ({
+      id: t._id,
+      title: t.title,
+      format: t.format,
+      concept: t.concept || '',
+      structure: {
+        hook: t.structure?.hook || '',
+        body: t.structure?.body || '',
+        cta: t.structure?.cta || '',
+      },
+      vlads_tip: t.vladsTip || '',
+      source: 'sanity' as const,
+    }));
+    return isLongFormHidden()
+      ? mapped.filter((t) => t.format === 'Kratka Forma')
+      : mapped;
+  }, [sanityTemplates]);
 
   // Debug: Log templates
   useEffect(() => {
@@ -222,14 +225,17 @@ export default function NewIdeaWizard({
 
   const handleSelectTemplate = (template: (typeof activeTemplates)[0]) => {
     const topic = formData.title || 'Moja Tema';
+    const effectiveFormat = isLongFormHidden()
+      ? ('Kratka Forma' as const)
+      : template.format;
 
     // Determine network based on format
     const networkForFormat =
-      template.format === 'Duga Forma'
+      effectiveFormat === 'Duga Forma'
         ? NETWORKS.find((n) => n.id === 'youtube')?.name || NETWORKS[1].name
         : NETWORKS.find((n) => n.id === 'instagram')?.name || NETWORKS[0].name;
 
-    if (template.format === 'Duga Forma') {
+    if (effectiveFormat === 'Duga Forma') {
       const generatedScript = `UVOD: U prve 3 sekunde kaži zašto bi trebalo da ostanu do kraja.
 GLAVNA TEMA 1: ${template.structure.body
         .replace('[TOPIC]', topic)
@@ -240,7 +246,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
       setFormData((prev) => ({
         ...prev,
         title: prev.title || template.title,
-        format: template.format as 'Kratka Forma' | 'Duga Forma',
+        format: effectiveFormat as 'Kratka Forma' | 'Duga Forma',
         network: networkForFormat,
         originalTemplate: template.title,
         fullScript: generatedScript,
@@ -260,7 +266,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
       setFormData((prev) => ({
         ...prev,
         title: prev.title || template.title,
-        format: template.format as 'Kratka Forma' | 'Duga Forma',
+        format: effectiveFormat as 'Kratka Forma' | 'Duga Forma',
         network: networkForFormat,
         originalTemplate: template.title,
         hook: hookText,
@@ -397,20 +403,23 @@ ZAKLJUČAK: ${template.structure.cta}`;
 
     setIsSaving(true);
 
+    const effectiveFormat = isLongFormHidden()
+      ? 'Kratka Forma'
+      : formData.format;
     const newTask = {
       title: formData.title.trim(),
       niche: formData.niche,
-      format: formData.format,
+      format: effectiveFormat,
       hook:
-        formData.format === 'Duga Forma'
+        effectiveFormat === 'Duga Forma'
           ? formData.fullScript.trim()
           : formData.hook.trim(),
       body:
-        formData.format === 'Duga Forma'
+        effectiveFormat === 'Duga Forma'
           ? 'CEO TEKST se nalazi u Hook/Skripta polju u detaljima.'
           : formData.body.trim(),
       cta:
-        formData.format === 'Duga Forma'
+        effectiveFormat === 'Duga Forma'
           ? 'Duga Forma: Nema odvojenog CTA za Kanban.'
           : formData.cta.trim(),
       status: 'idea' as const,
@@ -421,7 +430,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
 
     await onSaveToPlan(
       newTask as Omit<TaskInsert, 'user_id'>,
-      inspirationLinks
+      inspirationLinks,
     );
     setIsSaving(false);
     onClose();
@@ -433,14 +442,14 @@ ZAKLJUČAK: ${template.structure.cta}`;
     template: (typeof activeTemplates)[0];
   }) => (
     <Card
-      className="group flex h-full cursor-pointer flex-col border-border bg-card p-4 transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5"
+      className="group flex h-full cursor-pointer flex-col border border-slate-200 bg-slate-50 p-4 rounded-xl transition-all duration-200 hover:border-chart-2/50 hover:bg-white hover:shadow-md"
       onClick={() => handleSelectTemplate(template)}
     >
       <div className="mb-2 flex items-start justify-between">
         <span
           className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
             template.format === 'Kratka Forma'
-              ? 'bg-destructive/20 text-destructive'
+              ? 'bg-chart-1/20 text-chart-1'
               : 'bg-chart-2/20 text-chart-2'
           }`}
         >
@@ -448,11 +457,11 @@ ZAKLJUČAK: ${template.structure.cta}`;
         </span>
       </div>
 
-      <h3 className="mb-2 text-base font-bold text-foreground transition-colors group-hover:text-primary">
+      <h3 className="mb-2 text-base font-semibold text-slate-900 transition-colors group-hover:text-chart-2">
         {template.title}
       </h3>
 
-      <p className="mb-4 flex-grow line-clamp-2 text-xs text-muted-foreground">
+      <p className="mb-4 flex-grow line-clamp-2 text-xs text-slate-600">
         {template.concept}
       </p>
 
@@ -460,9 +469,9 @@ ZAKLJUČAK: ${template.structure.cta}`;
         <Button
           type="button"
           size="sm"
-          className="w-full gap-1 text-xs font-bold"
+          className="w-full gap-1 text-xs font-semibold bg-chart-2/90 hover:bg-chart-2 text-white border-0"
         >
-          <Zap size={14} /> Koristi Šablon
+          <Zap size={14} /> Koristi šablon
         </Button>
       </div>
     </Card>
@@ -471,31 +480,37 @@ ZAKLJUČAK: ${template.structure.cta}`;
   const renderContent = () => {
     if (step === 'start') {
       return (
-        <div className="space-y-4 p-4">
-          <h3 className="text-lg font-bold text-foreground">
-            1. Odaberi način kreiranja ideje
+        <div className="space-y-5">
+          <h3 className="text-lg font-semibold text-slate-900">
+            1. Odaberi način kreiranja skripte
           </h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <Card
-              className="flex cursor-pointer flex-col items-center space-y-2 rounded-lg border-border bg-card p-4 text-center transition-all hover:border-primary/50"
+              className="flex cursor-pointer flex-col items-center space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-5 text-center transition-all duration-200 hover:border-chart-2/50 hover:bg-white hover:shadow-md"
               onClick={handleManualStart}
             >
-              <FileText size={22} className="text-primary" />
-              <p className="text-base font-bold text-foreground">Ručni Unos</p>
-              <p className="text-sm text-muted-foreground">
-                Počnite od nule sa praznom skriptom.
+              <div className="rounded-xl bg-slate-100 p-3">
+                <FileText size={24} className="text-chart-2" />
+              </div>
+              <p className="text-base font-semibold text-slate-900">
+                Ručni unos
+              </p>
+              <p className="text-sm text-slate-600">
+                Počni od nule sa praznom skriptom.
               </p>
             </Card>
             <Card
-              className="flex cursor-pointer flex-col items-center space-y-2 rounded-lg border-border bg-card p-4 text-center transition-all hover:border-chart-2/50"
+              className="flex cursor-pointer flex-col items-center space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-5 text-center transition-all duration-200 hover:border-chart-3/50 hover:bg-white hover:shadow-md"
               onClick={() => setStep('template_select')}
             >
-              <Zap size={22} className="text-chart-2" />
-              <p className="text-base font-bold text-foreground">
-                Koristi Šablon
+              <div className="rounded-xl bg-slate-100 p-3">
+                <Zap size={24} className="text-chart-2" />
+              </div>
+              <p className="text-base font-semibold text-slate-900">
+                Koristi šablon
               </p>
-              <p className="text-sm text-muted-foreground">
-                Izaberite viralni format za brzi start.
+              <p className="text-sm text-slate-600">
+                Izaberi viralni format za brzi start.
               </p>
             </Card>
           </div>
@@ -505,16 +520,16 @@ ZAKLJUČAK: ${template.structure.cta}`;
 
     if (step === 'template_select') {
       return (
-        <div className="space-y-6 p-6">
+        <div className="space-y-6">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-xl font-bold text-foreground">
+            <h3 className="flex items-center gap-2 text-xl font-semibold text-slate-900">
               <Zap className="h-5 w-5 text-chart-3" /> 2. Odaberi Šablon
             </h3>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setStep('start')}
-              className="gap-1 text-muted-foreground hover:text-foreground"
+              className="gap-1 text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg"
             >
               <ChevronLeft size={16} /> Nazad
             </Button>
@@ -529,8 +544,8 @@ ZAKLJUČAK: ${template.structure.cta}`;
                 onClick={() => setSelectedNiche(niche.id)}
                 className={
                   selectedNiche === niche.id
-                    ? ''
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                    ? 'bg-chart-3 text-white border-chart-3 hover:bg-chart-3/90'
+                    : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900'
                 }
               >
                 {niche.name}
@@ -540,23 +555,34 @@ ZAKLJUČAK: ${template.structure.cta}`;
 
           {loadingTemplates ? (
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Card key={i} className="space-y-3 border-border bg-card p-4">
+              {[1, 2, 3].map((i) => (
+                <Card
+                  key={i}
+                  className="space-y-3 border border-slate-200 bg-slate-50 p-4 rounded-xl"
+                >
                   <div className="flex justify-between">
-                    <Skeleton height={20} width="60px" />
-                    <Skeleton height={20} width="50px" />
+                    <Skeleton
+                      height={20}
+                      width="60px"
+                      className="bg-slate-200"
+                    />
+                    <Skeleton
+                      height={20}
+                      width="50px"
+                      className="bg-slate-200"
+                    />
                   </div>
-                  <Skeleton height={24} width="100%" />
-                  <Skeleton height={40} width="100%" />
-                  <Skeleton height={32} width="100%" />
+                  <Skeleton height={24} width="100%" className="bg-slate-200" />
+                  <Skeleton height={40} width="100%" className="bg-slate-200" />
+                  <Skeleton height={32} width="100%" className="bg-slate-200" />
                 </Card>
               ))}
             </div>
           ) : (
             <div className="grid max-h-[50vh] grid-cols-2 gap-4 overflow-y-auto pr-2 md:grid-cols-3">
               {activeTemplates.length === 0 ? (
-                <div className="col-span-full py-8 text-center text-muted-foreground">
-                  Trenutno nema sablona za ovu kategoriju
+                <div className="col-span-full py-8 text-center text-slate-500">
+                  Trenutno nema šablona za ovu kategoriju
                 </div>
               ) : (
                 activeTemplates.map((template) => (
@@ -570,7 +596,8 @@ ZAKLJUČAK: ${template.structure.cta}`;
     }
 
     if (step === 'script_edit') {
-      const isLongForm = formData.format === 'Duga Forma';
+      const isLongForm =
+        formData.format === 'Duga Forma' && !isLongFormHidden();
 
       // Check which required fields are missing for AI generation
       const missingFields = [];
@@ -582,10 +609,13 @@ ZAKLJUČAK: ${template.structure.cta}`;
       const hasAllRequiredFields = missingFields.length === 0;
 
       return (
-        <div className="flex flex-1 flex-col space-y-4 p-4">
+        <div className="flex flex-1 flex-col space-y-4">
           <div className="mb-2 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-lg font-bold text-foreground">
-              <Edit3 className="h-4 w-4 text-chart-2" /> 2. Skripta i detalji
+            <h3 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+              <Edit3 className="h-4 w-4 text-chart-2" />{' '}
+              {formData.originalTemplate === 'Ručni Unos'
+                ? '2. Detalji skripte'
+                : '3. Detalji skripte'}
             </h3>
             <Button
               variant="ghost"
@@ -597,7 +627,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
                   setStep('template_select');
                 }
               }}
-              className="gap-1 text-muted-foreground hover:text-foreground"
+              className="gap-1 text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg"
             >
               <ChevronLeft size={16} />{' '}
               {formData.originalTemplate === 'Ručni Unos'
@@ -608,21 +638,20 @@ ZAKLJUČAK: ${template.structure.cta}`;
 
           {/* AI Generator Requirements Notification */}
           {!hasAllRequiredFields && (
-            <div className="space-y-2 rounded-lg border border-chart-3/50 bg-chart-3/10 p-4">
+            <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-4">
               <div className="flex items-start gap-3">
-                <Info className="mt-0.5 h-5 w-5 shrink-0 text-chart-3" />
+                <Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
                 <div className="flex-1">
-                  <h4 className="mb-1 text-sm font-semibold text-foreground">
+                  <h4 className="mb-1 text-sm font-semibold text-slate-900">
                     Potrebno za AI generator
                   </h4>
-                  <p className="mb-2 text-xs text-muted-foreground">
-                    Da biste koristili AI generator, molimo popunite sledeća
-                    obavezna polja:
+                  <p className="mb-2 text-xs text-slate-600">
+                    Za korišćenje AI generatora, molim te popuni sledeća polja:
                   </p>
-                  <ul className="list-inside list-disc space-y-1 text-xs text-muted-foreground">
+                  <ul className="list-inside list-disc space-y-1 text-xs text-slate-600">
                     {missingFields.map((field) => (
                       <li key={field} className="flex items-center gap-2">
-                        <span className="text-chart-3">•</span>
+                        <span className="text-amber-600">•</span>
                         <span>{field}</span>
                       </li>
                     ))}
@@ -633,24 +662,24 @@ ZAKLJUČAK: ${template.structure.cta}`;
           )}
 
           <div className="space-y-2">
-            <Label className="text-foreground">Naslov ideje</Label>
+            <Label className="text-slate-700">Naslov skripte</Label>
             <Input
               type="text"
               value={formData.title}
               onChange={(e) =>
                 setFormData((p) => ({ ...p, title: e.target.value }))
               }
-              placeholder="Unesite naslov (npr. 3 Alata za brže kreiranje sadržaja)"
-              className="w-full"
+              placeholder="Unesi naslov (npr. 3 alata za brže kreiranje sadržaja)"
+              className={cn('w-full rounded-lg', modalInputClass)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-foreground">
-              Kategorija <span className="text-destructive">*</span>
+            <Label className="text-slate-700">
+              Kategorija <span className="text-red-500">*</span>
             </Label>
             {loadingCategories ? (
-              <div className="w-full rounded-lg border border-border bg-muted p-3 text-muted-foreground">
+              <div className="w-full rounded-lg border border-slate-200 bg-slate-50 p-3 text-slate-500 text-sm">
                 Učitavanje kategorija...
               </div>
             ) : (
@@ -658,27 +687,29 @@ ZAKLJUČAK: ${template.structure.cta}`;
                 categories={categories}
                 value={selectedCategoryId}
                 onChange={setSelectedCategoryId}
-                placeholder="Izaberite kategoriju"
+                placeholder="Izaberi kategoriju"
                 className="w-full"
+                variant="light"
               />
             )}
           </div>
 
           <div className="space-y-2">
-            <Label className="text-foreground">
-              Ton / Stil <span className="text-destructive">*</span>
+            <Label className="text-slate-700">
+              Ton / Stil <span className="text-red-500">*</span>
             </Label>
             <ToneSelect
               value={formData.tone}
               onChange={(tone) => setFormData((p) => ({ ...p, tone }))}
-              placeholder="Izaberite ton"
+              placeholder="Izaberi ton"
               className="w-full"
+              variant="light"
             />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-foreground">
-              Ciljna Publika <span className="text-destructive">*</span>
+            <Label className="text-slate-700">
+              Ciljna Publika <span className="text-red-500">*</span>
             </Label>
             <Input
               type="text"
@@ -687,14 +718,18 @@ ZAKLJUČAK: ${template.structure.cta}`;
                 setFormData((p) => ({ ...p, targetAudience: e.target.value }))
               }
               placeholder="npr. Preduzetnici 25-40 godina, Marketinški stručnjaci..."
-              className="w-full"
+              className={cn('w-full rounded-lg', modalInputClass)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-foreground">Mreža za objavljivanje</Label>
+            <Label className="text-slate-700">Mreža za objavljivanje</Label>
             <div className="flex flex-wrap gap-2">
-              {NETWORKS.map((net) => {
+              {NETWORKS.filter(
+                (net) =>
+                  !isLongFormHidden() ||
+                  (net.id !== 'youtube' && net.id !== 'facebook'),
+              ).map((net) => {
                 const Icon = net.icon;
                 const isLongFormNetwork =
                   net.id === 'youtube' || net.id === 'facebook';
@@ -723,8 +758,9 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       setFormData((p) => ({
                         ...p,
                         network: net.name,
-                        format:
-                          net.id === 'youtube' || net.id === 'facebook'
+                        format: isLongFormHidden()
+                          ? 'Kratka Forma'
+                          : net.id === 'youtube' || net.id === 'facebook'
                             ? 'Duga Forma'
                             : 'Kratka Forma',
                       }));
@@ -732,10 +768,10 @@ ZAKLJUČAK: ${template.structure.cta}`;
                     disabled={isDisabled}
                     className={
                       formData.network === net.name
-                        ? 'gap-2'
+                        ? 'gap-2 bg-chart-2 text-white border-chart-2'
                         : isDisabled
                           ? 'cursor-not-allowed opacity-50'
-                          : 'gap-2 bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                          : 'gap-2 border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900'
                     }
                   >
                     <Icon
@@ -751,23 +787,25 @@ ZAKLJUČAK: ${template.structure.cta}`;
                 );
               })}
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Automatski format:
-              <span
-                className={`ml-1 font-semibold ${
-                  formData.format === 'Kratka Forma'
-                    ? 'text-destructive'
-                    : 'text-chart-2'
-                }`}
-              >
-                {formData.format}
-              </span>
-            </p>
+            {!isLongFormHidden() && (
+              <p className="mt-2 text-xs text-slate-600">
+                Automatski format:
+                <span
+                  className={`ml-1 font-semibold ${
+                    formData.format === 'Kratka Forma'
+                      ? 'text-chart-1'
+                      : 'text-chart-2'
+                  }`}
+                >
+                  {formData.format}
+                </span>
+              </p>
+            )}
           </div>
 
-          {isLongForm ? (
+          {isLongForm && !isLongFormHidden() ? (
             <div className="flex-1 flex flex-col min-h-[300px]">
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Ceo scenario / Tekst duge forme
               </label>
               <RichTextEditor
@@ -785,6 +823,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
                 placeholder="Pišite ceo scenario, uključujući uvod, glavne tačke i zaključak. Nije potrebno odvajati sekcije."
                 minHeight="300px"
                 className="flex-1"
+                variant="light"
                 aiButton={{
                   fieldType: 'fullScript' as const,
                   taskContext: {
@@ -796,14 +835,14 @@ ZAKLJUČAK: ${template.structure.cta}`;
                     cta: formData.cta,
                     categoryId: selectedCategoryId,
                     categoryName: categories.find(
-                      (c) => c.id === selectedCategoryId
+                      (c) => c.id === selectedCategoryId,
                     )?.name,
                     tone: formData.tone,
                     targetAudience: formData.targetAudience || undefined,
                   },
                 }}
               />
-              <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+              <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
                 <span>
                   Procena trajanja videa:{' '}
                   {getDurationEstimate(formData.fullScript)} (~
@@ -823,7 +862,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
           ) : (
             <div className="space-y-4">
               <div>
-                <Label className="mb-2 block text-sm font-bold text-destructive">
+                <Label className="mb-2 block text-base font-semibold text-primary">
                   01. HOOK (Udica)
                 </Label>
                 <RichTextEditor
@@ -836,8 +875,9 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       tempDiv.textContent || tempDiv.innerText || '';
                     setFormData((p) => ({ ...p, hook: plainText }));
                   }}
-                  placeholder="Unesite hook ovde (0-3 sekunde)"
+                  placeholder="Unesi hook ovde (0-3 sekunde)"
                   minHeight="80px"
+                  variant="light"
                   aiButton={{
                     fieldType: 'hook' as const,
                     taskContext: {
@@ -849,7 +889,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       cta: formData.cta,
                       categoryId: selectedCategoryId,
                       categoryName: categories.find(
-                        (c) => c.id === selectedCategoryId
+                        (c) => c.id === selectedCategoryId,
                       )?.name,
                       tone: formData.tone,
                       targetAudience: formData.targetAudience || undefined,
@@ -859,7 +899,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
               </div>
 
               <div>
-                <Label className="mb-2 block text-sm font-bold text-primary">
+                <Label className="mb-2 block text-base font-semibold text-primary">
                   02. BODY (Vrednost)
                 </Label>
                 <RichTextEditor
@@ -872,8 +912,9 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       tempDiv.textContent || tempDiv.innerText || '';
                     setFormData((p) => ({ ...p, body: plainText }));
                   }}
-                  placeholder="Unesite ključnu vrednost ovde (3-45 sekundi)"
+                  placeholder="Unesi tekst skripte ovde (3-45 sekundi)"
                   minHeight="120px"
+                  variant="light"
                   aiButton={{
                     fieldType: 'body' as const,
                     taskContext: {
@@ -885,7 +926,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       cta: formData.cta,
                       categoryId: selectedCategoryId,
                       categoryName: categories.find(
-                        (c) => c.id === selectedCategoryId
+                        (c) => c.id === selectedCategoryId,
                       )?.name,
                       tone: formData.tone,
                       targetAudience: formData.targetAudience || undefined,
@@ -895,7 +936,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
               </div>
 
               <div>
-                <Label className="mb-2 block text-sm font-bold text-chart-2">
+                <Label className="mb-2 block text-base font-semibold text-primary">
                   03. CTA (Poziv na akciju)
                 </Label>
                 <RichTextEditor
@@ -908,8 +949,9 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       tempDiv.textContent || tempDiv.innerText || '';
                     setFormData((p) => ({ ...p, cta: plainText }));
                   }}
-                  placeholder="Unesite poziv na akciju ovde"
+                  placeholder="Unesi poziv na akciju ovde"
                   minHeight="60px"
+                  variant="light"
                   aiButton={{
                     fieldType: 'cta' as const,
                     taskContext: {
@@ -921,7 +963,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       cta: formData.cta,
                       categoryId: selectedCategoryId,
                       categoryName: categories.find(
-                        (c) => c.id === selectedCategoryId
+                        (c) => c.id === selectedCategoryId,
                       )?.name,
                       tone: formData.tone,
                       targetAudience: formData.targetAudience || undefined,
@@ -930,11 +972,11 @@ ZAKLJUČAK: ${template.structure.cta}`;
                 />
               </div>
 
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center justify-between text-xs text-slate-500">
                 <span>
                   Procena trajanja:{' '}
                   {getDurationEstimate(
-                    `${formData.hook} ${formData.body} ${formData.cta}`
+                    `${formData.hook} ${formData.body} ${formData.cta}`,
                   )}
                 </span>
                 <span>{getTotalWordCount()} reči</span>
@@ -943,8 +985,8 @@ ZAKLJUČAK: ${template.structure.cta}`;
           )}
 
           {/* Inspiration Links Section */}
-          <div className="space-y-2 border-t border-border pt-4">
-            <h4 className="flex items-center gap-2 text-sm font-bold uppercase text-foreground">
+          <div className="space-y-2 border-t border-slate-200 pt-4">
+            <h4 className="flex items-center gap-2 text-base font-semibold uppercase tracking-wide text-primary">
               <Link size={14} className="text-chart-3" /> Inspiracija
             </h4>
             <div className="flex gap-2">
@@ -958,14 +1000,14 @@ ZAKLJUČAK: ${template.structure.cta}`;
                     handleAddInspirationLink();
                   }
                 }}
-                placeholder="Paste link (YouTube, Instagram, TikTok...)"
-                className="flex-1"
+                placeholder="Unesi link (YouTube, Instagram, TikTok...)"
+                className={cn('flex-1 rounded-lg', modalInputClass)}
               />
               <Button
                 type="button"
                 onClick={handleAddInspirationLink}
                 disabled={!linkInput.trim() || isAddingLink}
-                className="gap-2 bg-chart-2 hover:bg-chart-2/90"
+                className={cn('gap-2 rounded-lg', modalPrimaryButtonClass)}
               >
                 {isAddingLink ? (
                   <>
@@ -985,7 +1027,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
                 {inspirationLinks.map((item, index) => (
                   <Card
                     key={index}
-                    className="group relative overflow-hidden border-border bg-card"
+                    className="group relative overflow-hidden border border-slate-200 bg-slate-50 rounded-xl"
                   >
                     {item.displayUrl && item.type === 'youtube' ? (
                       <div className="relative">
@@ -1006,8 +1048,8 @@ ZAKLJUČAK: ${template.structure.cta}`;
                         />
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 bg-muted/50 p-2 text-xs text-muted-foreground">
-                        <Link size={14} className="text-primary" />
+                      <div className="flex items-center gap-2 bg-slate-100 p-2 text-xs text-slate-600">
+                        <Link size={14} className="text-chart-2" />
                         Eksterni Link
                       </div>
                     )}
@@ -1016,7 +1058,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
                         href={item.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="max-w-[70%] truncate text-xs text-primary hover:underline"
+                        className="max-w-[70%] truncate text-xs text-chart-2 hover:underline"
                       >
                         {item.link
                           .replace(/^https?:\/\//, '')
@@ -1027,7 +1069,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
                         variant="ghost"
                         size="icon"
                         onClick={() => handleRemoveInspirationLink(index)}
-                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                        className="h-8 w-8 shrink-0 text-slate-500 hover:text-chart-1"
                         title="Obriši link"
                       >
                         <Trash2 size={14} />
@@ -1040,12 +1082,12 @@ ZAKLJUČAK: ${template.structure.cta}`;
           </div>
 
           {/* Publish Date Section */}
-          <div className="space-y-2 border-t border-border pt-4">
-            <h4 className="flex items-center gap-2 text-sm font-bold uppercase text-foreground">
+          <div className="space-y-2 border-t border-slate-200 pt-4">
+            <h4 className="flex items-center gap-2 text-base font-semibold uppercase tracking-wide text-primary">
               <Calendar size={14} className="text-chart-4" /> Raspored
             </h4>
             <div className="space-y-2">
-              <Label className="text-foreground">
+              <Label className="text-slate-700">
                 Planirani datum objavljivanja
               </Label>
               <DatePicker
@@ -1166,7 +1208,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
             />
           </div> */}
 
-          <div className="border-t border-border pt-6">
+          <div className="border-t border-slate-200 pt-6">
             <Button
               type="button"
               size="lg"
@@ -1175,14 +1217,16 @@ ZAKLJUČAK: ${template.structure.cta}`;
                 isSaving ||
                 !formData.title.trim() ||
                 !selectedCategoryId ||
-                (formData.format === 'Kratka Forma' &&
+                (isLongForm && !formData.fullScript.trim()) ||
+                (!isLongForm &&
                   !formData.hook.trim() &&
                   !formData.body.trim() &&
-                  !formData.cta.trim()) ||
-                (formData.format === 'Duga Forma' &&
-                  !formData.fullScript.trim())
+                  !formData.cta.trim())
               }
-              className="w-full gap-2 text-base font-bold bg-chart-2 hover:bg-chart-2/90"
+              className={cn(
+                'w-full gap-2 text-base font-semibold border-0 rounded-xl py-6',
+                modalPrimaryButtonClass,
+              )}
             >
               <Calendar size={16} />{' '}
               {isSaving ? 'Čuvanje skripte...' : 'Sačuvaj skriptu'}
@@ -1193,36 +1237,32 @@ ZAKLJUČAK: ${template.structure.cta}`;
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 p-4 backdrop-blur-sm">
-      <Card className="flex max-h-[95vh] w-full max-w-4xl flex-col border-border bg-card shadow-lg">
-        <div className="flex shrink-0 items-center justify-between border-b border-border p-4">
-          <div className="flex items-center gap-3">
-            <h3 className="flex items-center gap-2 text-base font-bold text-foreground">
-              <Plus className="h-4 w-4 text-chart-2" />
-              Nova ideja
-            </h3>
-            {credits && (
-              <AICreditBadge
-                creditsRemaining={credits.credits_remaining}
-                maxCredits={credits.max_credits}
-                compact={true}
-                showWarning={true}
-              />
-            )}
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            aria-label="Zatvori"
-          >
-            <X size={20} />
-          </Button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">{renderContent()}</div>
-      </Card>
+  const modalTitle = (
+    <div className="flex items-center gap-2">
+      {/* <Plus className="h-4 w-4 text-chart-2" /> */}
+      <span>Nova skripta</span>
+      {credits && (
+        <AICreditBadge
+          creditsRemaining={credits.credits_remaining}
+          maxCredits={credits.max_credits}
+          compact={true}
+          showWarning={true}
+        />
+      )}
     </div>
+  );
+
+  return (
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={modalTitle}
+      maxWidth="4xl"
+      className="max-h-[90vh] overflow-hidden flex flex-col"
+    >
+      <div className="flex flex-1 flex-col min-h-0 overflow-y-auto">
+        {renderContent()}
+      </div>
+    </Modal>
   );
 }

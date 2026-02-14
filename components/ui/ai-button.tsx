@@ -312,7 +312,7 @@ export default function AIButton({
         if (error.error_code === 'INSUFFICIENT_CREDITS') {
           refreshCredits();
           throw new Error(
-            `Nedovoljno AI kredita. Preostalo: ${error.credits_remaining}/${error.max_credits}. Krediti se resetuju: ${new Date(error.reset_at).toLocaleDateString('sr-RS')}`
+            `Nedovoljno AI kredita. Preostalo: ${error.credits_remaining}/${error.max_credits}. Krediti se resetuju: ${new Date(error.reset_at).toLocaleDateString('sr-RS')}`,
           );
         }
 
@@ -364,7 +364,7 @@ export default function AIButton({
           const hookLines = lines.filter((line: string) => {
             const lowerLine = line.toLowerCase();
             return !explanationIndicators.some((indicator) =>
-              lowerLine.includes(indicator)
+              lowerLine.includes(indicator),
             );
           });
 
@@ -493,7 +493,7 @@ export default function AIButton({
       <button
         onClick={handleGenerate}
         disabled={isDisabled}
-        className={`flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:from-purple-700 disabled:to-blue-700 disabled:cursor-not-allowed text-white rounded-md text-sm font-medium transition-all shadow-lg ${isDisabled ? 'opacity-60' : ''}`}
+        className={`w-fit flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:from-purple-700 disabled:to-blue-700 disabled:cursor-not-allowed text-white rounded-md text-sm font-medium transition-all shadow-lg ${isDisabled ? 'opacity-60' : ''}`}
         title={getTooltipText()}
       >
         {isLoading ? (

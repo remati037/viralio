@@ -1,5 +1,6 @@
 'use client';
 
+import { isLongFormHidden } from '@/lib/utils/featureFlags';
 import { Target, Video, Youtube } from 'lucide-react';
 import { Card, CardTitle } from './ui/card';
 import {
@@ -23,7 +24,7 @@ interface GoalProgressDashboardProps {
   };
 }
 
-function ProgressBar({
+export function ProgressBar({
   current,
   goal,
   colorClass,
@@ -104,7 +105,11 @@ export default function GoalProgressDashboard({
             </Badge>
           )} */}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-8 min-w-0">
+        <div
+          className={`grid gap-3 md:gap-8 min-w-0 ${
+            isLongFormHidden() ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'
+          }`}
+        >
           <div className="space-y-1.5 min-w-0">
             <div className="flex justify-between items-center gap-2 min-w-0">
               <span className="text-sm md:text-base font-medium text-muted-foreground flex items-center gap-1.5 shrink-0 truncate">
@@ -131,31 +136,33 @@ export default function GoalProgressDashboard({
             />
           </div>
 
-          <div className="space-y-1.5 min-w-0">
-            <div className="flex justify-between items-center gap-2 min-w-0">
-              <span className="text-sm md:text-base font-medium text-muted-foreground flex items-center gap-1.5 shrink-0 truncate">
-                <Youtube
-                  size={16}
-                  className="text-chart-2 shrink-0 md:w-5 md:h-5"
-                />
-                Duga forma
-              </span>
-              <span className="text-xs md:text-sm font-semibold tabular-nums shrink-0">
-                {completedLong}/{monthlyGoalLong}
-                {monthlyGoalLong > 0 && (
-                  <span className="text-muted-foreground font-normal md:inline hidden ml-1">
-                    ({longPercent.toFixed(0)}%)
-                  </span>
-                )}
-              </span>
+          {!isLongFormHidden() && (
+            <div className="space-y-1.5 min-w-0">
+              <div className="flex justify-between items-center gap-2 min-w-0">
+                <span className="text-sm md:text-base font-medium text-muted-foreground flex items-center gap-1.5 shrink-0 truncate">
+                  <Youtube
+                    size={16}
+                    className="text-chart-2 shrink-0 md:w-5 md:h-5"
+                  />
+                  Duga forma
+                </span>
+                <span className="text-xs md:text-sm font-semibold tabular-nums shrink-0">
+                  {completedLong}/{monthlyGoalLong}
+                  {monthlyGoalLong > 0 && (
+                    <span className="text-muted-foreground font-normal md:inline hidden ml-1">
+                      ({longPercent.toFixed(0)}%)
+                    </span>
+                  )}
+                </span>
+              </div>
+              <ProgressBar
+                current={completedLong}
+                goal={monthlyGoalLong}
+                colorClass={getBarColor(completedLong, monthlyGoalLong)}
+                isComplete={completedLong >= monthlyGoalLong}
+              />
             </div>
-            <ProgressBar
-              current={completedLong}
-              goal={monthlyGoalLong}
-              colorClass={getBarColor(completedLong, monthlyGoalLong)}
-              isComplete={completedLong >= monthlyGoalLong}
-            />
-          </div>
+          )}
         </div>
       </Card>
     </TooltipProvider>

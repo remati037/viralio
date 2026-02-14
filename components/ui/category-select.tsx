@@ -17,7 +17,18 @@ interface CategorySelectProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  /** Use 'light' for modals/light backgrounds */
+  variant?: 'dark' | 'light';
 }
+
+const triggerClassDark =
+  'w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-left flex items-center justify-between transition-colors hover:border-slate-600 text-white placeholder:text-slate-500';
+const triggerClassLight =
+  'w-full bg-white border border-slate-200 rounded-md py-2 px-3 text-left flex items-center justify-between transition-colors hover:border-slate-300 text-slate-900 placeholder:text-slate-400';
+const listClassDark =
+  'absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-auto divide-y-[0.5px] divide-slate-700 p-2';
+const listClassLight =
+  'absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-auto divide-y divide-slate-100 p-2';
 
 export default function CategorySelect({
   categories,
@@ -26,7 +37,11 @@ export default function CategorySelect({
   placeholder = 'Izaberi kategoriju',
   className = '',
   disabled = false,
+  variant = 'dark',
 }: CategorySelectProps) {
+  const isLight = variant === 'light';
+  const triggerClass = isLight ? triggerClassLight : triggerClassDark;
+  const listClass = isLight ? listClassLight : listClassDark;
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const selectRef = useRef<HTMLDivElement>(null);
@@ -113,11 +128,11 @@ export default function CategorySelect({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
         disabled={disabled}
-        className={`w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-left flex items-center justify-between transition-colors ${
+        className={`${triggerClass} ${
           disabled
             ? 'opacity-50 cursor-not-allowed'
-            : 'hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer'
-        } ${isOpen ? 'border-blue-500 ring-2 ring-blue-500/20' : ''}`}
+            : 'focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer'
+        } ${isOpen ? 'border-slate-400 ring-2 ring-slate-400/20' : ''}`}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
@@ -127,12 +142,12 @@ export default function CategorySelect({
               className="w-2 h-2 rounded-full"
               style={{ backgroundColor: selectedCategory.color }}
             />
-            <span className="text-white first-letter:uppercase text-sm">
+            <span className="first-letter:uppercase text-sm">
               {selectedCategory.name}
             </span>
           </div>
         ) : (
-          <span className="text-slate-500">{placeholder}</span>
+          <span>{placeholder}</span>
         )}
         <div className="flex items-center gap-2">
           {/* {selectedCategory && (
@@ -158,7 +173,7 @@ export default function CategorySelect({
           )} */}
           <ChevronDown
             size={18}
-            className={`text-slate-400 transition-transform ${
+            className={`${isLight ? 'text-slate-500' : 'text-slate-400'} transition-transform ${
               isOpen ? 'transform rotate-180' : ''
             }`}
           />
@@ -169,7 +184,7 @@ export default function CategorySelect({
         <ul
           ref={listRef}
           role="listbox"
-          className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-auto divide-y-[0.5px] divide-slate-700 p-2"
+          className={listClass}
         >
           <li
             role="option"
@@ -180,15 +195,21 @@ export default function CategorySelect({
               setHighlightedIndex(-1);
             }}
             onMouseEnter={() => setHighlightedIndex(-1)}
-            className={`px-3 py-2 cursor-pointer transition-colors ${
-              value === null
-                ? 'bg-blue-600/20 text-white'
-                : highlightedIndex === -1
-                ? 'text-white'
-                : 'text-slate-300 hover:bg-slate-700'
+            className={`px-3 py-2 cursor-pointer transition-colors text-sm ${
+              isLight
+                ? value === null
+                  ? 'bg-slate-100 text-slate-900'
+                  : highlightedIndex === -1
+                    ? 'text-slate-900'
+                    : 'text-slate-700 hover:bg-slate-50'
+                : value === null
+                  ? 'bg-blue-600/20 text-white'
+                  : highlightedIndex === -1
+                    ? 'text-white'
+                    : 'text-slate-300 hover:bg-slate-700'
             }`}
           >
-            <span className="text-slate-400 text-sm">Bez kategorije</span>
+            <span className={isLight ? 'text-slate-500' : 'text-slate-400'}>Bez kategorije</span>
           </li>
           {categories.map((category, index) => (
             <li
@@ -202,11 +223,17 @@ export default function CategorySelect({
               }}
               onMouseEnter={() => setHighlightedIndex(index)}
               className={`px-3 py-2 cursor-pointer transition-colors flex items-center gap-2 ${
-                value === category.id
-                  ? 'bg-blue-600/20 text-white'
-                  : highlightedIndex === index
-                  ? 'bg-slate-700 text-white'
-                  : 'text-slate-300 hover:bg-slate-700'
+                isLight
+                  ? value === category.id
+                    ? 'bg-slate-100 text-slate-900'
+                    : highlightedIndex === index
+                      ? 'bg-slate-50 text-slate-900'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  : value === category.id
+                    ? 'bg-blue-600/20 text-white'
+                    : highlightedIndex === index
+                      ? 'bg-slate-700 text-white'
+                      : 'text-slate-300 hover:bg-slate-700'
               }`}
             >
               <div

@@ -2,25 +2,23 @@
 
 import { parseProfileDetails } from '@/lib/utils/helpers';
 import type { Competitor, CompetitorFeed } from '@/types';
-import { ExternalLink, Plus, Trash2, X } from 'lucide-react';
+import { ExternalLink, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Button } from './ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from './ui/card';
+import { Card } from './ui/card';
 import { Input } from './ui/input';
 import Loader from './ui/loader';
+import Modal, { modalCancelButtonClass, modalInputClass } from './ui/modal';
 
 interface CompetitorsViewProps {
   competitors: Competitor[];
   onAddCompetitor: (
-    competitor: Omit<Competitor, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+    competitor: Omit<
+      Competitor,
+      'id' | 'user_id' | 'created_at' | 'updated_at'
+    >,
   ) => Promise<void>;
   onRemoveCompetitor: (competitorId: string) => Promise<void>;
 }
@@ -68,7 +66,7 @@ export default function CompetitorsView({
     setIsAdding(true);
     const profileDetails = parseProfileDetails(
       linkInput.trim(),
-      nameInput.trim()
+      nameInput.trim(),
     );
 
     // Mock feed data
@@ -189,101 +187,77 @@ export default function CompetitorsView({
         )}
       </div>
 
-      {isAddModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-          onClick={() => !isAdding && setIsAddModalOpen(false)}
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => !isAdding && setIsAddModalOpen(false)}
+        title="Dodaj konkurenta"
+        description="Unesite ime i link ka profilu konkurenta"
+        disableClose={isAdding}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleAdd();
+          }}
+          className="space-y-4"
         >
-          <Card
-            className="w-full max-w-md shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle>Dodaj konkurenta</CardTitle>
-                  <CardDescription>
-                    Unesite ime i link ka profilu konkurenta
-                  </CardDescription>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => !isAdding && setIsAddModalOpen(false)}
-                  disabled={isAdding}
-                >
-                  <X size={20} />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleAdd();
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Ime konkurenta *
-                  </label>
-                  <Input
-                    type="text"
-                    value={nameInput}
-                    onChange={(e) => setNameInput(e.target.value)}
-                    placeholder="npr. Digital Guru"
-                    disabled={isAdding}
-                    autoFocus
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Link ka profilu *
-                  </label>
-                  <Input
-                    type="url"
-                    value={linkInput}
-                    onChange={(e) => setLinkInput(e.target.value)}
-                    placeholder="YouTube, TikTok, Instagram..."
-                    disabled={isAdding}
-                  />
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => !isAdding && setIsAddModalOpen(false)}
-                    className="flex-1"
-                    disabled={isAdding}
-                  >
-                    Otkaži
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="flex-1"
-                    disabled={
-                      !linkInput.trim() || !nameInput.trim() || isAdding
-                    }
-                  >
-                    {isAdding ? (
-                      <>
-                        <Loader size="sm" className="mr-2" />
-                        Dodavanje...
-                      </>
-                    ) : (
-                      <>
-                        <Plus size={18} className="mr-2" />
-                        Dodaj
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Ime konkurenta *
+            </label>
+            <Input
+              type="text"
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              placeholder="npr. Digital Guru"
+              disabled={isAdding}
+              autoFocus
+              className={modalInputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Link ka profilu *
+            </label>
+            <Input
+              type="url"
+              value={linkInput}
+              onChange={(e) => setLinkInput(e.target.value)}
+              placeholder="YouTube, TikTok, Instagram..."
+              disabled={isAdding}
+              className={modalInputClass}
+            />
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => !isAdding && setIsAddModalOpen(false)}
+              className={`flex-1 ${modalCancelButtonClass}`}
+              disabled={isAdding}
+            >
+              Otkaži
+            </Button>
+            <Button
+              type="submit"
+              className={`flex-1`}
+              disabled={!linkInput.trim() || !nameInput.trim() || isAdding}
+            >
+              {isAdding ? (
+                <>
+                  <Loader size="sm" className="mr-2" />
+                  Dodavanje...
+                </>
+              ) : (
+                <>
+                  <Plus size={18} />
+                  Dodaj
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }

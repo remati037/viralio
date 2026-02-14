@@ -54,31 +54,31 @@ export default function AICreditBadge({
   }
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="flex flex-col items-center gap-2 p-3 rounded-md bg-slate-800 border border-slate-700 w-full justify-center">
+    <div className="flex flex-col items-center gap-3 w-full">
+      <div className="flex flex-col items-center gap-3 p-4 rounded-xl bg-muted/50 border border-border w-full justify-center">
         <span
-          className={`text-md font-bold ${
+          className={`text-lg font-bold tabular-nums ${
             isEmpty
-              ? 'text-red-400'
+              ? 'text-destructive'
               : isLow
-                ? 'text-orange-400'
+                ? 'text-chart-5'
                 : isWarning
-                  ? 'text-yellow-400'
-                  : 'text-white'
+                  ? 'text-chart-4'
+                  : 'text-foreground'
           }`}
         >
           {creditsRemaining} / {maxCredits}
         </span>
-        <div className="h-2 bg-slate-700 rounded-full overflow-hidden w-full">
+        <div className="h-2.5 bg-muted rounded-full overflow-hidden w-full">
           <div
-            className={`h-full transition-all duration-300 ${
+            className={`h-full transition-all duration-300 rounded-full ${
               isEmpty
-                ? 'bg-red-500'
+                ? 'bg-destructive'
                 : isLow
-                  ? 'bg-orange-500'
+                  ? 'bg-chart-5'
                   : isWarning
-                    ? 'bg-yellow-500'
-                    : 'bg-gradient-to-r from-purple-500 to-blue-500'
+                    ? 'bg-chart-4'
+                    : 'bg-gradient-to-r from-chart-4 to-chart-1'
             }`}
             style={{ width: `${Math.max(0, Math.min(100, percentage))}%` }}
           />
@@ -87,10 +87,10 @@ export default function AICreditBadge({
 
       {showWarning && (isEmpty || isLow) && (
         <div
-          className={`px-2 py-1 rounded text-xs font-medium ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium w-full text-center ${
             isEmpty
-              ? 'bg-red-900/30 text-red-300 border border-red-800'
-              : 'bg-orange-900/30 text-orange-300 border border-orange-800'
+              ? 'bg-destructive/10 text-destructive border border-border'
+              : 'bg-chart-5/10 text-chart-5 border border-border'
           }`}
         >
           {isEmpty ? 'Nema kredita' : 'Niski limit'}

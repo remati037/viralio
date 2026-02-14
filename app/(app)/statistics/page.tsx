@@ -1,9 +1,8 @@
 'use client';
 
-import UserStatisticsComponent from '@/components/UserStatistics';
 import Loader from '@/components/ui/loader';
 import { useUserId } from '@/components/UserContext';
-import { BarChart3 } from 'lucide-react';
+import UserStatisticsComponent from '@/components/UserStatistics';
 
 export default function StatisticsPage() {
   const userId = useUserId();
@@ -13,20 +12,18 @@ export default function StatisticsPage() {
   }
 
   return (
-    <>
-      <header className="mb-4 md:mb-8">
+    <div className="space-y-6 md:space-y-8 min-w-0">
+      <header>
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <BarChart3 className="text-blue-400" size={28} />
+          <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
             Statistika
           </h1>
-          <p className="text-slate-400 text-sm text-balance">
-            Pregled vaših performansi i rezultata objavljenog sadržaja
+          <p className="text-muted-foreground max-w-2xl">
+            Pregled tvojih performansi i rezultata
           </p>
         </div>
       </header>
       <UserStatisticsComponent userId={userId} />
-    </>
+    </div>
   );
 }
-

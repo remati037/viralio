@@ -1,24 +1,12 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { isLongFormHidden } from '@/lib/utils/featureFlags';
 import { initializeUserStatistics } from '@/lib/utils/userStatistics';
 import type { Task, UserStatistics } from '@/types';
-import {
-  Activity,
-  BarChart3,
-  Calendar,
-  CheckCircle,
-  Clock,
-  Eye,
-  FileText,
-  Heart,
-  Target,
-  TrendingUp,
-  Video,
-  Youtube,
-  Zap,
-} from 'lucide-react';
+import { CheckCircle, Clock, Eye, FileText, Heart } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { ProgressBar } from './GoalProgressDashboard';
 import {
   Card,
   CardContent,
@@ -110,7 +98,7 @@ export default function UserStatisticsComponent({
 
   // Format statistics
   const shortFormTasks = tasks.filter(
-    (t) => t.format === 'Kratka Forma'
+    (t) => t.format === 'Kratka Forma',
   ).length;
   const longFormTasks = tasks.filter((t) => t.format === 'Duga Forma').length;
 
@@ -118,7 +106,7 @@ export default function UserStatisticsComponent({
   const publishedTasksWithResults = tasks.filter(
     (t) =>
       t.status === 'published' &&
-      (t.result_views || t.result_engagement || t.result_conversions)
+      (t.result_views || t.result_engagement || t.result_conversions),
   );
 
   const totalViews = publishedTasksWithResults.reduce((sum, task) => {
@@ -150,7 +138,7 @@ export default function UserStatisticsComponent({
       acc[categoryName] = (acc[categoryName] || 0) + 1;
       return acc;
     },
-    {} as Record<string, number>
+    {} as Record<string, number>,
   );
 
   const topCategories = Object.entries(tasksByCategory)
@@ -223,67 +211,80 @@ export default function UserStatisticsComponent({
     return `${count} zadataka`;
   };
 
+  const cardBase =
+    'bg-gradient-to-b from-background to-muted border border-border rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/20';
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 md:space-y-6">
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Card className="bg-slate-800 border-slate-700">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-md text-slate-400 mb-2">Ukupno skripti</p>
-                <p className="text-2xl font-bold text-white">{totalTasks}</p>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className={cardBase}>
+          <CardContent className="p-4 md:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-base font-medium text-foreground mb-1">
+                  Ukupno skripti
+                </p>
+                <p className="text-2xl font-bold text-foreground tabular-nums">
+                  {totalTasks}
+                </p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <FileText className="text-blue-400" size={22} />
+              <div className="h-11 w-11 shrink-0 rounded-xl bg-chart-1/15 border border-border flex items-center justify-center">
+                <FileText className="text-chart-1" size={22} />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-md text-slate-400 mb-2">Objavljeno</p>
-                <p className="text-2xl font-bold text-white">
+        <Card className={cardBase}>
+          <CardContent className="p-4 md:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-base font-medium text-foreground mb-1">
+                  Objavljeno
+                </p>
+                <p className="text-2xl font-bold text-foreground tabular-nums">
                   {publishedTasks}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
-                <CheckCircle className="text-green-400" size={22} />
+              <div className="h-11 w-11 shrink-0 rounded-xl bg-chart-2/15 border border-border flex items-center justify-center">
+                <CheckCircle className="text-chart-2" size={22} />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-md text-slate-400 mb-2">Ukupno pregleda</p>
-                <p className="text-2xl font-bold text-white">
+        <Card className={cardBase}>
+          <CardContent className="p-4 md:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-base font-medium text-foreground mb-1">
+                  Ukupno pregleda
+                </p>
+                <p className="text-2xl font-bold text-foreground tabular-nums">
                   {formatNumber(displayTotalViews)}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <Eye className="text-purple-400" size={22} />
+              <div className="h-11 w-11 shrink-0 rounded-xl bg-chart-4/15 border border-border flex items-center justify-center">
+                <Eye className="text-chart-4" size={22} />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-md text-slate-400 mb-2">Engagement</p>
-                <p className="text-2xl font-bold text-white">
+        <Card className={cardBase}>
+          <CardContent className="p-4 md:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-base font-medium text-foreground mb-1">
+                  Engagement
+                </p>
+                <p className="text-2xl font-bold text-foreground tabular-nums">
                   {formatNumber(displayTotalEngagement)}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-pink-500/20 flex items-center justify-center">
-                <Heart className="text-pink-400" size={22} />
+              <div className="h-11 w-11 shrink-0 rounded-xl bg-chart-5/15 border border-border flex items-center justify-center">
+                <Heart className="text-chart-5" size={22} />
               </div>
             </div>
           </CardContent>
@@ -291,55 +292,52 @@ export default function UserStatisticsComponent({
       </div>
 
       {/* Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Card className="bg-slate-800 border-slate-700">
-          <CardHeader className="p-4">
-            <CardTitle className="text-white flex items-center gap-2 text-lg">
-              <TrendingUp className="text-green-400" size={20} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className={cardBase}>
+          <CardHeader className="p-4 md:p-5 md:pb-0">
+            <CardTitle className="text-base font-medium text-foreground mb-1">
               Engagement Rate
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="text-3xl font-bold text-white mb-2">
+          <CardContent className="p-4 md:p-5 pt-0">
+            <div className="text-2xl md:text-3xl font-bold text-foreground tabular-nums mb-1">
               {engagementRate}%
             </div>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-muted-foreground">
               {displayTotalEngagement.toLocaleString()} od{' '}
               {displayTotalViews.toLocaleString()} pregleda
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
-          <CardHeader className="p-4">
-            <CardTitle className="text-white flex items-center gap-2 text-lg">
-              <Zap className="text-yellow-400" size={20} />
+        <Card className={cardBase}>
+          <CardHeader className="p-4 md:p-5 md:pb-0">
+            <CardTitle className="text-base font-medium text-foreground mb-1">
               Conversion Rate
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="text-3xl font-bold text-white mb-2">
+          <CardContent className="p-4 md:p-5 pt-0">
+            <div className="text-2xl md:text-3xl font-bold text-foreground tabular-nums mb-1">
               {conversionRate}%
             </div>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-muted-foreground">
               {displayTotalConversions.toLocaleString()} konverzija od{' '}
               {displayTotalViews.toLocaleString()} pregleda
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
-          <CardHeader className="p-4">
-            <CardTitle className="text-white flex items-center gap-2 text-lg">
-              <Activity className="text-blue-400" size={20} />
+        <Card className={cardBase}>
+          <CardHeader className="p-4 md:p-5 md:pb-0">
+            <CardTitle className="text-base font-medium text-foreground mb-1">
               Ukupno Konverzija
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="text-3xl font-bold text-white mb-2">
+          <CardContent className="p-4 md:p-5 pt-0">
+            <div className="text-2xl md:text-3xl font-bold text-foreground tabular-nums mb-1">
               {formatNumber(displayTotalConversions)}
             </div>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-muted-foreground">
               Ukupno konverzija iz svih objavljenih zadataka
             </p>
           </CardContent>
@@ -347,25 +345,26 @@ export default function UserStatisticsComponent({
       </div>
 
       {/* Task Status Breakdown */}
-      <Card className="bg-slate-800 border-slate-700">
-        <CardHeader className="p-4">
-          <CardTitle className="text-white flex items-center gap-2">
-            <BarChart3 className="text-blue-400" size={20} />
+      <Card className={cardBase}>
+        <CardHeader className="p-4 md:p-5 md:pb-0">
+          <CardTitle className="text-base font-medium text-foreground mb-1">
             Status zadataka
           </CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-sm text-muted-foreground">
             Pregled zadataka po statusu
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-4 pt-0">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-1">
-            <div className="bg-slate-900 p-3 rounded-md border border-slate-700">
+        <CardContent className="p-4 md:p-5 pt-0">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-muted/50 p-3 rounded-lg border border-border">
               <div className="flex items-center gap-2 mb-2">
-                <FileText className="text-slate-400" size={14} />
-                <span className="text-sm text-slate-400">Ideje</span>
+                <FileText className="text-foreground" size={14} />
+                <span className="text-sm text-foreground">Ideje</span>
               </div>
-              <div className="text-2xl font-bold text-white">{ideaTasks}</div>
-              <div className="text-xs text-slate-500 mt-1">
+              <div className="text-2xl font-bold text-foreground tabular-nums">
+                {ideaTasks}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
                 {totalTasks > 0
                   ? ((ideaTasks / totalTasks) * 100).toFixed(0)
                   : 0}
@@ -373,13 +372,15 @@ export default function UserStatisticsComponent({
               </div>
             </div>
 
-            <div className="bg-slate-900 p-3 rounded-md border border-slate-700">
+            <div className="bg-muted/50 p-3 rounded-lg border border-border">
               <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="text-green-400" size={14} />
-                <span className="text-sm text-slate-400">Spremno</span>
+                <CheckCircle className="text-foregorund" size={14} />
+                <span className="text-sm text-foreground">Spremno</span>
               </div>
-              <div className="text-2xl font-bold text-white">{readyTasks}</div>
-              <div className="text-xs text-slate-500 mt-1">
+              <div className="text-2xl font-bold text-foreground tabular-nums">
+                {readyTasks}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
                 {totalTasks > 0
                   ? ((readyTasks / totalTasks) * 100).toFixed(0)
                   : 0}
@@ -387,15 +388,15 @@ export default function UserStatisticsComponent({
               </div>
             </div>
 
-            <div className="bg-slate-900 p-3 rounded-md border border-slate-700">
+            <div className="bg-muted/50 p-3 rounded-lg border border-border">
               <div className="flex items-center gap-2 mb-2">
-                <Clock className="text-yellow-400" size={14} />
-                <span className="text-sm text-slate-400">Zakazano</span>
+                <Clock className="text-foreground" size={14} />
+                <span className="text-sm text-foreground">Zakazano</span>
               </div>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold text-foreground tabular-nums">
                 {scheduledTasks}
               </div>
-              <div className="text-xs text-slate-500 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 {totalTasks > 0
                   ? ((scheduledTasks / totalTasks) * 100).toFixed(0)
                   : 0}
@@ -403,15 +404,15 @@ export default function UserStatisticsComponent({
               </div>
             </div>
 
-            <div className="bg-slate-900 p-3 rounded-md border border-slate-700">
+            <div className="bg-muted/50 p-3 rounded-lg border border-border">
               <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="text-blue-400" size={14} />
-                <span className="text-sm text-slate-400">Objavljeno</span>
+                <CheckCircle className="text-foreground" size={14} />
+                <span className="text-sm text-foreground">Objavljeno</span>
               </div>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold text-foreground tabular-nums">
                 {publishedTasks}
               </div>
-              <div className="text-xs text-slate-500 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 {totalTasks > 0
                   ? ((publishedTasks / totalTasks) * 100).toFixed(0)
                   : 0}
@@ -423,27 +424,26 @@ export default function UserStatisticsComponent({
       </Card>
 
       {/* Format Distribution */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Card className="bg-slate-800 border-slate-700">
-          <CardHeader className="p-4">
-            <CardTitle className="text-white flex items-center gap-2">
-              <Video className="text-red-400" size={20} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card
+          className={`${cardBase} ${isLongFormHidden() ? 'col-span-2' : ''}`}
+        >
+          <CardHeader className="p-4 md:p-5 md:pb-0">
+            <CardTitle className="text-base font-medium text-foreground mb-1">
               Kratka forma
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="text-3xl font-bold text-white mb-2">
+          <CardContent className="p-4 md:p-5 pt-0">
+            <div className="text-2xl md:text-3xl font-bold text-foreground tabular-nums mb-2">
               {shortFormTasks}
             </div>
-            <div className="w-full bg-slate-900 rounded-full h-1.5">
-              <div
-                className="bg-red-500 h-1.5 rounded-full"
-                style={{
-                  width: `${totalTasks > 0 ? (shortFormTasks / totalTasks) * 100 : 0}%`,
-                }}
-              />
-            </div>
-            <p className="text-sm text-slate-400 mt-2">
+            <ProgressBar
+              current={shortFormTasks}
+              goal={totalTasks}
+              colorClass="bg-chart-1"
+              isComplete={shortFormTasks >= totalTasks}
+            />
+            <p className="text-sm text-muted-foreground mt-2">
               {totalTasks > 0
                 ? ((shortFormTasks / totalTasks) * 100).toFixed()
                 : 0}
@@ -452,26 +452,27 @@ export default function UserStatisticsComponent({
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
-          <CardHeader className="p-4">
-            <CardTitle className="text-white flex items-center gap-2">
-              <Youtube className="text-green-400" size={20} />
+        <Card
+          className={`${cardBase} ${isLongFormHidden() ? 'hidden' : 'block'}`}
+        >
+          <CardHeader className="p-4 md:p-5 pb-2">
+            <CardTitle className="text-base font-medium text-foreground mb-1">
               Duga forma
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="text-3xl font-bold text-white mb-2">
+          <CardContent className="p-4 md:p-5 pt-0">
+            <div className="text-2xl md:text-3xl font-bold text-foreground tabular-nums mb-2">
               {longFormTasks}
             </div>
-            <div className="w-full bg-slate-900 rounded-full h-1.5">
+            <div className="w-full bg-muted rounded-full h-2">
               <div
-                className="bg-green-500 h-1.5 rounded-full"
+                className="bg-chart-2 h-2 rounded-full transition-all duration-300"
                 style={{
                   width: `${totalTasks > 0 ? (longFormTasks / totalTasks) * 100 : 0}%`,
                 }}
               />
             </div>
-            <p className="text-sm text-slate-400 mt-2">
+            <p className="text-sm text-muted-foreground mt-2">
               {totalTasks > 0
                 ? ((longFormTasks / totalTasks) * 100).toFixed()
                 : 0}
@@ -481,36 +482,35 @@ export default function UserStatisticsComponent({
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Monthly Statistics */}
-        <Card className="bg-slate-800 border-slate-700">
-          <CardHeader className="p-4">
-            <CardTitle className="text-white flex items-center gap-2">
-              <Calendar className="text-purple-400" size={20} />
+        <Card className={cardBase}>
+          <CardHeader className="p-4 md:p-5 md:pb-0">
+            <CardTitle className="text-base font-medium text-foreground mb-1">
               Statistika za tekući mesec
             </CardTitle>
-            <CardDescription className="text-slate-400 capitalize">
+            <CardDescription className="text-muted-foreground capitalize">
               {new Date().toLocaleDateString('sr-Latn-RS', {
                 month: 'long',
                 year: 'numeric',
               })}
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-slate-900 p-4 rounded-md border border-slate-700">
-                <div className="text-sm text-slate-400 mb-1">
+          <CardContent className="p-4 md:p-5 pt-0">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-muted/50 p-4 rounded-lg border border-border">
+                <div className="text-sm text-foreground mb-1">
                   Kreirane skripte
                 </div>
-                <div className="text-2xl font-bold text-white">
+                <div className="text-2xl font-bold text-foreground tabular-nums">
                   {tasksThisMonth}
                 </div>
               </div>
-              <div className="bg-slate-900 p-4 rounded-md border border-slate-700">
-                <div className="text-sm text-slate-400 mb-1">
+              <div className="bg-muted/50 p-4 rounded-lg border border-border">
+                <div className="text-sm text-foreground mb-1">
                   Objavljene skripte
                 </div>
-                <div className="text-2xl font-bold text-white">
+                <div className="text-2xl font-bold text-foreground tabular-nums">
                   {publishedThisMonth}
                 </div>
               </div>
@@ -520,32 +520,31 @@ export default function UserStatisticsComponent({
 
         {/* Top Categories */}
         {topCategories.length > 0 && (
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="p-4">
-              <CardTitle className="text-white flex items-center gap-2">
-                <Target className="text-orange-400" size={16} />
+          <Card className={cardBase}>
+            <CardHeader className="p-4 md:p-5 md:pb-0">
+              <CardTitle className="text-base font-medium text-foreground mb-1">
                 Najčešće kategorije
               </CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardDescription className="text-muted-foreground">
                 Top 5 kategorija po broju zadataka
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="space-y-3">
+            <CardContent className="p-4 md:p-5 pt-0">
+              <div className="space-y-2">
                 {topCategories.map(([category, count], index) => (
                   <div
                     key={category}
-                    className="flex items-center justify-between bg-slate-900 p-2 rounded-md border border-slate-700"
+                    className="flex items-center justify-between bg-muted/50 p-3 rounded-lg border border-border"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold text-xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-6 h-6 shrink-0 rounded-full bg-chart-5/20 border border-border flex items-center justify-center text-chart-5 font-bold text-xs">
                         {index + 1}
                       </div>
-                      <span className="text-white font-medium capitalize text-sm">
+                      <span className="text-foreground font-medium capitalize text-sm truncate">
                         {category}
                       </span>
                     </div>
-                    <div className="text-slate-400 font-medium text-sm">
+                    <div className="text-muted-foreground font-medium text-sm shrink-0 ml-2">
                       {formatTaskCount(count)}
                     </div>
                   </div>

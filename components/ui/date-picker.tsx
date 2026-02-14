@@ -170,8 +170,8 @@ export default function DatePicker({
     if (isOpen && pickerRef.current) {
       document.addEventListener('mousedown', handleClickOutside);
 
-      // Calculate initial position
-      calculatePosition();
+      // Calculate initial position (after a microtask so layout is settled)
+      requestAnimationFrame(() => calculatePosition());
 
       // Recalculate on scroll, resize, or orientation change
       const handleResize = () => calculatePosition();
@@ -181,11 +181,27 @@ export default function DatePicker({
       window.addEventListener('scroll', handleScroll, true);
       window.addEventListener('orientationchange', handleResize);
 
+      // Scroll events don't bubble – attach to scrollable ancestors (e.g. modal content)
+      const scrollableParents: Element[] = [];
+      let el: Element | null = pickerRef.current;
+      while (el && el !== document.body) {
+        const style = getComputedStyle(el);
+        const overflow = style.overflow + style.overflowY + style.overflowX;
+        if (/(auto|scroll|overlay)/.test(overflow)) {
+          scrollableParents.push(el);
+          el.addEventListener('scroll', handleScroll);
+        }
+        el = el.parentElement;
+      }
+
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
         window.removeEventListener('resize', handleResize);
         window.removeEventListener('scroll', handleScroll, true);
         window.removeEventListener('orientationchange', handleResize);
+        scrollableParents.forEach((parent) =>
+          parent.removeEventListener('scroll', handleScroll),
+        );
       };
     }
 
@@ -317,7 +333,7 @@ export default function DatePicker({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-left flex items-center justify-between transition-colors ${
+        className={`w-full text-sm bg-white border border-slate-700 rounded-lg py-2 px-3 text-left flex items-center justify-between transition-colors ${
           disabled
             ? 'opacity-50 cursor-not-allowed'
             : 'hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer'
@@ -369,12 +385,12 @@ export default function DatePicker({
         mounted &&
         createPortal(
           <div
-            className="date-picker-dropdown fixed z-[9999] bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4"
+            className="date-picker-dropdown fixed z-[99999] bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4 min-w-[320px]"
             style={{
               top: `${dropdownPosition.top}px`,
               left: `${dropdownPosition.left}px`,
-              width: `${dropdownPosition.width}px`,
-              maxWidth: 'calc(100vw - 32px)',
+              width: `${Math.max(dropdownPosition.width, 320)}px`,
+              maxWidth: 'min(360px, calc(100vw - 32px))',
             }}
           >
             {/* Calendar Header */}
@@ -410,11 +426,11 @@ export default function DatePicker({
             </div>
 
             {/* Weekday Headers */}
-            <div className="grid grid-cols-7 gap-1 mb-2">
+            <div className="grid grid-cols-[repeat(7,minmax(0,1fr))] gap-1 mb-2">
               {WEEKDAYS.map((day) => (
                 <div
                   key={day}
-                  className="text-center text-xs font-semibold text-slate-400 py-1"
+                  className="text-center text-xs font-semibold text-slate-400 py-1 min-w-0"
                 >
                   {day}
                 </div>
@@ -422,11 +438,14 @@ export default function DatePicker({
             </div>
 
             {/* Calendar Days */}
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-[repeat(7,minmax(0,1fr))] gap-1">
               {days.map((day, index) => {
                 if (day === null) {
                   return (
-                    <div key={`empty-${index}`} className="aspect-square" />
+                    <div
+                      key={`empty-${index}`}
+                      className="aspect-square min-w-0"
+                    />
                   );
                 }
 
@@ -441,14 +460,14 @@ export default function DatePicker({
                     type="button"
                     onClick={() => handleDateSelect(day)}
                     disabled={disabled}
-                    className={`aspect-square flex items-center justify-center text-sm rounded transition-colors ${
+                    className={`aspect-square min-w-0 flex items-center justify-center text-sm rounded transition-colors ${
                       disabled
                         ? 'text-slate-600 cursor-not-allowed'
                         : isSelectedDay
-                        ? 'bg-blue-600 text-white font-semibold'
-                        : isTodayDay
-                        ? 'bg-blue-600/20 text-blue-400 font-semibold border border-blue-500'
-                        : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                          ? 'bg-blue-600 text-white font-semibold'
+                          : isTodayDay
+                            ? 'bg-blue-600/20 text-blue-400 font-semibold border border-blue-500'
+                            : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                     }`}
                   >
                     {day}
@@ -457,7 +476,7 @@ export default function DatePicker({
               })}
             </div>
           </div>,
-          document.body
+          document.body,
         )}
     </div>
   );

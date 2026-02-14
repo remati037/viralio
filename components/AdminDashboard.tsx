@@ -26,6 +26,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import AdminCaseStudyCreation from './AdminCaseStudyCreation';
 import AdminTemplateManagement from './AdminTemplateManagement';
@@ -131,7 +132,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
       const { data: allTasks, error: tasksError } = await supabase
         .from('tasks')
         .select(
-          'user_id, status, result_views, result_engagement, result_conversions, is_admin_case_study'
+          'user_id, status, result_views, result_engagement, result_conversions, is_admin_case_study',
         );
 
       if (tasksError) throw tasksError;
@@ -141,11 +142,11 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
         // Filter out admin case studies - only count user's own tasks
         const userTasks =
           allTasks?.filter(
-            (t) => t.user_id === profile.id && !t.is_admin_case_study
+            (t) => t.user_id === profile.id && !t.is_admin_case_study,
           ) || [];
         const totalTasks = userTasks.length;
         const publishedTasks = userTasks.filter(
-          (t) => t.status === 'published'
+          (t) => t.status === 'published',
         ).length;
 
         // Calculate views, engagement, and conversions from published tasks
@@ -220,7 +221,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
           } catch (error) {
             console.error(`Error fetching email for user ${userId}:`, error);
           }
-        })
+        }),
       );
     }
 
@@ -235,7 +236,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
         .select(
-          'id, status, result_views, result_engagement, result_conversions, is_admin_case_study'
+          'id, status, result_views, result_engagement, result_conversions, is_admin_case_study',
         )
         .eq('user_id', userId);
 
@@ -553,7 +554,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
         enableSorting: false,
       },
     ],
-    [userEmails, emailConfirmations, updatingTierId, openActionMenu]
+    [userEmails, emailConfirmations, updatingTierId, openActionMenu],
   );
 
   const table = useReactTable({
@@ -707,7 +708,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                             '/api/sanity/sync-templates',
                             {
                               method: 'POST',
-                            }
+                            },
                           );
                           const data = await response.json();
                           if (response.ok) {
@@ -719,7 +720,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                             }
                           } else {
                             throw new Error(
-                              data.error || 'Greška pri sinhronizaciji'
+                              data.error || 'Greška pri sinhronizaciji',
                             );
                           }
                         } catch (error: any) {
@@ -749,7 +750,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                             '/api/sanity/sync-case-studies',
                             {
                               method: 'POST',
-                            }
+                            },
                           );
                           const data = await response.json();
                           if (response.ok) {
@@ -757,14 +758,14 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                               'Studije slučaja uspešno sinhronizovane',
                               {
                                 description: `Sinhronizovano ${data.synced} studija slučaja.`,
-                              }
+                              },
                             );
                             if (data.errors && data.errors.length > 0) {
                               console.error('Sync errors:', data.errors);
                             }
                           } else {
                             throw new Error(
-                              data.error || 'Greška pri sinhronizaciji'
+                              data.error || 'Greška pri sinhronizaciji',
                             );
                           }
                         } catch (error: any) {
@@ -772,7 +773,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                             'Greška pri sinhronizaciji studija slučaja',
                             {
                               description: error.message,
-                            }
+                            },
                           );
                         } finally {
                           setSyncingCaseStudies(false);
@@ -859,7 +860,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                 <CardTitle className="text-xl md:text-2xl text-white">
                   {users.reduce(
                     (sum, u) => sum + (u.realStats?.total_tasks || 0),
-                    0
+                    0,
                   )}
                 </CardTitle>
               </CardHeader>
@@ -1057,7 +1058,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                               ? null
                               : flexRender(
                                   header.column.columnDef.header,
-                                  header.getContext()
+                                  header.getContext(),
                                 )}
                           </th>
                         ))}
@@ -1092,7 +1093,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                             >
                               {flexRender(
                                 cell.column.columnDef.cell,
-                                cell.getContext()
+                                cell.getContext(),
                               )}
                             </td>
                           ))}
@@ -1114,7 +1115,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                   {Math.min(
                     (table.getState().pagination.pageIndex + 1) *
                       table.getState().pagination.pageSize,
-                    table.getFilteredRowModel().rows.length
+                    table.getFilteredRowModel().rows.length,
                   )}{' '}
                   od {table.getFilteredRowModel().rows.length} korisnika
                 </div>
@@ -1149,136 +1150,145 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
           </Card>
 
           {/* User Details Modal */}
-          {selectedUser && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-              <Card className="bg-slate-900 border-slate-700 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-white">
-                        {selectedUser.business_name || 'Korisnik'}
-                      </CardTitle>
-                      <CardDescription className="text-slate-400">
-                        ID: {selectedUser.id}
-                      </CardDescription>
-                      {userEmails[selectedUser.id] && (
-                        <CardDescription className="text-slate-400 flex items-center gap-2">
-                          Email: {userEmails[selectedUser.id]}
-                          {emailConfirmations[selectedUser.id] === false && (
-                            <span className="px-2 py-0.5 rounded text-xs font-bold bg-yellow-900/30 text-yellow-300 border border-yellow-800">
-                              Email Nije Potvrđen
-                            </span>
-                          )}
-                          {emailConfirmations[selectedUser.id] === true && (
-                            <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-900/30 text-green-300 border border-green-800">
-                              Email Potvrđen
-                            </span>
-                          )}
+          {selectedUser &&
+            typeof document !== 'undefined' &&
+            createPortal(
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
+                <Card className="bg-white border-slate-200 w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl shadow-xl">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-slate-900">
+                          {selectedUser.business_name || 'Korisnik'}
+                        </CardTitle>
+                        <CardDescription className="text-slate-500">
+                          ID: {selectedUser.id}
                         </CardDescription>
-                      )}
-                      {(selectedUser as any).has_unlimited_free && (
-                        <div className="mt-2">
-                          <span className="px-2 py-1 rounded text-xs font-bold bg-green-900/30 text-green-300">
-                            Neograničena Besplatna PRO Pretplata
-                          </span>
-                        </div>
-                      )}
+                        {userEmails[selectedUser.id] && (
+                          <CardDescription className="text-slate-500 flex items-center gap-2">
+                            Email: {userEmails[selectedUser.id]}
+                            {emailConfirmations[selectedUser.id] === false && (
+                              <span className="px-2 py-0.5 rounded text-xs font-bold bg-yellow-900/30 text-yellow-300 border border-yellow-800">
+                                Email Nije Potvrđen
+                              </span>
+                            )}
+                            {emailConfirmations[selectedUser.id] === true && (
+                              <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-900/30 text-green-300 border border-green-800">
+                                Email Potvrđen
+                              </span>
+                            )}
+                          </CardDescription>
+                        )}
+                        {(selectedUser as any).has_unlimited_free && (
+                          <div className="mt-2">
+                            <span className="px-2 py-1 rounded text-xs font-bold bg-green-900/30 text-green-300">
+                              Neograničena Besplatna PRO Pretplata
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        onClick={() => setSelectedUser(null)}
+                      >
+                        ×
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      onClick={() => setSelectedUser(null)}
-                    >
-                      ×
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <h3 className="text-white font-bold mb-2">Statistike</h3>
-                    {loadingStatistics ? (
-                      <div className="text-slate-400 text-sm">
-                        Učitavanje statistika...
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-slate-800 p-3 rounded">
-                          <div className="text-slate-400 text-sm">
-                            Ukupno Zadataka
-                          </div>
-                          <div className="text-white font-bold">
-                            {userRealStatistics?.total_tasks || 0}
-                          </div>
-                        </div>
-                        <div className="bg-slate-800 p-3 rounded">
-                          <div className="text-slate-400 text-sm">
-                            Objavljeno
-                          </div>
-                          <div className="text-white font-bold">
-                            {userRealStatistics?.published_tasks || 0}
-                          </div>
-                        </div>
-                        <div className="bg-slate-800 p-3 rounded">
-                          <div className="text-slate-400 text-sm">Pregledi</div>
-                          <div className="text-white font-bold">
-                            {userRealStatistics?.total_views || '0'}
-                          </div>
-                        </div>
-                        <div className="bg-slate-800 p-3 rounded">
-                          <div className="text-slate-400 text-sm">Angažman</div>
-                          <div className="text-white font-bold">
-                            {userRealStatistics?.total_engagement || '0'}
-                          </div>
-                        </div>
-                        <div className="bg-slate-800 p-3 rounded">
-                          <div className="text-slate-400 text-sm">
-                            Konverzije
-                          </div>
-                          <div className="text-white font-bold">
-                            {userRealStatistics?.total_conversions || '0'}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <h3 className="text-white font-bold mb-2">
-                      Platni Istorija
-                    </h3>
-                    <div className="space-y-2">
-                      {selectedUser.payments &&
-                      selectedUser.payments.length > 0 ? (
-                        selectedUser.payments.map((payment) => (
-                          <div
-                            key={payment.id}
-                            className="bg-slate-800 p-3 rounded flex justify-between"
-                          >
-                            <div>
-                              <div className="text-white font-medium">
-                                ${payment.amount} - {payment.status}
-                              </div>
-                              <div className="text-slate-400 text-sm">
-                                {new Date(
-                                  payment.created_at
-                                ).toLocaleDateString()}
-                              </div>
-                            </div>
-                            <div className="text-slate-400 text-sm">
-                              {payment.tier_at_payment?.toUpperCase()}
-                            </div>
-                          </div>
-                        ))
-                      ) : (
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <h3 className="text-slate-900 font-bold mb-2">
+                        Statistike
+                      </h3>
+                      {loadingStatistics ? (
                         <div className="text-slate-500 text-sm">
-                          Nema platnih podataka
+                          Učitavanje statistika...
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-slate-100 p-3 rounded-lg border border-slate-200">
+                            <div className="text-slate-500 text-sm">
+                              Ukupno Zadataka
+                            </div>
+                            <div className="text-slate-900 font-bold">
+                              {userRealStatistics?.total_tasks || 0}
+                            </div>
+                          </div>
+                          <div className="bg-slate-100 p-3 rounded-lg border border-slate-200">
+                            <div className="text-slate-500 text-sm">
+                              Objavljeno
+                            </div>
+                            <div className="text-slate-900 font-bold">
+                              {userRealStatistics?.published_tasks || 0}
+                            </div>
+                          </div>
+                          <div className="bg-slate-100 p-3 rounded-lg border border-slate-200">
+                            <div className="text-slate-500 text-sm">
+                              Pregledi
+                            </div>
+                            <div className="text-slate-900 font-bold">
+                              {userRealStatistics?.total_views || '0'}
+                            </div>
+                          </div>
+                          <div className="bg-slate-100 p-3 rounded-lg border border-slate-200">
+                            <div className="text-slate-500 text-sm">
+                              Angažman
+                            </div>
+                            <div className="text-slate-900 font-bold">
+                              {userRealStatistics?.total_engagement || '0'}
+                            </div>
+                          </div>
+                          <div className="bg-slate-100 p-3 rounded-lg border border-slate-200">
+                            <div className="text-slate-500 text-sm">
+                              Konverzije
+                            </div>
+                            <div className="text-slate-900 font-bold">
+                              {userRealStatistics?.total_conversions || '0'}
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+
+                    <div>
+                      <h3 className="text-white font-bold mb-2">
+                        Platni Istorija
+                      </h3>
+                      <div className="space-y-2">
+                        {selectedUser.payments &&
+                        selectedUser.payments.length > 0 ? (
+                          selectedUser.payments.map((payment) => (
+                            <div
+                              key={payment.id}
+                              className="bg-slate-100 p-3 rounded-lg border border-slate-200 flex justify-between"
+                            >
+                              <div>
+                                <div className="text-slate-900 font-medium">
+                                  ${payment.amount} - {payment.status}
+                                </div>
+                                <div className="text-slate-500 text-sm">
+                                  {new Date(
+                                    payment.created_at,
+                                  ).toLocaleDateString()}
+                                </div>
+                              </div>
+                              <div className="text-slate-500 text-sm">
+                                {payment.tier_at_payment?.toUpperCase()}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-slate-500 text-sm">
+                            Nema platnih podataka
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>,
+              document.body,
+            )}
 
           {/* Create User Modal */}
           <CreateUserModal

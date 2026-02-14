@@ -1,6 +1,7 @@
 'use client';
 
 import { NICHES } from '@/lib/constants';
+import { isLongFormHidden } from '@/lib/utils/featureFlags';
 import { createClient } from '@/lib/supabase/client';
 import type { Template, TemplateVisibility, UserTier } from '@/types';
 import { Edit, Eye, EyeOff, Plus, Save, Trash2, X } from 'lucide-react';
@@ -314,7 +315,9 @@ export default function AdminTemplateManagement({
                   className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-white"
                 >
                   <option value="Kratka Forma">Kratka Forma</option>
-                  <option value="Duga Forma">Duga Forma</option>
+                  {!isLongFormHidden() && (
+                    <option value="Duga Forma">Duga Forma</option>
+                  )}
                 </select>
               </div>
             </div>

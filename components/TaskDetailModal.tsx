@@ -20,6 +20,7 @@ import {
   Youtube,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import AIAssistant from './AIAssistant';
 import AICreditBadge from './ui/ai-credit-badge';
@@ -39,7 +40,7 @@ interface TaskDetailModalProps {
     taskId: string,
     link: string,
     displayUrl?: string,
-    type?: string
+    type?: string,
   ) => Promise<{ data: any | null; error: string | null }>;
   onRemoveInspirationLink: (linkId: string) => Promise<void>;
 }
@@ -108,7 +109,7 @@ export default function TaskDetailModal({
   const [bodyHtml, setBodyHtml] = useState(getHtmlContent(editedTask.body));
   const [ctaHtml, setCtaHtml] = useState(getHtmlContent(editedTask.cta));
   const [analysisHtml, setAnalysisHtml] = useState(
-    getHtmlContent(editedTask.analysis)
+    getHtmlContent(editedTask.analysis),
   );
 
   useEffect(() => {
@@ -165,7 +166,7 @@ export default function TaskDetailModal({
   };
 
   const handleStatusChange = async (
-    newStatus: 'idea' | 'ready' | 'scheduled' | 'published'
+    newStatus: 'idea' | 'ready' | 'scheduled' | 'published',
   ) => {
     // Update local state immediately
     setEditedTask((prev) => ({ ...prev, status: newStatus }));
@@ -234,7 +235,7 @@ export default function TaskDetailModal({
       const hasValidHost = Boolean(
         url.hostname &&
         url.hostname.length > 0 &&
-        (url.hostname.includes('.') || url.hostname === 'localhost')
+        (url.hostname.includes('.') || url.hostname === 'localhost'),
       );
 
       // Additional check: hostname should not be just numbers or random characters
@@ -324,7 +325,7 @@ export default function TaskDetailModal({
         editedTask.id,
         urlToAdd,
         thumbnailUrl || undefined,
-        type || undefined
+        type || undefined,
       );
 
       // If API call succeeded, update with real ID from server
@@ -351,7 +352,7 @@ export default function TaskDetailModal({
                     link: realLink.link || link.link,
                     created_at: realLink.created_at || link.created_at,
                   }
-                : link
+                : link,
             ),
           }));
 
@@ -377,7 +378,7 @@ export default function TaskDetailModal({
         setEditedTask((prev) => ({
           ...prev,
           inspiration_links: (prev.inspiration_links || []).filter(
-            (link) => link.id !== tempId
+            (link) => link.id !== tempId,
           ),
         }));
 
@@ -396,7 +397,7 @@ export default function TaskDetailModal({
       setEditedTask((prev) => ({
         ...prev,
         inspiration_links: (prev.inspiration_links || []).filter(
-          (link) => link.id !== tempId
+          (link) => link.id !== tempId,
         ),
       }));
 
@@ -480,12 +481,12 @@ export default function TaskDetailModal({
   };
 
   const taskFormat =
-    editedTask.format === 'Kratka Forma' ? 'text-red-400' : 'text-green-400';
+    editedTask.format === 'Kratka Forma' ? 'text-chart-1' : 'text-chart-2';
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-lg shadow-2xl flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between p-3 border-b border-slate-800">
+  const modalContent = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
+      <div className="bg-white border border-slate-200 w-full max-w-2xl rounded-xl shadow-xl flex flex-col max-h-[90vh] overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
           <div className="flex flex-col gap-2 w-full">
             <div
               className={`flex ${
@@ -517,7 +518,7 @@ export default function TaskDetailModal({
                 {!task.is_admin_case_study && (
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="text-red-400 hover:text-red-300 transition-colors p-2 hover:bg-red-900/20 rounded-lg"
+                    className="text-chart-1 hover:text-chart-1/90 transition-colors p-2 hover:bg-chart-1/20 rounded-lg"
                     title="Obriši zadatak"
                   >
                     <Trash2 size={20} />
@@ -525,27 +526,27 @@ export default function TaskDetailModal({
                 )}
                 <button
                   onClick={onClose}
-                  className="text-slate-400 hover:text-white transition-colors"
+                  className="text-slate-400 hover:text-slate-100 hover:bg-slate-700/50 rounded-lg p-2 transition-colors"
                 >
                   <X size={24} />
                 </button>
               </div>
             </div>
 
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
               {editedTask.title}
             </h3>
-            <span className={`text-sm font-bold ${taskFormat}`}>
+            <span className={`text-sm font-semibold ${taskFormat}`}>
               {editedTask.format}
             </span>
             <p className="text-slate-400 text-xs mt-1">
               Kreirano:{' '}
               {new Date(editedTask.created_at).toLocaleDateString('sr-RS')}{' '}
               {editedTask.publish_date && (
-                <span className="font-semibold text-purple-300">
+                <span className="font-semibold text-chart-4">
                   | Planirano:{' '}
                   {new Date(editedTask.publish_date).toLocaleDateString(
-                    'sr-RS'
+                    'sr-RS',
                   )}
                 </span>
               )}
@@ -553,33 +554,33 @@ export default function TaskDetailModal({
           </div>
         </div>
 
-        <div className="flex border-b border-slate-800 flex-wrap justify-center">
+        <div className="flex border-b border-slate-700/80 flex-wrap justify-center bg-slate-900/50">
           <button
             onClick={() => setActiveTab('script')}
-            className={`py-3 px-6 text-sm font-medium transition-colors flex items-center gap-2 ${
+            className={`py-3 px-6 text-sm font-medium transition-colors flex items-center gap-2 rounded-t-lg ${
               activeTab === 'script'
-                ? 'text-white border-b-2 border-blue-500'
-                : 'text-slate-500 hover:text-slate-300'
+                ? 'text-slate-100 border-b-2 border-chart-2 bg-slate-800/30'
+                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/20'
             }`}
           >
             <FileText size={14} /> Skripta
           </button>
           <button
             onClick={() => setActiveTab('inspiration')}
-            className={`py-3 px-6 text-sm font-medium transition-colors flex items-center gap-2 ${
+            className={`py-3 px-6 text-sm font-medium transition-colors flex items-center gap-2 rounded-t-lg ${
               activeTab === 'inspiration'
-                ? 'text-white border-b-2 border-blue-500'
-                : 'text-slate-500 hover:text-slate-300'
+                ? 'text-slate-100 border-b-2 border-chart-2 bg-slate-800/30'
+                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/20'
             }`}
           >
             <Link size={14} /> Inspiracija
           </button>
           <button
             onClick={() => setActiveTab('schedule')}
-            className={`py-3 px-6 text-sm font-medium transition-colors flex items-center gap-2 ${
+            className={`py-3 px-6 text-sm font-medium transition-colors flex items-center gap-2 rounded-t-lg ${
               activeTab === 'schedule'
-                ? 'text-white border-b-2 border-blue-500'
-                : 'text-slate-500 hover:text-slate-300'
+                ? 'text-slate-100 border-b-2 border-chart-2 bg-slate-800/30'
+                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/20'
             }`}
           >
             <Calendar size={14} /> Raspored
@@ -587,10 +588,10 @@ export default function TaskDetailModal({
           {editedTask.status === 'published' && (
             <button
               onClick={() => setActiveTab('results')}
-              className={`py-3 px-6 text-sm font-medium transition-colors flex items-center gap-2 ${
+              className={`py-3 px-6 text-sm font-medium transition-colors flex items-center gap-2 rounded-t-lg ${
                 activeTab === 'results'
-                  ? 'text-white border-b-2 border-blue-500'
-                  : 'text-slate-500 hover:text-slate-300'
+                  ? 'text-slate-100 border-b-2 border-chart-2 bg-slate-800/30'
+                  : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/20'
               }`}
             >
               <ClipboardList size={14} /> Rezultati
@@ -598,11 +599,11 @@ export default function TaskDetailModal({
           )}
         </div>
 
-        <div className="p-2 overflow-y-auto flex-1 space-y-6">
+        <div className="p-4 overflow-y-auto flex-1 space-y-6 bg-slate-50">
           {activeTab === 'script' && (
-            <div className="bg-slate-800 rounded-lg p-3 border border-slate-700 space-y-4">
-              <h4 className="text-sm font-bold text-slate-100 uppercase mb-2 flex items-center gap-2">
-                <Edit3 size={14} className="text-blue-100" />
+            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/60 space-y-4">
+              <h4 className="text-sm font-semibold text-slate-100 uppercase tracking-wide mb-2 flex items-center gap-2">
+                <Edit3 size={14} className="text-chart-2" />
                 Skripta
                 {/* <span
                   className={`ml-1 font-bold ${
@@ -628,7 +629,7 @@ export default function TaskDetailModal({
               {/* Category Selection */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Kategorija <span className="text-red-400">*</span>
+                  Kategorija <span className="text-chart-1">*</span>
                 </label>
                 {loadingCategories ? (
                   <div className="w-full bg-slate-700 border border-slate-600 rounded-md p-3 text-slate-400">
@@ -653,7 +654,7 @@ export default function TaskDetailModal({
 
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Ton / Stil <span className="text-red-400">*</span>
+                  Ton / Stil <span className="text-chart-1">*</span>
                 </label>
                 <ToneSelect
                   value={tone}
@@ -666,28 +667,28 @@ export default function TaskDetailModal({
 
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Ciljna Publika <span className="text-red-400">*</span>
+                  Ciljna Publika <span className="text-chart-1">*</span>
                 </label>
                 <input
                   type="text"
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
                   placeholder="npr. Preduzetnici 25-40 godina, Marketinški stručnjaci..."
-                  className="w-full bg-slate-700 border border-slate-600 rounded-md py-2 px-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-slate-800/60 border border-slate-600 rounded-lg py-2 px-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-chart-2/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isEditingDisabled}
                 />
               </div>
 
               {/* Editing Disabled Notice for Published Tasks */}
               {isEditingDisabled && (
-                <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-4">
+                <div className="bg-chart-3/20 border border-chart-3/40 rounded-xl p-4">
                   <div className="flex items-start gap-3">
-                    <Info className="text-blue-400 w-5 h-5 mt-0.5 shrink-0" />
+                    <Info className="text-chart-3 w-5 h-5 mt-0.5 shrink-0" />
                     <div className="flex-1">
-                      <h4 className="text-sm font-semibold text-blue-300 mb-1">
+                      <h4 className="text-sm font-semibold text-chart-3 mb-1">
                         Zadatak je objavljen
                       </h4>
-                      <p className="text-xs text-blue-200/80">
+                      <p className="text-xs text-slate-400">
                         Ne možete menjati skriptu, inspiraciju ili raspored za
                         objavljene zadatke. Možete samo urediti rezultate na
                         kartici "Rezultati".
@@ -709,24 +710,24 @@ export default function TaskDetailModal({
 
                 if (!hasAllRequiredFields && !isEditingDisabled) {
                   return (
-                    <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-4 space-y-2">
+                    <div className="bg-chart-3/10 border border-chart-3/40 rounded-xl p-4 space-y-2">
                       <div className="flex items-start gap-3">
-                        <Info className="text-amber-400 w-5 h-5 mt-0.5 shrink-0" />
+                        <Info className="text-chart-3 w-5 h-5 mt-0.5 shrink-0" />
                         <div className="flex-1">
-                          <h4 className="text-sm font-semibold text-amber-300 mb-1">
+                          <h4 className="text-sm font-semibold text-slate-100 mb-1">
                             Potrebno za AI generator
                           </h4>
-                          <p className="text-xs text-amber-200/80 mb-2">
+                          <p className="text-xs text-slate-400 mb-2">
                             Da biste koristili AI generator, molimo popunite
                             sledeća obavezna polja:
                           </p>
-                          <ul className="list-disc list-inside space-y-1 text-xs text-amber-200/80">
+                          <ul className="list-disc list-inside space-y-1 text-xs text-slate-400">
                             {missingFields.map((field) => (
                               <li
                                 key={field}
                                 className="flex items-center gap-2"
                               >
-                                <span className="text-amber-400">•</span>
+                                <span className="text-chart-3">•</span>
                                 <span>{field}</span>
                               </li>
                             ))}
@@ -741,7 +742,7 @@ export default function TaskDetailModal({
 
               {isLongForm ? (
                 <div className="flex-1 flex flex-col min-h-[300px]">
-                  <label className="text-green-400 text-xs font-bold block mb-1">
+                  <label className="text-chart-2 text-xs font-semibold block mb-1">
                     CEO SCENARIO / TEKST (Duga Forma)
                   </label>
                   <RichTextEditor
@@ -772,7 +773,7 @@ export default function TaskDetailModal({
                     *Napomena: Za Dugu Formu koristi se jedno polje. Procena
                     trajanja bi bila: ~
                     {Math.round(
-                      fullScriptText.trim().split(/\s+/).length / 150
+                      fullScriptText.trim().split(/\s+/).length / 150,
                     )}{' '}
                     min
                   </p>
@@ -780,7 +781,7 @@ export default function TaskDetailModal({
               ) : (
                 <>
                   <div>
-                    <label className="text-red-400 text-xs font-bold block mb-1">
+                    <label className="text-chart-1 text-xs font-semibold block mb-1">
                       01. HOOK (Udica)
                     </label>
                     <RichTextEditor
@@ -810,7 +811,7 @@ export default function TaskDetailModal({
                   </div>
 
                   <div>
-                    <label className="text-blue-400 text-xs font-bold block mb-1">
+                    <label className="text-chart-2 text-xs font-semibold block mb-1">
                       02. BODY (Vrednost)
                     </label>
                     <RichTextEditor
@@ -840,7 +841,7 @@ export default function TaskDetailModal({
                   </div>
 
                   <div>
-                    <label className="text-emerald-400 text-xs font-bold block mb-1">
+                    <label className="text-chart-4 text-xs font-semibold block mb-1">
                       03. CTA (Poziv na akciju)
                     </label>
                     <RichTextEditor
@@ -905,17 +906,17 @@ export default function TaskDetailModal({
                           handleUpdateFullScript(content.trim());
                         } else {
                           const hookMatch = content.match(
-                            /HOOK:?\s*([\s\S]+?)(?:\n\n|BODY:|CTA:|$)/i
+                            /HOOK:?\s*([\s\S]+?)(?:\n\n|BODY:|CTA:|$)/i,
                           );
                           const bodyMatch = content.match(
-                            /BODY:?\s*([\s\S]+?)(?:\n\n|CTA:|$)/i
+                            /BODY:?\s*([\s\S]+?)(?:\n\n|CTA:|$)/i,
                           );
                           const ctaMatch =
                             content.match(/CTA:?\s*([\s\S]+?)$/i);
                           const titleMatch =
                             content.match(/NASLOV:?\s*([\s\S]+?)(?:\n|$)/i) ||
                             content.match(
-                              /^([\s\S]+?)(?:\n|HOOK:|BODY:|CTA:)/i
+                              /^([\s\S]+?)(?:\n|HOOK:|BODY:|CTA:)/i,
                             );
 
                           if (titleMatch?.[1]) {
@@ -941,8 +942,8 @@ export default function TaskDetailModal({
 
           {activeTab === 'inspiration' && (
             <div className="space-y-2">
-              <h4 className="text-sm font-bold text-blue-100 uppercase flex items-center gap-2 mt-2">
-                <Trello size={14} className="text-blue-100" /> Dodaj Linkove
+              <h4 className="text-sm font-semibold text-slate-200 uppercase tracking-wide flex items-center gap-2 mt-2">
+                <Trello size={14} className="text-chart-2" /> Dodaj Linkove
                 Konkurenata
               </h4>
 
@@ -963,7 +964,7 @@ export default function TaskDetailModal({
                     }
                   }}
                   placeholder="Paste link (YouTube, Instagram, TikTok...)"
-                  className="flex-1 bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-slate-800/60 border border-slate-600 rounded-lg py-2 px-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-chart-2/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isEditingDisabled}
                 />
                 <button
@@ -971,7 +972,7 @@ export default function TaskDetailModal({
                   disabled={
                     !linkInput.trim() || isAddingLink || isEditingDisabled
                   }
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-sm font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500 flex items-center gap-2"
+                  className="px-4 py-2 bg-chart-2 hover:bg-chart-2/90 text-white rounded-lg text-sm font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500 flex items-center gap-2"
                 >
                   {isAddingLink ? (
                     <>
@@ -1041,7 +1042,7 @@ export default function TaskDetailModal({
                                 ...prev,
                                 inspiration_links:
                                   prev.inspiration_links?.filter(
-                                    (link) => link.id !== item.id
+                                    (link) => link.id !== item.id,
                                   ) || [],
                               }));
                             } finally {
@@ -1243,29 +1244,31 @@ export default function TaskDetailModal({
 
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl">
-              <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                <Trash2 size={24} className="text-red-400" />
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
+            <div className="bg-white border border-slate-200 rounded-xl p-6 max-w-md w-full shadow-xl">
+              <h3 className="text-xl font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <Trash2 size={24} className="text-chart-1" />
                 Potvrdite Brisanje
               </h3>
-              <p className="text-slate-400 mb-6">
+              <p className="text-slate-600 mb-6">
                 Da li ste sigurni da želite da obrišete zadatak{' '}
-                <span className="font-semibold text-white">"{task.title}"</span>
+                <span className="font-semibold text-slate-900">
+                  "{task.title}"
+                </span>
                 ? Ova akcija se ne može poništiti.
               </p>
               <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
                   disabled={isDeleting}
-                  className="py-2 px-4 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+                  className="py-2 px-4 rounded-lg font-medium border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
                 >
                   Otkaži
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={isDeleting}
-                  className="py-2 px-4 rounded-lg font-medium bg-red-600 hover:bg-red-500 text-white transition-colors disabled:bg-red-800 disabled:text-red-300 flex items-center gap-2"
+                  className="py-2 px-4 rounded-lg font-medium bg-chart-1 hover:bg-chart-1/90 text-white transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                   {isDeleting ? (
                     <>
@@ -1286,4 +1289,7 @@ export default function TaskDetailModal({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return modalContent;
+  return createPortal(modalContent, document.body);
 }

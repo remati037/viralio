@@ -23,6 +23,8 @@ export interface RichTextEditorProps {
   className?: string;
   minHeight?: string;
   disabled?: boolean;
+  /** Use 'light' for modals/light backgrounds */
+  variant?: 'dark' | 'light';
   aiButton?: {
     fieldType: 'hook' | 'body' | 'cta' | 'title' | 'fullScript';
     taskContext?: {
@@ -47,9 +49,14 @@ export default function RichTextEditor({
   className,
   minHeight = '200px',
   disabled = false,
+  variant = 'dark',
   aiButton,
 }: RichTextEditorProps) {
   const [mounted, setMounted] = useState(false);
+  const isLight = variant === 'light';
+  const proseClass = isLight
+    ? 'prose prose-sm max-w-none focus:outline-none min-h-[200px] p-4 prose-ul:list-disc prose-ol:list-decimal text-slate-900'
+    : 'prose prose-invert prose-sm max-w-none focus:outline-none min-h-[200px] p-4 prose-ul:list-disc prose-ol:list-decimal';
 
   const editor = useEditor({
     editable: !disabled,
@@ -90,8 +97,7 @@ export default function RichTextEditor({
     },
     editorProps: {
       attributes: {
-        class:
-          'prose prose-invert prose-sm max-w-none focus:outline-none min-h-[200px] p-4 prose-ul:list-disc prose-ol:list-decimal',
+        class: proseClass,
         spellcheck: 'false',
       },
       handleDOMEvents: {
@@ -131,16 +137,24 @@ export default function RichTextEditor({
     setMounted(true);
   }, []);
 
+  const wrapperClass = isLight
+    ? 'border border-slate-200 rounded-lg bg-white overflow-hidden'
+    : 'border border-slate-700 rounded-lg bg-slate-800 overflow-hidden';
+  const toolbarClass = isLight
+    ? 'flex items-center gap-1 p-2 border-b border-slate-200 bg-slate-50 flex-wrap'
+    : 'flex items-center gap-1 p-2 border-b border-slate-700 bg-slate-900/50 flex-wrap';
+  const toolbarBtnActive = isLight ? 'bg-slate-200 text-slate-900' : 'bg-slate-700 text-white';
+  const toolbarBtnInactive = isLight ? 'text-slate-600 hover:bg-slate-100' : 'text-slate-400 hover:bg-slate-700/50';
+  const toolbarDivider = isLight ? 'bg-slate-200' : 'bg-slate-700';
+  const aiSectionClass = isLight ? 'p-3 border-t border-slate-200 bg-slate-50' : 'p-3 border-t border-slate-700 bg-slate-900/50';
+
   if (!editor || !mounted) {
     return (
       <div
-        className={cn(
-          'border border-slate-700 rounded-lg bg-slate-800 overflow-hidden',
-          className
-        )}
+        className={cn(wrapperClass, className)}
         style={{ minHeight }}
       >
-        <div className="p-4 text-slate-400">Loading editor...</div>
+        <div className={cn('p-4', isLight ? 'text-slate-500' : 'text-slate-400')}>Loading editor...</div>
       </div>
     );
   }
@@ -148,23 +162,22 @@ export default function RichTextEditor({
   return (
     <div
       className={cn(
-        'border border-slate-700 rounded-lg bg-slate-800 overflow-hidden',
+        isLight ? 'rich-text-editor-light' : 'rich-text-editor-dark',
+        wrapperClass,
         className
       )}
     >
       {/* Toolbar */}
       {!disabled && (
-        <div className="flex items-center gap-1 p-2 border-b border-slate-700 bg-slate-900/50 flex-wrap">
+        <div className={toolbarClass}>
           {/* Heading and Paragraph Controls */}
-          <div className="flex items-center gap-0.5 border-r border-slate-700 pr-1 mr-1">
+          <div className={cn('flex items-center gap-0.5 border-r pr-1 mr-1', isLight ? 'border-slate-200' : 'border-slate-700')}>
             <button
               type="button"
               onClick={() => editor.chain().focus().setParagraph().run()}
               className={cn(
                 'px-2.5 py-1.5 rounded text-xs font-semibold transition-colors',
-                editor.isActive('paragraph')
-                  ? 'bg-slate-700 text-white'
-                  : 'text-slate-400 hover:bg-slate-700/50'
+                editor.isActive('paragraph') ? toolbarBtnActive : toolbarBtnInactive
               )}
               title="Paragraph"
             >
@@ -177,9 +190,7 @@ export default function RichTextEditor({
               }
               className={cn(
                 'px-2.5 py-1.5 rounded text-xs font-bold transition-colors',
-                editor.isActive('heading', { level: 1 })
-                  ? 'bg-slate-700 text-white'
-                  : 'text-slate-400 hover:bg-slate-700/50'
+                editor.isActive('heading', { level: 1 }) ? toolbarBtnActive : toolbarBtnInactive
               )}
               title="Heading 1"
             >
@@ -192,9 +203,7 @@ export default function RichTextEditor({
               }
               className={cn(
                 'px-2.5 py-1.5 rounded text-xs font-bold transition-colors',
-                editor.isActive('heading', { level: 2 })
-                  ? 'bg-slate-700 text-white'
-                  : 'text-slate-400 hover:bg-slate-700/50'
+                editor.isActive('heading', { level: 2 }) ? toolbarBtnActive : toolbarBtnInactive
               )}
               title="Heading 2"
             >
@@ -207,25 +216,21 @@ export default function RichTextEditor({
               }
               className={cn(
                 'px-2.5 py-1.5 rounded text-xs font-bold transition-colors',
-                editor.isActive('heading', { level: 3 })
-                  ? 'bg-slate-700 text-white'
-                  : 'text-slate-400 hover:bg-slate-700/50'
+                editor.isActive('heading', { level: 3 }) ? toolbarBtnActive : toolbarBtnInactive
               )}
               title="Heading 3"
             >
               H3
             </button>
           </div>
-          <div className="w-px h-6 bg-slate-700 mx-1" />
+          <div className={cn('w-px h-6 mx-1', toolbarDivider)} />
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBold().run()}
             disabled={!editor.can().chain().focus().toggleBold().run()}
             className={cn(
-              'p-2 rounded hover:bg-slate-700 transition-colors',
-              editor.isActive('bold')
-                ? 'bg-slate-700 text-white'
-                : 'text-slate-400'
+              'p-2 rounded transition-colors',
+              editor.isActive('bold') ? toolbarBtnActive : toolbarBtnInactive
             )}
             title="Bold"
           >
@@ -236,26 +241,22 @@ export default function RichTextEditor({
             onClick={() => editor.chain().focus().toggleItalic().run()}
             disabled={!editor.can().chain().focus().toggleItalic().run()}
             className={cn(
-              'p-2 rounded hover:bg-slate-700 transition-colors',
-              editor.isActive('italic')
-                ? 'bg-slate-700 text-white'
-                : 'text-slate-400'
+              'p-2 rounded transition-colors',
+              editor.isActive('italic') ? toolbarBtnActive : toolbarBtnInactive
             )}
             title="Italic"
           >
             <Italic size={16} />
           </button>
-          <div className="w-px h-6 bg-slate-700 mx-1" />
+          <div className={cn('w-px h-6 mx-1', toolbarDivider)} />
           <button
             type="button"
             onClick={() => {
               editor.chain().focus().toggleBulletList().run();
             }}
             className={cn(
-              'p-2 rounded hover:bg-slate-700 transition-colors',
-              editor.isActive('bulletList')
-                ? 'bg-slate-700 text-white'
-                : 'text-slate-400'
+              'p-2 rounded transition-colors',
+              editor.isActive('bulletList') ? toolbarBtnActive : toolbarBtnInactive
             )}
             title="Bullet List"
           >
@@ -267,10 +268,8 @@ export default function RichTextEditor({
               editor.chain().focus().toggleOrderedList().run();
             }}
             className={cn(
-              'p-2 rounded hover:bg-slate-700 transition-colors',
-              editor.isActive('orderedList')
-                ? 'bg-slate-700 text-white'
-                : 'text-slate-400'
+              'p-2 rounded transition-colors',
+              editor.isActive('orderedList') ? toolbarBtnActive : toolbarBtnInactive
             )}
             title="Numbered List"
           >
@@ -280,21 +279,19 @@ export default function RichTextEditor({
             type="button"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
             className={cn(
-              'p-2 rounded hover:bg-slate-700 transition-colors',
-              editor.isActive('blockquote')
-                ? 'bg-slate-700 text-white'
-                : 'text-slate-400'
+              'p-2 rounded transition-colors',
+              editor.isActive('blockquote') ? toolbarBtnActive : toolbarBtnInactive
             )}
             title="Quote"
           >
             <Quote size={16} />
           </button>
-          <div className="w-px h-6 bg-slate-700 mx-1" />
+          <div className={cn('w-px h-6 mx-1', toolbarDivider)} />
           <button
             type="button"
             onClick={() => editor.chain().focus().undo().run()}
             disabled={!editor.can().chain().focus().undo().run()}
-            className="p-2 rounded hover:bg-slate-700 transition-colors text-slate-400 disabled:opacity-50"
+            className={cn('p-2 rounded transition-colors disabled:opacity-50', toolbarBtnInactive)}
             title="Undo"
           >
             <Undo size={16} />
@@ -303,7 +300,7 @@ export default function RichTextEditor({
             type="button"
             onClick={() => editor.chain().focus().redo().run()}
             disabled={!editor.can().chain().focus().redo().run()}
-            className="p-2 rounded hover:bg-slate-700 transition-colors text-slate-400 disabled:opacity-50"
+            className={cn('p-2 rounded transition-colors disabled:opacity-50', toolbarBtnInactive)}
             title="Redo"
           >
             <Redo size={16} />
@@ -318,7 +315,7 @@ export default function RichTextEditor({
 
       {/* AI Button */}
       {aiButton && !disabled && (
-        <div className="p-3 border-t border-slate-700 bg-slate-900/50">
+        <div className={aiSectionClass}>
           <AIButton
             fieldType={aiButton.fieldType}
             currentContent={content}
@@ -333,116 +330,124 @@ export default function RichTextEditor({
       )}
 
       <style jsx global>{`
-        .ProseMirror {
+        /* Dark variant (default) */
+        .rich-text-editor-dark .ProseMirror {
           outline: none;
           color: rgb(226 232 240);
           padding: 16px;
         }
-        .ProseMirror p {
+        .rich-text-editor-dark .ProseMirror p {
           margin: 8px 0;
         }
-        .ProseMirror p.is-editor-empty:first-child::before {
+        .rich-text-editor-dark .ProseMirror p.is-editor-empty:first-child::before {
           content: attr(data-placeholder);
           float: left;
           color: rgb(100 116 139);
           pointer-events: none;
           height: 0;
         }
-        /* Override prose list styles */
-        .ProseMirror ul,
-        .ProseMirror ol {
+        .rich-text-editor-dark .ProseMirror ul,
+        .rich-text-editor-dark .ProseMirror ol {
           padding-left: 28px !important;
           margin: 12px 0 !important;
           list-style-position: outside !important;
-          list-style-image: none !important;
         }
-        .ProseMirror ul {
+        .rich-text-editor-dark .ProseMirror ul {
           list-style-type: disc !important;
         }
-        .ProseMirror ul[data-type='taskList'] {
-          list-style: none !important;
-          padding-left: 0 !important;
-        }
-        .ProseMirror ol {
+        .rich-text-editor-dark .ProseMirror ol {
           list-style-type: decimal !important;
         }
-        .ProseMirror li {
+        .rich-text-editor-dark .ProseMirror li {
           display: list-item !important;
           margin: 4px 0 !important;
           padding-left: 4px !important;
-          list-style-position: outside !important;
-          list-style-image: none !important;
         }
-        .ProseMirror ul li {
-          list-style-type: disc !important;
-        }
-        .ProseMirror ol li {
-          list-style-type: decimal !important;
-        }
-        .ProseMirror ul li::marker,
-        .ProseMirror ol li::marker {
+        .rich-text-editor-dark .ProseMirror ul li::marker,
+        .rich-text-editor-dark .ProseMirror ol li::marker {
           color: rgb(226 232 240) !important;
         }
-        .ProseMirror ul li p,
-        .ProseMirror ol li p {
-          margin: 0;
-          display: inline;
-        }
-        .ProseMirror ul li p:first-child,
-        .ProseMirror ol li p:first-child {
-          margin-top: 0;
-        }
-        .ProseMirror ul li p:last-child,
-        .ProseMirror ol li p:last-child {
-          margin-bottom: 0;
-        }
-        .ProseMirror h1,
-        .ProseMirror h2,
-        .ProseMirror h3 {
+        .rich-text-editor-dark .ProseMirror h1,
+        .rich-text-editor-dark .ProseMirror h2,
+        .rich-text-editor-dark .ProseMirror h3 {
           font-weight: bold;
           margin-top: 16px;
           margin-bottom: 8px;
           color: rgb(226 232 240);
         }
-        .ProseMirror h1 {
-          font-size: 24px;
-        }
-        .ProseMirror h2 {
-          font-size: 20px;
-        }
-        .ProseMirror h3 {
-          font-size: 18px;
-        }
-        .ProseMirror blockquote {
+        .rich-text-editor-dark .ProseMirror blockquote {
           border-left: 3px solid rgb(59 130 246);
           padding-left: 16px;
           margin: 8px 0;
           font-style: italic;
           color: rgb(148 163 184);
         }
-        .ProseMirror strong {
-          font-weight: bold;
-        }
-        .ProseMirror em {
-          font-style: italic;
-        }
-        .ProseMirror code {
+        .rich-text-editor-dark .ProseMirror code {
           background-color: rgb(30 41 59);
           padding: 2px 4px;
           border-radius: 4px;
-          font-size: 14px;
           color: rgb(226 232 240);
         }
-        .ProseMirror pre {
+        .rich-text-editor-dark .ProseMirror pre {
           background-color: rgb(30 41 59);
           padding: 16px;
           border-radius: 8px;
           margin: 8px 0;
           overflow-x: auto;
         }
-        .ProseMirror pre code {
-          background-color: transparent;
-          padding: 0;
+        /* Light variant */
+        .rich-text-editor-light .ProseMirror {
+          outline: none;
+          color: rgb(15 23 42);
+          padding: 16px;
+        }
+        .rich-text-editor-light .ProseMirror p {
+          margin: 8px 0;
+        }
+        .rich-text-editor-light .ProseMirror p.is-editor-empty:first-child::before {
+          content: attr(data-placeholder);
+          float: left;
+          color: rgb(148 163 184);
+          pointer-events: none;
+          height: 0;
+        }
+        .rich-text-editor-light .ProseMirror ul,
+        .rich-text-editor-light .ProseMirror ol {
+          padding-left: 28px !important;
+          margin: 12px 0 !important;
+          list-style-position: outside !important;
+        }
+        .rich-text-editor-light .ProseMirror ul li::marker,
+        .rich-text-editor-light .ProseMirror ol li::marker {
+          color: rgb(51 65 85) !important;
+        }
+        .rich-text-editor-light .ProseMirror h1,
+        .rich-text-editor-light .ProseMirror h2,
+        .rich-text-editor-light .ProseMirror h3 {
+          font-weight: bold;
+          margin-top: 16px;
+          margin-bottom: 8px;
+          color: rgb(15 23 42);
+        }
+        .rich-text-editor-light .ProseMirror blockquote {
+          border-left: 3px solid rgb(59 130 246);
+          padding-left: 16px;
+          margin: 8px 0;
+          font-style: italic;
+          color: rgb(71 85 105);
+        }
+        .rich-text-editor-light .ProseMirror code {
+          background-color: rgb(226 232 240);
+          padding: 2px 4px;
+          border-radius: 4px;
+          color: rgb(15 23 42);
+        }
+        .rich-text-editor-light .ProseMirror pre {
+          background-color: rgb(241 245 249);
+          padding: 16px;
+          border-radius: 8px;
+          margin: 8px 0;
+          overflow-x: auto;
         }
       `}</style>
     </div>

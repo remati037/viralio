@@ -1,6 +1,7 @@
 'use client'
 
 import { NICHES } from '@/lib/constants'
+import { isLongFormHidden } from '@/lib/utils/featureFlags'
 import { createClient } from '@/lib/supabase/client'
 import type { TaskInsert, TaskCategory } from '@/types'
 import { Plus, Save, X } from 'lucide-react'
@@ -191,7 +192,9 @@ export default function AdminCaseStudyCreation({ userId, onCaseStudyCreated }: A
                   className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-white"
                 >
                   <option value="Kratka Forma">Kratka Forma</option>
-                  <option value="Duga Forma">Duga Forma</option>
+                  {!isLongFormHidden() && (
+                    <option value="Duga Forma">Duga Forma</option>
+                  )}
                 </select>
               </div>
             </div>

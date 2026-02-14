@@ -14,6 +14,7 @@ import {
 import { useUserId } from '@/components/UserContext';
 import { useProfile } from '@/lib/hooks/useProfile';
 import { useTasks } from '@/lib/hooks/useTasks';
+import { isLongFormHidden } from '@/lib/utils/featureFlags';
 import {
   canCreateTask,
   canUseView,
@@ -295,13 +296,15 @@ export default function PlannerPage() {
     ) {
       notification = `Kratka forma: ${completedShort}/${requiredShort}. Ubrzajte kreiranje!`;
     } else if (
+      !isLongFormHidden() &&
       (profile.monthly_goal_long || 0) > 0 &&
       completedLong < requiredLong
     ) {
       notification = `Duga forma: ${completedLong}/${requiredLong}. Ubrzajte kreiranje!`;
     } else if (
       completedShort >= (profile.monthly_goal_short || 0) &&
-      completedLong >= (profile.monthly_goal_long || 0)
+      (isLongFormHidden() ||
+        completedLong >= (profile.monthly_goal_long || 0))
     ) {
       notification =
         'Čestitamo! Svi ciljevi za ovaj mesec su već ispunjeni. Kreirajte dalje!';

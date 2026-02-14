@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Task } from '@/types';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 /** Format a Date as ISO string at noon UTC so the calendar day is preserved across timezones. */
 function toPublishDateISO(day: Date): string {
@@ -21,7 +22,7 @@ interface CalendarViewProps {
   /** When provided, task chips become draggable and day cells accept drops to update publish_date. */
   onUpdatePublishDate?: (
     taskId: string,
-    publishDate: string
+    publishDate: string,
   ) => void | Promise<void>;
 }
 
@@ -79,7 +80,7 @@ export default function CalendarView({
   const lastDayOfMonth = new Date(
     viewYear,
     viewMonth,
-    daysInMonth(viewYear, viewMonth)
+    daysInMonth(viewYear, viewMonth),
   );
 
   const startDate = getStartOfWeek(firstDayOfMonth);
@@ -106,7 +107,7 @@ export default function CalendarView({
         acc[date].push(task);
         return acc;
       },
-      {} as Record<string, Task[]>
+      {} as Record<string, Task[]>,
     );
 
   const isToday = (date: Date) =>
@@ -348,95 +349,102 @@ export default function CalendarView({
       </Card>
 
       {/* Day tasks modal */}
-      {selectedDayTasks && selectedDate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 p-4 backdrop-blur-sm">
-          <Card className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden border-border shadow-lg">
-            <CardHeader className="flex flex-row items-start justify-between space-y-0 border-b border-border p-4 md:p-6">
-              <div className="space-y-1">
-                <CardTitle className="text-lg font-bold text-foreground md:text-xl">
-                  {formatDateDisplay(selectedDate)}
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  {selectedDayTasks.length}{' '}
-                  {selectedDayTasks.length === 1 ? 'zadatak' : 'zadataka'}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setSelectedDayTasks(null);
-                  setSelectedDate(null);
-                }}
-                className="shrink-0 rounded-lg text-muted-foreground hover:text-foreground"
-                aria-label="Zatvori"
-              >
-                <X size={20} />
-              </Button>
-            </CardHeader>
-
-            <CardContent className="overflow-y-auto p-4">
-              <div className="space-y-2">
-                {selectedDayTasks.map((task) => {
-                  const taskDate = task.publish_date
-                    ? new Date(task.publish_date)
-                    : null;
-                  const isPastTask = taskDate ? isPast(taskDate) : false;
-
-                  return (
-                    <button
-                      key={task.id}
-                      type="button"
-                      onClick={() => handleTaskSelectFromModal(task)}
-                      className={`w-full rounded-lg border p-4 text-left transition-all hover:opacity-90 ${
-                        isPastTask
-                          ? 'border-border bg-muted/50 text-muted-foreground hover:bg-muted'
-                          : 'border-border bg-card text-foreground hover:border-primary/50 hover:bg-accent/50'
-                      }`}
+      {selectedDayTasks &&
+        selectedDate &&
+        (typeof document !== 'undefined'
+          ? createPortal(
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
+                <Card className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden border-slate-200 bg-white shadow-xl rounded-xl">
+                  <CardHeader className="flex flex-row items-start justify-between space-y-0 border-b border-slate-200 bg-slate-50 p-4 md:p-6">
+                    <div className="space-y-1">
+                      <CardTitle className="text-lg font-bold text-slate-900 md:text-xl">
+                        {formatDateDisplay(selectedDate)}
+                      </CardTitle>
+                      <p className="text-sm text-slate-500">
+                        {selectedDayTasks.length}{' '}
+                        {selectedDayTasks.length === 1 ? 'zadatak' : 'zadataka'}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setSelectedDayTasks(null);
+                        setSelectedDate(null);
+                      }}
+                      className="shrink-0 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200"
+                      aria-label="Zatvori"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-2 flex flex-wrap items-center gap-2">
-                            <span className="text-lg">
-                              {task.format === 'Kratka Forma' ? '🎥' : '📺'}
-                            </span>
-                            {task.category && (
-                              <Badge
-                                variant="outline"
-                                className="border-border text-xs font-semibold"
-                                style={{
-                                  color: task.category.color,
-                                  borderColor: `${task.category.color}60`,
-                                  backgroundColor: `${task.category.color}15`,
-                                }}
-                              >
-                                {task.category.name}
-                              </Badge>
-                            )}
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] font-bold uppercase tracking-wider ${
-                                task.format === 'Kratka Forma'
-                                  ? 'border-destructive/50 bg-destructive/20 text-destructive'
-                                  : 'border-chart-2/50 bg-chart-2/20 text-chart-2'
-                              }`}
-                            >
-                              {task.format}
-                            </Badge>
-                          </div>
-                          <h4 className="text-sm font-bold leading-snug text-foreground">
-                            {task.title}
-                          </h4>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                      <X size={20} />
+                    </Button>
+                  </CardHeader>
+
+                  <CardContent className="overflow-y-auto p-4 bg-white">
+                    <div className="space-y-2">
+                      {selectedDayTasks.map((task) => {
+                        const taskDate = task.publish_date
+                          ? new Date(task.publish_date)
+                          : null;
+                        const isPastTask = taskDate ? isPast(taskDate) : false;
+
+                        return (
+                          <button
+                            key={task.id}
+                            type="button"
+                            onClick={() => handleTaskSelectFromModal(task)}
+                            className={`w-full rounded-xl border p-4 text-left transition-all ${
+                              isPastTask
+                                ? 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100'
+                                : 'border-slate-200 bg-slate-50 text-slate-900 hover:border-chart-2/40 hover:bg-slate-100'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="mb-2 flex flex-wrap items-center gap-2">
+                                  <span className="text-lg">
+                                    {task.format === 'Kratka Forma'
+                                      ? '🎥'
+                                      : '📺'}
+                                  </span>
+                                  {task.category && (
+                                    <Badge
+                                      variant="outline"
+                                      className="border-slate-600 text-xs font-semibold"
+                                      style={{
+                                        color: task.category.color,
+                                        borderColor: `${task.category.color}60`,
+                                        backgroundColor: `${task.category.color}15`,
+                                      }}
+                                    >
+                                      {task.category.name}
+                                    </Badge>
+                                  )}
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-[10px] font-bold uppercase tracking-wider ${
+                                      task.format === 'Kratka Forma'
+                                        ? 'border-chart-1/50 bg-chart-1/20 text-chart-1'
+                                        : 'border-chart-2/50 bg-chart-2/20 text-chart-2'
+                                    }`}
+                                  >
+                                    {task.format}
+                                  </Badge>
+                                </div>
+                                <h4 className="text-sm font-bold leading-snug text-slate-900">
+                                  {task.title}
+                                </h4>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>,
+              document.body,
+            )
+          : null)}
     </>
   );
 }

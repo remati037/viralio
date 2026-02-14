@@ -1,5 +1,6 @@
 'use client';
 
+import { isLongFormHidden } from '@/lib/utils/featureFlags';
 import { cn } from '@/lib/utils';
 import type { Profile, SocialLink } from '@/types';
 import { Check, Target, Video, Youtube } from 'lucide-react';
@@ -105,7 +106,11 @@ export default function ProfileSettingsForm({
         <p className="text-muted-foreground text-sm mb-4">
           Postavite ciljeve za tekući mesec za praćenje progresa
         </p>
-        <div className="grid grid-cols-2 gap-4">
+        <div
+          className={
+            isLongFormHidden() ? 'grid grid-cols-1 gap-4' : 'grid grid-cols-2 gap-4'
+          }
+        >
           <div>
             <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
               <Video size={16} className="text-muted-foreground" /> Kratka forma
@@ -126,23 +131,25 @@ export default function ProfileSettingsForm({
               className="w-full rounded-md border border-input bg-background py-3 px-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
             />
           </div>
-          <div>
-            <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
-              <Youtube size={16} className="text-muted-foreground" /> Duga forma
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={formData.monthly_goal_long}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  monthly_goal_long: Math.max(0, parseInt(e.target.value) || 0),
-                })
-              }
-              className="w-full rounded-md border border-input bg-background py-3 px-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-            />
-          </div>
+          {!isLongFormHidden() && (
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                <Youtube size={16} className="text-muted-foreground" /> Duga forma
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.monthly_goal_long}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    monthly_goal_long: Math.max(0, parseInt(e.target.value) || 0),
+                  })
+                }
+                className="w-full rounded-md border border-input bg-background py-3 px-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+              />
+            </div>
+          )}
         </div>
       </div>
 

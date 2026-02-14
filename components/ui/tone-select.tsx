@@ -68,7 +68,18 @@ interface ToneSelectProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  /** Use 'light' for modals/light backgrounds */
+  variant?: 'dark' | 'light';
 }
+
+const triggerClassDark =
+  'w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-left flex items-center justify-between transition-colors hover:border-slate-600 text-white';
+const triggerClassLight =
+  'w-full bg-white border border-slate-200 rounded-md py-2 px-3 text-left flex items-center justify-between transition-colors hover:border-slate-300 text-slate-900';
+const listClassDark =
+  'absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-auto divide-y-[0.5px] divide-slate-700 p-2';
+const listClassLight =
+  'absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-auto divide-y divide-slate-100 p-2';
 
 export default function ToneSelect({
   value,
@@ -76,7 +87,11 @@ export default function ToneSelect({
   placeholder = 'Izaberi ton',
   className = '',
   disabled = false,
+  variant = 'dark',
 }: ToneSelectProps) {
+  const isLight = variant === 'light';
+  const triggerClass = isLight ? triggerClassLight : triggerClassDark;
+  const listClass = isLight ? listClassLight : listClassDark;
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const selectRef = useRef<HTMLDivElement>(null);
@@ -164,29 +179,29 @@ export default function ToneSelect({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
         disabled={disabled}
-        className={`w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-left flex items-center justify-between transition-colors ${
+        className={`${triggerClass} ${
           disabled
             ? 'opacity-50 cursor-not-allowed'
-            : 'hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer'
-        } ${isOpen ? 'border-blue-500 ring-2 ring-blue-500/20' : ''}`}
+            : 'focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer'
+        } ${isOpen ? 'border-slate-400 ring-2 ring-slate-400/20' : ''}`}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
         {selectedTone ? (
           <div className="flex flex-col items-start gap-0.5">
-            <span className="text-white text-sm font-medium">
+            <span className="text-sm font-medium">
               {selectedTone.label}
             </span>
-            <span className="text-xs text-slate-400">
+            <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
               {selectedTone.description}
             </span>
           </div>
         ) : (
-          <span className="text-slate-500 text-sm">{placeholder}</span>
+          <span className={`text-sm ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>{placeholder}</span>
         )}
         <ChevronDown
           size={18}
-          className={`text-slate-400 transition-transform shrink-0 ${
+          className={`${isLight ? 'text-slate-500' : 'text-slate-400'} transition-transform shrink-0 ${
             isOpen ? 'transform rotate-180' : ''
           }`}
         />
@@ -196,7 +211,7 @@ export default function ToneSelect({
         <ul
           ref={listRef}
           role="listbox"
-          className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-auto divide-y-[0.5px] divide-slate-700 p-2"
+          className={listClass}
         >
           <li
             role="option"
@@ -208,14 +223,20 @@ export default function ToneSelect({
             }}
             onMouseEnter={() => setHighlightedIndex(-1)}
             className={`px-3 py-2 cursor-pointer transition-colors ${
-              value === null
-                ? 'bg-blue-600/20 text-white'
-                : highlightedIndex === -1
-                  ? 'text-white'
-                  : 'text-slate-300 hover:bg-slate-700'
+              isLight
+                ? value === null
+                  ? 'bg-slate-100 text-slate-900'
+                  : highlightedIndex === -1
+                    ? 'text-slate-900'
+                    : 'text-slate-700 hover:bg-slate-50'
+                : value === null
+                  ? 'bg-blue-600/20 text-white'
+                  : highlightedIndex === -1
+                    ? 'text-white'
+                    : 'text-slate-300 hover:bg-slate-700'
             }`}
           >
-            <span className="text-slate-400 text-sm">Bez tona</span>
+            <span className={`text-sm ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Bez tona</span>
           </li>
           {TONE_OPTIONS.map((tone, index) => (
             <li
@@ -229,16 +250,22 @@ export default function ToneSelect({
               }}
               onMouseEnter={() => setHighlightedIndex(index)}
               className={`px-3 py-2 cursor-pointer transition-colors ${
-                value === tone.value
-                  ? 'bg-blue-600/20 text-white'
-                  : highlightedIndex === index
-                    ? 'bg-slate-700 text-white'
-                    : 'text-slate-300 hover:bg-slate-700'
+                isLight
+                  ? value === tone.value
+                    ? 'bg-slate-100 text-slate-900'
+                    : highlightedIndex === index
+                      ? 'bg-slate-50 text-slate-900'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  : value === tone.value
+                    ? 'bg-blue-600/20 text-white'
+                    : highlightedIndex === index
+                      ? 'bg-slate-700 text-white'
+                      : 'text-slate-300 hover:bg-slate-700'
               }`}
             >
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm font-medium">{tone.label}</span>
-                <span className="text-xs text-slate-400">
+                <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                   {tone.description}
                 </span>
               </div>
