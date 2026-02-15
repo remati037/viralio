@@ -57,9 +57,9 @@ export default async function SetPasswordPage({
         redirect('/auth/set-password' + (type ? `?type=${type}` : ''));
       }
 
-      // If we have a session but it's not recovery/invite, redirect to planner
+      // If we have a session but it's not recovery/invite, redirect to pocetna
       if (existingSession && type !== 'recovery' && type !== 'invite') {
-        redirect('/planner');
+        redirect('/pocetna');
       }
 
       // Exchange code for session
@@ -95,9 +95,9 @@ export default async function SetPasswordPage({
         redirect(`/auth/set-password?${errorParams.toString()}`);
       }
 
-      // If this is not a recovery/invite flow, redirect to planner
+      // If this is not a recovery/invite flow, redirect to pocetna
       if (type && type !== 'recovery' && type !== 'invite') {
-        redirect('/planner');
+        redirect('/pocetna');
       }
 
       // For recovery/invite flows (or if type is missing, assume recovery), continue to show the password form

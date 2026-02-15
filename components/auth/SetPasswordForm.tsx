@@ -82,7 +82,7 @@ export default function SetPasswordForm() {
             } else if (session) {
               // Already authenticated, redirect
               window.history.replaceState(null, '', window.location.pathname);
-              router.push('/planner');
+              router.push('/pocetna');
               return;
             }
           }
@@ -106,7 +106,7 @@ export default function SetPasswordForm() {
             return;
           }
           // Otherwise, redirect to dashboard
-          router.push('/planner');
+          router.push('/pocetna');
           return;
         }
 
@@ -137,7 +137,7 @@ export default function SetPasswordForm() {
         }
 
         // Otherwise, redirect to dashboard
-        router.push('/planner');
+        router.push('/pocetna');
         return;
       }
 
@@ -228,7 +228,7 @@ export default function SetPasswordForm() {
         }
 
         // Otherwise redirect
-        router.push('/planner');
+        router.push('/pocetna');
         return;
       }
 
@@ -279,7 +279,7 @@ export default function SetPasswordForm() {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Redirect to dashboard
-      window.location.href = '/planner';
+      window.location.href = '/pocetna';
     } catch (err: any) {
       setError(err.message || 'Došlo je do greške. Pokušajte ponovo.');
       toast.error('Greška', {

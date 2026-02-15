@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default async function LoginPage() {
   const user = await getCurrentUser();
   if (user) {
-    redirect('/planner');
+    redirect('/pocetna');
   }
   return (
     <AuthLayout>

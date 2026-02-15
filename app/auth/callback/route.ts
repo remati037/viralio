@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   const type = requestUrl.searchParams.get('type')
   const token = requestUrl.searchParams.get('token')
   const tokenHash = requestUrl.searchParams.get('token_hash')
-  const next = requestUrl.searchParams.get('next') || '/planner'
+  const next = requestUrl.searchParams.get('next') || '/pocetna'
   const origin = requestUrl.origin
 
   // Handle PKCE code-based flow (most common for Supabase Auth)

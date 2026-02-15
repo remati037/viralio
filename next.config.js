@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Redirect /dashboard to /pocetna (dashboard route doesn't exist)
+  async redirects() {
+    return [
+      { source: '/dashboard', destination: '/pocetna', permanent: false },
+      { source: '/dashboard/', destination: '/pocetna', permanent: false },
+    ];
+  },
   // Enable compression
   compress: true,
   
