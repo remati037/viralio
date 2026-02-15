@@ -67,6 +67,12 @@ export default defineType({
       validation: (Rule) => Rule.required(),
     }),
     defineField({
+      name: 'viralVideoUrl',
+      title: 'URL viralnog videa',
+      type: 'url',
+      description: 'Link ka videu koji je analiziran u studiji slučaja (Instagram, YouTube, itd.)',
+    }),
+    defineField({
       name: 'coverImageUrl',
       title: 'URL naslovne slike',
       type: 'url',

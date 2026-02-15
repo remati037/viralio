@@ -68,8 +68,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         message: 'No case studies found in Sanity',
         synced: 0,
+        foundInSanity: 0,
+        hint: 'Check NEXT_PUBLIC_SANITY_DATASET (e.g. production) and that documents exist in Sanity Studio with type "Studija slučaja (Case Study)".',
       })
     }
+
+    const foundInSanity = sanityCaseStudies.length
 
     let synced = 0
     let errors: string[] = []
@@ -89,6 +93,7 @@ export async function POST(request: NextRequest) {
           cta: sanityCaseStudy.cta || null,
           analysis: analysisHtml || null,
           cover_image_url: sanityCaseStudy.coverImageUrl || null,
+          viral_video_url: sanityCaseStudy.viralVideoUrl || null,
           result_views: sanityCaseStudy.resultViews || null,
           result_engagement: sanityCaseStudy.resultEngagement || null,
           result_conversions: sanityCaseStudy.resultConversions || null,
@@ -146,6 +151,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: `Synced ${synced} case studies`,
       synced,
+      foundInSanity,
       errors: errors.length > 0 ? errors : undefined,
     })
   } catch (error: any) {

@@ -438,6 +438,33 @@
             "level": "error"
           }
         ],
+        "description": "Link ka videu koji je analiziran u studiji slučaja (Instagram, YouTube, itd.)",
+        "name": "viralVideoUrl",
+        "type": "url",
+        "title": "URL viralnog videa"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "uri",
+                "constraint": {
+                  "options": {
+                    "scheme": [
+                      "/^http$/",
+                      "/^https$/"
+                    ],
+                    "allowRelative": false,
+                    "relativeOnly": false,
+                    "allowCredentials": false
+                  }
+                }
+              }
+            ],
+            "level": "error"
+          }
+        ],
         "name": "coverImageUrl",
         "type": "url",
         "title": "URL naslovne slike"

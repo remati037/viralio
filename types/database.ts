@@ -119,12 +119,14 @@ export interface Database {
           publish_date: string | null
           original_template: string | null
           cover_image_url: string | null
+          viral_video_url: string | null
           result_views: string | null
           result_engagement: string | null
           result_conversions: string | null
           analysis: string | null
           created_by: string | null
           is_admin_case_study: boolean
+          is_demo_case_study: boolean
           category_id: string | null
           created_at: string
           updated_at: string
@@ -142,12 +144,14 @@ export interface Database {
           publish_date?: string | null
           original_template?: string | null
           cover_image_url?: string | null
+          viral_video_url?: string | null
           result_views?: string | null
           result_engagement?: string | null
           result_conversions?: string | null
           analysis?: string | null
           created_by?: string | null
           is_admin_case_study?: boolean
+          is_demo_case_study?: boolean
           category_id?: string | null
           created_at?: string
           updated_at?: string
@@ -165,12 +169,14 @@ export interface Database {
           publish_date?: string | null
           original_template?: string | null
           cover_image_url?: string | null
+          viral_video_url?: string | null
           result_views?: string | null
           result_engagement?: string | null
           result_conversions?: string | null
           analysis?: string | null
           created_by?: string | null
           is_admin_case_study?: boolean
+          is_demo_case_study?: boolean
           category_id?: string | null
           created_at?: string
           updated_at?: string

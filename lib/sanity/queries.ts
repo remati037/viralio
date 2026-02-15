@@ -24,6 +24,7 @@ export const caseStudyQuery = groq`
     body,
     cta,
     analysis,
+    viralVideoUrl,
     coverImageUrl,
     resultViews,
     resultEngagement,

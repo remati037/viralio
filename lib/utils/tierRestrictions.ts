@@ -8,7 +8,16 @@ export interface TierLimits {
   canUseKanban: boolean
 }
 
-export const TIER_LIMITS: Record<UserTier, TierLimits> = {
+export type TierKey = UserTier | 'free'
+
+export const TIER_LIMITS: Record<TierKey, TierLimits> = {
+  free: {
+    maxTasks: 5,
+    maxTemplates: 2,
+    maxCaseStudies: 2,
+    canUseCalendar: false,
+    canUseKanban: true,
+  },
   pro: {
     maxTasks: null, // unlimited
     maxTemplates: null, // unlimited
@@ -25,8 +34,9 @@ export const TIER_LIMITS: Record<UserTier, TierLimits> = {
   }
 }
 
-export function getTierLimits(tier: UserTier): TierLimits {
-  return TIER_LIMITS[tier]
+export function getTierLimits(tier: UserTier | 'free' | undefined): TierLimits {
+  if (!tier || !(tier in TIER_LIMITS)) return TIER_LIMITS.free
+  return TIER_LIMITS[tier as TierKey]
 }
 
 export function canCreateTask(tier: UserTier, currentTaskCount: number): boolean {

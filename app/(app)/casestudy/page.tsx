@@ -21,6 +21,7 @@ export default function CaseStudyPage() {
         onCaseStudyClick={setSelectedCaseStudy}
         userId={userId}
         userTier={profile?.tier as UserTier | undefined}
+        isAdmin={profile?.role === 'admin'}
       />
 
       {selectedCaseStudy && (
