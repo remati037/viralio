@@ -127,6 +127,7 @@ export interface Database {
           created_by: string | null
           is_admin_case_study: boolean
           is_demo_case_study: boolean
+          sanity_id: string | null
           category_id: string | null
           created_at: string
           updated_at: string
@@ -152,6 +153,7 @@ export interface Database {
           created_by?: string | null
           is_admin_case_study?: boolean
           is_demo_case_study?: boolean
+          sanity_id?: string | null
           category_id?: string | null
           created_at?: string
           updated_at?: string
@@ -177,6 +179,7 @@ export interface Database {
           created_by?: string | null
           is_admin_case_study?: boolean
           is_demo_case_study?: boolean
+          sanity_id?: string | null
           category_id?: string | null
           created_at?: string
           updated_at?: string

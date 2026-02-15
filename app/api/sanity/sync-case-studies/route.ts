@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
         // Convert Portable Text analysis to HTML
         const analysisHtml = portableTextToHTML(sanityCaseStudy.analysis || [])
 
+        const sanityDocumentId = sanityCaseStudy._id ?? null
         const caseStudyData: Partial<TaskInsert> = {
           user_id: user.id,
           title: sanityCaseStudy.title,
@@ -102,44 +103,52 @@ export async function POST(request: NextRequest) {
           publish_date: sanityCaseStudy.publishDate || new Date().toISOString(),
           is_admin_case_study: true,
           category_id: sanityCaseStudy.categoryId || null,
+          sanity_id: sanityDocumentId,
         }
 
-        // Check if case study already exists by sanityId
-        let existingCaseStudy
-        if (sanityCaseStudy.sanityId) {
+        // Find existing case study by Sanity document _id to avoid duplicates
+        let existingCaseStudy: { id: string } | null = null
+        if (sanityDocumentId) {
           const { data } = await supabase
             .from('tasks')
             .select('id')
-            .eq('id', sanityCaseStudy.sanityId)
+            .eq('sanity_id', sanityDocumentId)
             .eq('is_admin_case_study', true)
-            .single()
-
+            .maybeSingle()
           existingCaseStudy = data
         }
 
+        // Fallback: match by title + admin owner for case studies synced before sanity_id existed
+        if (!existingCaseStudy && sanityCaseStudy.title) {
+          const { data: byTitle } = await supabase
+            .from('tasks')
+            .select('id')
+            .eq('title', sanityCaseStudy.title)
+            .eq('is_admin_case_study', true)
+            .eq('user_id', user.id)
+            .limit(1)
+            .maybeSingle()
+          existingCaseStudy = byTitle
+        }
+
         if (existingCaseStudy) {
-          // Update existing case study
           const { error: updateError } = await supabase
             .from('tasks')
             .update({
               ...caseStudyData,
-              user_id: undefined, // Don't update user_id on existing
+              user_id: undefined,
             })
             .eq('id', existingCaseStudy.id)
 
           if (updateError) throw updateError
         } else {
-          // Create new case study
-          const { data: newCaseStudy, error: insertError } = await supabase
+          const { error: insertError } = await supabase
             .from('tasks')
             .insert(caseStudyData as TaskInsert)
             .select('id')
             .single()
 
           if (insertError) throw insertError
-
-          // Note: We can't store sanityId in tasks table directly
-          // We could add a sanity_id column if needed
         }
 
         synced++
