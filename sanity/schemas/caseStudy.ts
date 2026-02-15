@@ -73,9 +73,13 @@ export default defineType({
       description: 'Link ka videu koji je analiziran u studiji slučaja (Instagram, YouTube, itd.)',
     }),
     defineField({
-      name: 'coverImageUrl',
-      title: 'URL naslovne slike',
-      type: 'url',
+      name: 'coverImage',
+      title: 'Naslovna slika',
+      type: 'image',
+      description: 'Povucite i pustite sliku ili kliknite da izaberete. Slika se hostuje na Sanity-u.',
+      options: {
+        hotspot: true,
+      },
     }),
     defineField({
       name: 'resultViews',
@@ -121,11 +125,13 @@ export default defineType({
       format: 'format',
       niche: 'niche',
       views: 'resultViews',
+      media: 'coverImage',
     },
-    prepare({ title, format, niche, views }) {
+    prepare({ title, format, niche, views, media }) {
       return {
         title: title || 'Bez naslova',
         subtitle: `${format} • ${niche} ${views ? `• ${views} pregleda` : ''}`,
+        media,
       }
     },
   },

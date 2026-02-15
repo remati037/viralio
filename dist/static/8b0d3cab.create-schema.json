@@ -444,30 +444,13 @@
         "title": "URL viralnog videa"
       },
       {
-        "validation": [
-          {
-            "rules": [
-              {
-                "flag": "uri",
-                "constraint": {
-                  "options": {
-                    "scheme": [
-                      "/^http$/",
-                      "/^https$/"
-                    ],
-                    "allowRelative": false,
-                    "relativeOnly": false,
-                    "allowCredentials": false
-                  }
-                }
-              }
-            ],
-            "level": "error"
-          }
-        ],
-        "name": "coverImageUrl",
-        "type": "url",
-        "title": "URL naslovne slike"
+        "options": {
+          "hotspot": true
+        },
+        "description": "Povucite i pustite sliku ili kliknite da izaberete. Slika se hostuje na Sanity-u.",
+        "name": "coverImage",
+        "type": "image",
+        "title": "Naslovna slika"
       },
       {
         "name": "resultViews",

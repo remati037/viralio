@@ -277,17 +277,27 @@ export default function CaseStudyView({
               <div
                 className={`flex flex-col ${task.cover_image_url ? 'md:flex-row' : ''}`}
               >
-                {task.cover_image_url && (
+                {task.cover_image_url ? (
                   <div className="md:w-72 shrink-0 relative">
-                    <div className="aspect-video w-full bg-muted overflow-hidden">
+                    <div className="aspect-video w-full bg-muted overflow-hidden rounded-l-xl md:rounded-l-xl md:rounded-r-none">
                       <img
                         src={task.cover_image_url}
-                        alt=""
+                        alt={task.title ? `Naslovna slika: ${task.title}` : 'Naslovna slika studije slučaja'}
                         className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                        loading="lazy"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
+                          const el = e.target as HTMLImageElement
+                          el.style.display = 'none'
+                          const fallback = el.nextElementSibling as HTMLElement
+                          if (fallback) fallback.className = 'absolute inset-0 flex items-center justify-center bg-muted text-muted-foreground text-xs'
                         }}
                       />
+                      <div
+                        className="absolute inset-0 hidden items-center justify-center bg-muted text-muted-foreground text-xs"
+                        aria-hidden
+                      >
+                        Slika nije učitana
+                      </div>
                     </div>
                     {task.format && (
                       <span
@@ -301,7 +311,7 @@ export default function CaseStudyView({
                       </span>
                     )}
                   </div>
-                )}
+                ) : null}
 
                 <div className="flex flex-1 flex-col p-5 md:p-6">
                   <div className="flex flex-wrap items-center gap-2 mb-2">

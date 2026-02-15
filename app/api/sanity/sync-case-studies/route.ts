@@ -1,8 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sanityClient } from '@/lib/sanity/client'
+import { sanityClientNoCdn, urlFor } from '@/lib/sanity/client'
 import { caseStudyQuery } from '@/lib/sanity/queries'
 import { createClient } from '@/lib/supabase/server'
 import type { TaskInsert } from '@/types'
+
+const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID ?? ''
+const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET ?? 'production'
+
+/** Build Sanity CDN image URL from asset _ref (e.g. "image-abc123-1200x800-jpg"). */
+function buildImageUrlFromRef(ref: string): string | null {
+  if (!ref || typeof ref !== 'string' || !ref.startsWith('image-')) return null
+  const rest = ref.slice(6)
+  const lastDash = rest.lastIndexOf('-')
+  if (lastDash === -1) return null
+  const path = `${rest.slice(0, lastDash)}.${rest.slice(lastDash + 1)}`
+  return `https://cdn.sanity.io/images/${projectId}/${dataset}/${path}`
+}
+
+function getCoverImageUrl(item: {
+  coverImage?: { _type?: string; asset?: { _ref?: string; _type?: string } } | null
+  coverImageCdnUrl?: string | null
+  coverImageUrl?: string | null
+}): string | null {
+  if (item.coverImageCdnUrl && typeof item.coverImageCdnUrl === 'string') {
+    return item.coverImageCdnUrl
+  }
+  if (item.coverImageUrl && typeof item.coverImageUrl === 'string') {
+    return item.coverImageUrl
+  }
+  const ref = item.coverImage?.asset?._ref
+  if (ref) {
+    const fromRef = buildImageUrlFromRef(ref)
+    if (fromRef) return fromRef
+    try {
+      const url = urlFor(item.coverImage!).width(1200).url()
+      return url && typeof url === 'string' ? url : null
+    } catch (_) {
+      return null
+    }
+  }
+  return null
+}
 
 // Helper to convert Portable Text to HTML
 function portableTextToHTML(blocks: any[]): string {
@@ -48,10 +86,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Fetch case studies from Sanity
+    // Fetch case studies from Sanity (no CDN so we get latest, including new uploads)
     let sanityCaseStudies
     try {
-      sanityCaseStudies = await sanityClient.fetch(caseStudyQuery)
+      sanityCaseStudies = await sanityClientNoCdn.fetch(caseStudyQuery)
     } catch (error: any) {
       console.error('Sanity fetch error:', error)
       return NextResponse.json(
@@ -93,7 +131,7 @@ export async function POST(request: NextRequest) {
           body: sanityCaseStudy.body || null,
           cta: sanityCaseStudy.cta || null,
           analysis: analysisHtml || null,
-          cover_image_url: sanityCaseStudy.coverImageUrl || null,
+          cover_image_url: getCoverImageUrl(sanityCaseStudy),
           viral_video_url: sanityCaseStudy.viralVideoUrl || null,
           result_views: sanityCaseStudy.resultViews || null,
           result_engagement: sanityCaseStudy.resultEngagement || null,
@@ -103,22 +141,19 @@ export async function POST(request: NextRequest) {
           publish_date: sanityCaseStudy.publishDate || new Date().toISOString(),
           is_admin_case_study: true,
           category_id: sanityCaseStudy.categoryId || null,
-          sanity_id: sanityDocumentId,
         }
 
-        // Find existing case study by Sanity document _id to avoid duplicates
+        // Find existing: try sanity_id first (if migration 030 applied), else match by title + admin
         let existingCaseStudy: { id: string } | null = null
         if (sanityDocumentId) {
-          const { data } = await supabase
+          const { data, error: sanityIdError } = await supabase
             .from('tasks')
             .select('id')
             .eq('sanity_id', sanityDocumentId)
             .eq('is_admin_case_study', true)
             .maybeSingle()
-          existingCaseStudy = data
+          if (!sanityIdError) existingCaseStudy = data
         }
-
-        // Fallback: match by title + admin owner for case studies synced before sanity_id existed
         if (!existingCaseStudy && sanityCaseStudy.title) {
           const { data: byTitle } = await supabase
             .from('tasks')
@@ -131,23 +166,47 @@ export async function POST(request: NextRequest) {
           existingCaseStudy = byTitle
         }
 
-        if (existingCaseStudy) {
-          const { error: updateError } = await supabase
-            .from('tasks')
-            .update({
-              ...caseStudyData,
-              user_id: undefined,
-            })
-            .eq('id', existingCaseStudy.id)
+        const payloadWithSanityId = {
+          ...caseStudyData,
+          ...(sanityDocumentId ? { sanity_id: sanityDocumentId } : {}),
+          ...(existingCaseStudy ? { user_id: undefined } : {}),
+        }
 
-          if (updateError) throw updateError
-        } else {
-          const { error: insertError } = await supabase
+        const runUpdate = () =>
+          supabase
             .from('tasks')
-            .insert(caseStudyData as TaskInsert)
+            .update(payloadWithSanityId)
+            .eq('id', existingCaseStudy!.id)
+
+        const runInsert = () =>
+          supabase
+            .from('tasks')
+            .insert(payloadWithSanityId as TaskInsert)
             .select('id')
             .single()
 
+        if (existingCaseStudy) {
+          let { error: updateError } = await runUpdate()
+          if (updateError?.message?.includes('sanity_id') || updateError?.message?.includes('schema cache')) {
+            const { sanity_id: _, ...payloadWithoutSanityId } = payloadWithSanityId as Record<string, unknown>
+            const { error: retryError } = await supabase
+              .from('tasks')
+              .update(payloadWithoutSanityId)
+              .eq('id', existingCaseStudy.id)
+            updateError = retryError
+          }
+          if (updateError) throw updateError
+        } else {
+          let { error: insertError } = await runInsert()
+          if (insertError?.message?.includes('sanity_id') || insertError?.message?.includes('schema cache')) {
+            const { sanity_id: _, ...payloadWithoutSanityId } = payloadWithSanityId as Record<string, unknown>
+            const { error: retryError } = await supabase
+              .from('tasks')
+              .insert(payloadWithoutSanityId as TaskInsert)
+              .select('id')
+              .single()
+            insertError = retryError
+          }
           if (insertError) throw insertError
         }
 

@@ -25,6 +25,14 @@ export const caseStudyQuery = groq`
     cta,
     analysis,
     viralVideoUrl,
+    coverImage {
+      _type,
+      asset {
+        _ref,
+        _type
+      }
+    },
+    "coverImageCdnUrl": coverImage.asset->url,
     coverImageUrl,
     resultViews,
     resultEngagement,

@@ -29,6 +29,17 @@ export const sanityClient = createClient({
   withCredentials: false,
 })
 
+/** Use for sync/API routes that must see the latest content (bypass CDN cache). */
+export const sanityClientNoCdn = createClient({
+  projectId: projectId || '',
+  dataset,
+  useCdn: false,
+  apiVersion: '2024-01-01',
+  token: apiToken,
+  requestTagPrefix: 'viralio',
+  withCredentials: false,
+})
+
 // Log configuration in development
 if (nodeEnv === 'development') {
   console.log('🔧 Sanity Server Client Config:', {
