@@ -21,6 +21,7 @@ export interface Database {
           role: 'admin' | 'user'
           tier: 'free' | 'pro' | 'admin'
           has_unlimited_free: boolean | null
+          free_trial_ends_at: string | null
           created_at: string
           updated_at: string
         }
@@ -35,6 +36,7 @@ export interface Database {
           role?: 'admin' | 'user'
           tier?: 'free' | 'pro' | 'admin'
           has_unlimited_free?: boolean | null
+          free_trial_ends_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -49,6 +51,7 @@ export interface Database {
           role?: 'admin' | 'user'
           tier?: 'free' | 'pro' | 'admin'
           has_unlimited_free?: boolean | null
+          free_trial_ends_at?: string | null
           created_at?: string
           updated_at?: string
         }

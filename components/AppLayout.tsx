@@ -3,6 +3,7 @@
 import { useCompetitors } from '@/lib/hooks/useCompetitors';
 import { useProfile } from '@/lib/hooks/useProfile';
 import { useTasks } from '@/lib/hooks/useTasks';
+import { useUserRole } from '@/lib/hooks/useUserRole';
 import { createClient } from '@/lib/supabase/client';
 import { canCreateTask, getTierLimits } from '@/lib/utils/tierRestrictions';
 import type { TaskInsert, UserTier } from '@/types';
@@ -48,6 +49,7 @@ export default function AppLayout({
   const [mounted, setMounted] = useState(false);
 
   const { profile, loading: profileLoading } = useProfile(userId);
+  const { roleInfo } = useUserRole(userId);
   const {
     tasks,
     loading: tasksLoading,
@@ -167,7 +169,7 @@ export default function AppLayout({
   return (
     <SidebarProvider>
       <UserProvider userId={userId}>
-        <AppSidebar user={user} />
+        <AppSidebar user={user} isAdmin={roleInfo?.isAdmin ?? false} />
         <SidebarInset>
           {/* <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30"> */}
           {/* Loader overlay - always rendered in same position to avoid hydration mismatch */}

@@ -2,9 +2,11 @@
 
 import { isLongFormHidden } from '@/lib/utils/featureFlags';
 import type { Profile } from '@/types';
+import { Calendar } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
+import DatePicker from './ui/date-picker';
 import { Input } from './ui/input';
 import Modal, {
   modalCancelButtonClass,
@@ -34,6 +36,7 @@ export default function UpdateUserModal({
     monthly_goal_long: 0,
     tier: 'pro' as 'pro' | 'admin',
     has_unlimited_free: false,
+    free_trial_ends_at: null as string | null,
     email: '',
     password: '',
   });
@@ -53,6 +56,9 @@ export default function UpdateUserModal({
         monthly_goal_long: user.monthly_goal_long || 0,
         tier: (user.tier || 'pro') as 'pro' | 'admin',
         has_unlimited_free: (user as any).has_unlimited_free || false,
+        free_trial_ends_at: (user as any).free_trial_ends_at
+          ? (user as any).free_trial_ends_at.substring(0, 10)
+          : null,
         email: (user as any).email || '',
         password: '',
       });
@@ -114,6 +120,9 @@ export default function UpdateUserModal({
         monthly_goal_long: formData.monthly_goal_long,
         tier: formData.tier,
         has_unlimited_free: formData.has_unlimited_free,
+        free_trial_ends_at: formData.free_trial_ends_at
+          ? `${formData.free_trial_ends_at}T23:59:59.000Z`
+          : null,
       };
 
       // Only include email/password if they were changed
@@ -333,6 +342,7 @@ export default function UpdateUserModal({
                 setFormData({
                   ...formData,
                   has_unlimited_free: e.target.checked,
+                  free_trial_ends_at: e.target.checked ? null : formData.free_trial_ends_at,
                 })
               }
               className="w-4 h-4 rounded border-slate-300 text-slate-600 focus:ring-slate-400"
@@ -344,6 +354,26 @@ export default function UpdateUserModal({
               Neograničena besplatna PRO pretplata
             </label>
           </div>
+
+          {!formData.has_unlimited_free && (
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-1">
+                <Calendar size={16} /> Besplatni probni period do
+              </label>
+              <DatePicker
+                value={formData.free_trial_ends_at}
+                onChange={(date) =>
+                  setFormData({ ...formData, free_trial_ends_at: date })
+                }
+                placeholder="Izaberite datum isteka probnog perioda"
+                disablePast
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Korisnik će plaćati 0€ do ovog datuma. Posle isteka, Stripe
+                automatski naplaćuje mesečnu pretplatu.
+              </p>
+            </div>
+          )}
 
           <div className="flex gap-2 pt-4">
             <Button

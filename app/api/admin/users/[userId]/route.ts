@@ -91,19 +91,28 @@ export async function PUT(
       }
     }
 
+    // When granting unlimited free, clear free_trial_ends_at (mutually exclusive)
+    const freeTrialEndsAt =
+      body.has_unlimited_free === true ? null : body.free_trial_ends_at ?? undefined
+
+    const profileUpdate: Record<string, unknown> = {
+      business_name: body.business_name,
+      target_audience: body.target_audience,
+      persona: body.persona,
+      monthly_goal_short: body.monthly_goal_short,
+      monthly_goal_long: body.monthly_goal_long,
+      tier: body.tier,
+      has_unlimited_free: body.has_unlimited_free,
+      updated_at: new Date().toISOString(),
+    }
+    if ('free_trial_ends_at' in body) {
+      profileUpdate.free_trial_ends_at = freeTrialEndsAt ?? null
+    }
+
     // Update profile
     const { error: profileError } = await adminClient
       .from('profiles')
-      .update({
-        business_name: body.business_name,
-        target_audience: body.target_audience,
-        persona: body.persona,
-        monthly_goal_short: body.monthly_goal_short,
-        monthly_goal_long: body.monthly_goal_long,
-        tier: body.tier,
-        has_unlimited_free: body.has_unlimited_free,
-        updated_at: new Date().toISOString(),
-      })
+      .update(profileUpdate)
       .eq('id', userId)
 
     if (profileError) {

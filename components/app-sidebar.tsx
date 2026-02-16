@@ -9,6 +9,7 @@ import {
   LifeBuoy,
   Rocket,
   Send,
+  Shield,
   Sparkles,
   Tag,
 } from 'lucide-react';
@@ -27,8 +28,7 @@ import { NavMain } from './nav-main';
 import { NavSecondary } from './nav-secondary';
 import { NavUser } from './nav-user';
 
-const data = {
-  navMain: [
+const baseNavMain = [
     {
       title: 'Početna',
       url: '/pocetna',
@@ -64,27 +64,44 @@ const data = {
       url: '/categories',
       icon: Tag,
     },
-  ],
-  navSecondary: [
-    {
-      title: 'Podrška',
-      url: '#',
-      icon: LifeBuoy,
-    },
-    {
-      title: 'Feedback',
-      url: '#',
-      icon: Send,
-    },
-  ],
-};
+  ];
+
+const navSecondary = [
+  {
+    title: 'Podrška',
+    url: '#',
+    icon: LifeBuoy,
+  },
+  {
+    title: 'Feedback',
+    url: '#',
+    icon: Send,
+  },
+];
 
 export function AppSidebar({
   user,
+  isAdmin,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   user: { name: string; email: string; avatar?: string };
+  isAdmin?: boolean;
 }) {
+  const navMain = React.useMemo(
+    () =>
+      isAdmin
+        ? [
+            ...baseNavMain,
+            {
+              title: 'Admin',
+              url: '/admin',
+              icon: Shield,
+            },
+          ]
+        : baseNavMain,
+    [isAdmin],
+  );
+
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
@@ -100,8 +117,8 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavMain items={navMain} />
+        <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarSeparator />
       <SidebarFooter>

@@ -1,3 +1,4 @@
+import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/auth/utils'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid tier' }, { status: 400 })
     }
 
-    // Pro plan: €19/month, 7-day trial set below (STRIPE_PRO_PRICE_ID or STRIPE_STARTER_PRICE_ID = Price ID for €19/month recurring)
+    // Pro plan: €19/month. Trial: admin-set free_trial_ends_at or default 7 days
     const priceId = process.env.STRIPE_PRO_PRICE_ID || process.env.STRIPE_STARTER_PRICE_ID
 
     if (!priceId) {
@@ -58,6 +59,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check for admin-set free trial end date
+    const supabase = await createClient()
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('free_trial_ends_at, has_unlimited_free')
+      .eq('id', user.id)
+      .single()
+
+    const freeTrialEndsAt = profile?.free_trial_ends_at
+    const now = Math.floor(Date.now() / 1000)
+    const trialEndUnix =
+      freeTrialEndsAt && !profile?.has_unlimited_free
+        ? Math.floor(new Date(freeTrialEndsAt).getTime() / 1000)
+        : null
+
+    // Use admin-set trial_end if it's in the future (min 1 hour from now for Stripe)
+    const subscriptionData: Stripe.Checkout.SessionCreateParams['subscription_data'] = {
+      metadata: {
+        userId: user.id,
+        tier: tier,
+      },
+    }
+    if (trialEndUnix && trialEndUnix > now + 3600) {
+      subscriptionData.trial_end = trialEndUnix
+    } else {
+      subscriptionData.trial_period_days = 7
+    }
+
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -68,13 +97,7 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-      subscription_data: {
-        trial_period_days: 7,
-        metadata: {
-          userId: user.id,
-          tier: tier,
-        },
-      },
+      subscription_data: subscriptionData,
       customer_email: user.email || undefined,
       client_reference_id: user.id,
       metadata: {

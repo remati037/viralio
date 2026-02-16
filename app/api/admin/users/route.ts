@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
+const DEFAULT_PAGE_SIZE = 10
+
 // Create admin client for user management operations
 function getAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -17,6 +19,182 @@ function getAdminClient() {
       persistSession: false,
     },
   })
+}
+
+async function checkAdmin() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { isAdmin: false }
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  return { isAdmin: profile?.role === 'admin' }
+}
+
+/**
+ * GET /api/admin/users
+ * Fetch paginated users (admin only)
+ * Query params: page (default 1), pageSize (default 10), search (optional)
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const { isAdmin } = await checkAdmin()
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
+    const pageSize = Math.min(50, Math.max(5, parseInt(searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE), 10)))
+    const search = (searchParams.get('search') || '').trim()
+
+    const adminClient = getAdminClient()
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    // Build profiles query with optional search
+    let profilesQuery = adminClient
+      .from('profiles')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+
+    if (search) {
+      profilesQuery = profilesQuery.or(`business_name.ilike.%${search}%,id.ilike.%${search}%`)
+    }
+
+    const { data: profiles, error: profilesError, count: totalCount } = await profilesQuery.range(from, to)
+
+    if (profilesError) {
+      return NextResponse.json(
+        { error: profilesError.message },
+        { status: 500 }
+      )
+    }
+
+    const profileIds = (profiles || []).map((p) => p.id)
+    if (profileIds.length === 0) {
+      const stats = await fetchStats(adminClient)
+      return NextResponse.json({
+        users: [],
+        pagination: { page, pageSize, total: totalCount ?? 0, totalPages: Math.ceil((totalCount ?? 0) / pageSize) },
+        stats,
+      })
+    }
+
+    // Fetch payments, statistics, tasks, and auth emails in parallel
+    const [paymentsRes, statisticsRes, tasksRes, emailsMap] = await Promise.all([
+      adminClient.from('payments').select('*').in('user_id', profileIds).order('created_at', { ascending: false }),
+      adminClient.from('user_statistics').select('*').in('user_id', profileIds),
+      adminClient
+        .from('tasks')
+        .select('user_id, status, result_views, result_engagement, result_conversions, is_admin_case_study')
+        .in('user_id', profileIds),
+      fetchEmailsForUsers(adminClient, profileIds),
+    ])
+
+    const payments = paymentsRes.data || []
+    const statistics = statisticsRes.data || []
+    const allTasks = tasksRes.data || []
+
+    const usersWithData = (profiles || []).map((profile) => {
+      const userTasks = allTasks.filter((t) => t.user_id === profile.id && !t.is_admin_case_study)
+      let totalViews = 0
+      let totalEngagement = 0
+      let totalConversions = 0
+      userTasks.forEach((task) => {
+        if (task.status === 'published') {
+          totalViews += parseInt(task.result_views || '0', 10) || 0
+          totalEngagement += parseInt(task.result_engagement || '0', 10) || 0
+          totalConversions += parseInt(task.result_conversions || '0', 10) || 0
+        }
+      })
+      const { email, email_confirmed } = emailsMap[profile.id] || {}
+      return {
+        ...profile,
+        email: email ?? null,
+        email_confirmed: email_confirmed ?? null,
+        statistics: statistics.find((s) => s.user_id === profile.id),
+        payments: payments.filter((p) => p.user_id === profile.id),
+        realStats: {
+          total_tasks: userTasks.length,
+          published_tasks: userTasks.filter((t) => t.status === 'published').length,
+          total_views: totalViews,
+          total_engagement: totalEngagement,
+          total_conversions: totalConversions,
+        },
+      }
+    })
+
+    const stats = await fetchStats(adminClient)
+    const total = totalCount ?? 0
+
+    return NextResponse.json({
+      users: usersWithData,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+      stats,
+    })
+  } catch (error: any) {
+    console.error('Error fetching admin users:', error)
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+async function fetchEmailsForUsers(adminClient: ReturnType<typeof getAdminClient>, userIds: string[]) {
+  const map: Record<string, { email: string; email_confirmed: boolean }> = {}
+  await Promise.all(
+    userIds.map(async (userId) => {
+      try {
+        const { data } = await adminClient.auth.admin.getUserById(userId)
+        if (data?.user) {
+          map[userId] = {
+            email: data.user.email ?? '',
+            email_confirmed: !!(data.user.email_confirmed_at !== null && data.user.email_confirmed_at !== undefined),
+          }
+        }
+      } catch {
+        // ignore per-user errors
+      }
+    })
+  )
+  return map
+}
+
+async function fetchStats(adminClient: ReturnType<typeof getAdminClient>) {
+  const [profilesRes, proCountRes, tasksCountRes, viewsRes] = await Promise.all([
+    adminClient.from('profiles').select('id', { count: 'exact', head: true }),
+    adminClient.from('profiles').select('id', { count: 'exact', head: true }).eq('tier', 'pro'),
+    adminClient
+      .from('tasks')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_admin_case_study', false),
+    adminClient
+      .from('tasks')
+      .select('result_views')
+      .eq('status', 'published')
+      .eq('is_admin_case_study', false),
+  ])
+
+  const totalUsers = profilesRes.count ?? 0
+  const totalPro = proCountRes.count ?? 0
+  const totalTasks = tasksCountRes.count ?? 0
+  const totalViews = (viewsRes.data || []).reduce(
+    (sum, t) => sum + (parseInt(t.result_views || '0', 10) || 0),
+    0
+  )
+
+  return { totalUsers, totalPro, totalTasks, totalViews }
 }
 
 /**

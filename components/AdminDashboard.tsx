@@ -5,17 +5,10 @@ import type { Payment, Profile, UserStatistics } from '@/types';
 import {
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   useReactTable,
   type ColumnDef,
-  type SortingState,
 } from '@tanstack/react-table';
 import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
   Database,
   Edit,
   MoreVertical,
@@ -25,7 +18,7 @@ import {
   Trash2,
   Users,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import AdminCaseStudyCreation from './AdminCaseStudyCreation';
@@ -48,42 +41,48 @@ interface AdminDashboardProps {
   userId: string;
 }
 
+type UserWithData = Profile & {
+  email?: string;
+  email_confirmed?: boolean;
+  statistics?: UserStatistics;
+  payments?: Payment[];
+  realStats?: {
+    total_tasks: number;
+    published_tasks: number;
+    total_views: number;
+    total_engagement: number;
+    total_conversions: number;
+  };
+};
+
 export default function AdminDashboard({ userId }: AdminDashboardProps) {
-  const supabase = createClient();
   const [activeTab, setActiveTab] = useState<
     'users' | 'templates' | 'case-studies' | 'sanity'
   >('users');
   const [syncingTemplates, setSyncingTemplates] = useState(false);
   const [syncingCaseStudies, setSyncingCaseStudies] = useState(false);
-  const [users, setUsers] = useState<
-    (Profile & {
-      statistics?: UserStatistics;
-      payments?: Payment[];
-      realStats?: {
-        total_tasks: number;
-        published_tasks: number;
-        total_views: number;
-        total_engagement: number;
-        total_conversions: number;
-      };
-    })[]
-  >([]);
+  const [users, setUsers] = useState<UserWithData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserWithData | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [updatingTierId, setUpdatingTierId] = useState<string | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    totalPages: 1,
+    pageSize: 10,
+  });
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalPro: 0,
+    totalTasks: 0,
+    totalViews: 0,
+  });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
-  const [userToUpdate, setUserToUpdate] = useState<Profile | null>(null);
-  const [userEmails, setUserEmails] = useState<Record<string, string>>({});
-  const [emailConfirmations, setEmailConfirmations] = useState<
-    Record<string, boolean>
-  >({});
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [loadingEmails, setLoadingEmails] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserWithData | null>(null);
+  const [userToUpdate, setUserToUpdate] = useState<UserWithData | null>(null);
   const [userRealStatistics, setUserRealStatistics] = useState<{
     total_tasks: number;
     published_tasks: number;
@@ -94,9 +93,49 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
   const [loadingStatistics, setLoadingStatistics] = useState(false);
   const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
 
+  const supabase = createClient();
+
+  const fetchUsers = useCallback(
+    async (page: number, search: string) => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          page: String(page),
+          pageSize: '10',
+        });
+        if (search) params.set('search', search);
+        const res = await fetch(`/api/admin/users?${params}`);
+        if (!res.ok) throw new Error('Failed to fetch users');
+        const data = await res.json();
+        setUsers(data.users);
+        setPagination({
+          total: data.pagination.total,
+          totalPages: data.pagination.totalPages,
+          pageSize: data.pagination.pageSize,
+        });
+        if (data.stats) setStats(data.stats);
+      } catch (error: any) {
+        toast.error('Greška pri učitavanju korisnika', {
+          description: error.message,
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
-    fetchAllUsers();
-  }, []);
+    fetchUsers(currentPage, debouncedSearch);
+  }, [currentPage, debouncedSearch, fetchUsers]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
 
   useEffect(() => {
     if (selectedUser) {
@@ -105,129 +144,6 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
       setUserRealStatistics(null);
     }
   }, [selectedUser]);
-
-  const fetchAllUsers = async () => {
-    try {
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (profilesError) throw profilesError;
-
-      const { data: statistics, error: statsError } = await supabase
-        .from('user_statistics')
-        .select('*');
-
-      if (statsError) throw statsError;
-
-      const { data: payments, error: paymentsError } = await supabase
-        .from('payments')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (paymentsError) throw paymentsError;
-
-      // Fetch all tasks for all users to calculate real statistics
-      const { data: allTasks, error: tasksError } = await supabase
-        .from('tasks')
-        .select(
-          'user_id, status, result_views, result_engagement, result_conversions, is_admin_case_study',
-        );
-
-      if (tasksError) throw tasksError;
-
-      // Calculate real statistics for each user
-      const usersWithData = (profiles || []).map((profile) => {
-        // Filter out admin case studies - only count user's own tasks
-        const userTasks =
-          allTasks?.filter(
-            (t) => t.user_id === profile.id && !t.is_admin_case_study,
-          ) || [];
-        const totalTasks = userTasks.length;
-        const publishedTasks = userTasks.filter(
-          (t) => t.status === 'published',
-        ).length;
-
-        // Calculate views, engagement, and conversions from published tasks
-        let totalViews = 0;
-        let totalEngagement = 0;
-        let totalConversions = 0;
-
-        userTasks.forEach((task) => {
-          if (task.status === 'published') {
-            const views = parseInt(task.result_views || '0', 10) || 0;
-            const engagement = parseInt(task.result_engagement || '0', 10) || 0;
-            const conversions =
-              parseInt(task.result_conversions || '0', 10) || 0;
-
-            totalViews += views;
-            totalEngagement += engagement;
-            totalConversions += conversions;
-          }
-        });
-
-        return {
-          ...profile,
-          statistics: statistics?.find((s) => s.user_id === profile.id),
-          payments: payments?.filter((p) => p.user_id === profile.id),
-          realStats: {
-            total_tasks: totalTasks,
-            published_tasks: publishedTasks,
-            total_views: totalViews,
-            total_engagement: totalEngagement,
-            total_conversions: totalConversions,
-          },
-        };
-      });
-
-      setUsers(usersWithData as any);
-
-      // Fetch emails for all users (wait for completion before showing table)
-      setLoadingEmails(true);
-      await fetchUserEmails(profiles?.map((p) => p.id) || []);
-      setLoadingEmails(false);
-    } catch (error: any) {
-      toast.error('Greška pri učitavanju korisnika', {
-        description: error.message,
-      });
-      setLoadingEmails(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchUserEmails = async (userIds: string[]) => {
-    // Fetch emails and confirmation status in batches to avoid overwhelming the API
-    const batchSize = 5;
-    const emailMap: Record<string, string> = {};
-    const confirmationMap: Record<string, boolean> = {};
-
-    for (let i = 0; i < userIds.length; i += batchSize) {
-      const batch = userIds.slice(i, i + batchSize);
-      await Promise.all(
-        batch.map(async (userId) => {
-          try {
-            const response = await fetch(`/api/admin/users/${userId}/get`);
-            if (response.ok) {
-              const data = await response.json();
-              if (data.email) {
-                emailMap[userId] = data.email;
-              }
-              if (data.email_confirmed !== undefined) {
-                confirmationMap[userId] = data.email_confirmed;
-              }
-            }
-          } catch (error) {
-            console.error(`Error fetching email for user ${userId}:`, error);
-          }
-        }),
-      );
-    }
-
-    setUserEmails((prev) => ({ ...prev, ...emailMap }));
-    setEmailConfirmations((prev) => ({ ...prev, ...confirmationMap }));
-  };
 
   const fetchUserRealStatistics = async (userId: string) => {
     setLoadingStatistics(true);
@@ -313,19 +229,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
 
   // Define columns for TanStack Table
   const columns = useMemo<
-    ColumnDef<
-      Profile & {
-        statistics?: UserStatistics;
-        payments?: Payment[];
-        realStats?: {
-          total_tasks: number;
-          published_tasks: number;
-          total_views: number;
-          total_engagement: number;
-          total_conversions: number;
-        };
-      }
-    >[]
+    ColumnDef<UserWithData>[]
   >(
     () => [
       {
@@ -333,41 +237,25 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
         size: 300,
         minSize: 250,
         maxSize: 400,
-        header: ({ column }) => {
-          return (
-            <button
-              onClick={() =>
-                column.toggleSorting(column.getIsSorted() === 'asc')
-              }
-              className="flex items-center gap-2 hover:text-white transition-colors text-slate-400 text-sm font-medium"
-            >
-              Korisnik
-              {column.getIsSorted() === 'asc' ? (
-                <ArrowUp size={14} />
-              ) : column.getIsSorted() === 'desc' ? (
-                <ArrowDown size={14} />
-              ) : (
-                <ArrowUpDown size={14} />
-              )}
-            </button>
-          );
-        },
+        header: () => (
+          <span className="text-muted-foreground text-sm font-medium">Korisnik</span>
+        ),
         cell: ({ row }) => {
           const user = row.original;
-          const email = userEmails[user.id];
+          const email = user.email;
           return (
             <div className="min-w-[250px]">
-              <div className="text-white font-medium flex items-center gap-2">
+              <div className="text-foreground font-medium flex items-center gap-2">
                 {user.business_name || 'Nema imena'}
-                {emailConfirmations[user.id] === false && (
-                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-yellow-900/30 text-yellow-300 border border-yellow-800">
+                {user.email_confirmed === false && (
+                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-destructive/20 text-destructive border border-border">
                     Email Nije Potvrđen
                   </span>
                 )}
               </div>
-              <div className="text-xs text-slate-500 min-h-[16px]">
+              <div className="text-xs text-muted-foreground min-h-[16px]">
                 {email ? (
-                  <span className="text-slate-400">{email}</span>
+                  <span>{email}</span>
                 ) : (
                   <span className="invisible">Loading...</span>
                 )}
@@ -379,35 +267,19 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
       {
         accessorKey: 'tier',
         size: 120,
-        header: ({ column }) => {
-          return (
-            <button
-              onClick={() =>
-                column.toggleSorting(column.getIsSorted() === 'asc')
-              }
-              className="flex items-center gap-2 hover:text-white transition-colors text-slate-400 text-sm font-medium"
-            >
-              Tier
-              {column.getIsSorted() === 'asc' ? (
-                <ArrowUp size={14} />
-              ) : column.getIsSorted() === 'desc' ? (
-                <ArrowDown size={14} />
-              ) : (
-                <ArrowUpDown size={14} />
-              )}
-            </button>
-          );
-        },
+        header: () => (
+          <span className="text-muted-foreground text-sm font-medium">Tier</span>
+        ),
         cell: ({ row }) => {
           const user = row.original;
           return (
             <span
-              className={`px-2 py-1 rounded text-xs font-bold ${
+              className={`px-2 py-1 rounded text-xs font-bold border border-border ${
                 user.tier === 'admin'
-                  ? 'bg-yellow-900/30 text-yellow-300'
+                  ? 'bg-primary/20 text-primary'
                   : user.tier === 'pro'
-                    ? 'bg-purple-900/30 text-purple-300'
-                    : 'bg-slate-800 text-slate-400'
+                    ? 'bg-chart-4/20 text-chart-4'
+                    : 'bg-muted text-muted-foreground'
               }`}
             >
               {user.tier?.toUpperCase() || 'PRO'}
@@ -418,33 +290,19 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
       {
         id: 'tasks',
         size: 100,
-        header: ({ column }) => {
-          return (
-            <button
-              onClick={() =>
-                column.toggleSorting(column.getIsSorted() === 'asc')
-              }
-              className="flex items-center gap-2 hover:text-white transition-colors text-slate-400 text-sm font-medium"
-            >
-              <span className="hidden md:inline">Zadaci</span>
-              <span className="md:hidden">Zad.</span>
-              {column.getIsSorted() === 'asc' ? (
-                <ArrowUp size={14} />
-              ) : column.getIsSorted() === 'desc' ? (
-                <ArrowDown size={14} />
-              ) : (
-                <ArrowUpDown size={14} />
-              )}
-            </button>
-          );
-        },
+        header: () => (
+          <span className="text-muted-foreground text-sm font-medium">
+            <span className="hidden md:inline">Zadaci</span>
+            <span className="md:hidden">Zad.</span>
+          </span>
+        ),
         accessorFn: (row) => row.realStats?.total_tasks || 0,
         cell: ({ row }) => {
           const user = row.original;
           const totalTasks = user.realStats?.total_tasks || 0;
           const publishedTasks = user.realStats?.published_tasks || 0;
           return (
-            <span className="text-slate-300 text-sm">
+            <span className="text-foreground text-sm">
               <span className="hidden md:inline">
                 {totalTasks} / {publishedTasks}
               </span>
@@ -458,26 +316,12 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
       {
         id: 'views',
         size: 100,
-        header: ({ column }) => {
-          return (
-            <button
-              onClick={() =>
-                column.toggleSorting(column.getIsSorted() === 'asc')
-              }
-              className="flex items-center gap-2 hover:text-white transition-colors text-slate-400 text-sm font-medium"
-            >
-              <span className="hidden md:inline">Pregledi</span>
-              <span className="md:hidden">Preg.</span>
-              {column.getIsSorted() === 'asc' ? (
-                <ArrowUp size={14} />
-              ) : column.getIsSorted() === 'desc' ? (
-                <ArrowDown size={14} />
-              ) : (
-                <ArrowUpDown size={14} />
-              )}
-            </button>
-          );
-        },
+        header: () => (
+          <span className="text-muted-foreground text-sm font-medium">
+            <span className="hidden md:inline">Pregledi</span>
+            <span className="md:hidden">Preg.</span>
+          </span>
+        ),
         accessorFn: (row) => row.realStats?.total_views || 0,
         cell: ({ row }) => {
           const user = row.original;
@@ -485,7 +329,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
           const shortViews =
             views >= 1000 ? `${(views / 1000).toFixed(1)}k` : views.toString();
           return (
-            <span className="text-slate-300 text-sm">
+            <span className="text-foreground text-sm">
               <span className="hidden md:inline">{views.toLocaleString()}</span>
               <span className="md:hidden">{shortViews}</span>
             </span>
@@ -515,13 +359,13 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                     className="fixed inset-0 z-10"
                     onClick={() => setOpenActionMenu(null)}
                   />
-                  <div className="absolute right-0 top-8 z-20 bg-slate-800 border border-slate-700 rounded-lg shadow-xl min-w-[160px]">
+                  <div className="absolute right-0 top-8 z-20 bg-popover border border-border rounded-lg shadow-xl min-w-[160px]">
                     <button
                       onClick={() => {
                         setSelectedUser(user);
                         setOpenActionMenu(null);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors flex items-center gap-2"
                     >
                       Detalji
                     </button>
@@ -531,7 +375,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                         setIsUpdateModalOpen(true);
                         setOpenActionMenu(null);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors flex items-center gap-2"
                     >
                       <Edit size={14} /> Ažuriraj
                     </button>
@@ -541,7 +385,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                         setIsDeleteModalOpen(true);
                         setOpenActionMenu(null);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700 hover:text-red-300 transition-colors flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-muted transition-colors flex items-center gap-2"
                     >
                       <Trash2 size={14} /> Obriši
                     </button>
@@ -554,62 +398,40 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
         enableSorting: false,
       },
     ],
-    [userEmails, emailConfirmations, updatingTierId, openActionMenu],
+    [openActionMenu],
   );
 
   const table = useReactTable({
     data: users,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    globalFilterFn: (row, columnId, filterValue) => {
-      const user = row.original;
-      const search = filterValue.toLowerCase();
-      return (
-        user.business_name?.toLowerCase().includes(search) ||
-        user.id.toLowerCase().includes(search) ||
-        userEmails[user.id]?.toLowerCase().includes(search) ||
-        false
-      );
-    },
-    state: {
-      sorting,
-      globalFilter: searchTerm,
-    },
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
-    },
   });
 
-  if (loading || loadingEmails) {
+  if (loading) {
     return <Loader fullScreen text="Učitavanje korisnika..." />;
   }
 
   return (
-    <div className="space-y-4">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-2 flex items-center gap-2 justify-center">
-          <Shield className="text-yellow-400" size={24} /> Admin Dashboard
-        </h1>
-        <p className="text-slate-400 text-center text-sm">
-          Upravljanje korisnicima, statistikama i šablonima
-        </p>
+    <div className="space-y-6 md:space-y-8 min-w-0">
+      <header>
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
+            <Shield className="text-primary" size={24} /> Admin Dashboard
+          </h1>
+          <p className="text-muted-foreground max-w-2xl">
+            Upravljanje korisnicima, statistikama i šablonima
+          </p>
+        </div>
       </header>
 
       {/* Tabs */}
-      <div className="flex gap-y-2 gap-x-0 border-b border-slate-700 flex-wrap justify-center">
+      <div className="flex gap-y-2 gap-x-0 border-b border-border flex-wrap">
         <button
           onClick={() => setActiveTab('users')}
           className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
             activeTab === 'users'
-              ? 'text-white border-b-2 border-blue-500'
-              : 'text-slate-400 hover:text-white'
+              ? 'text-foreground border-b-2 border-primary'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <Users size={16} /> Korisnici
@@ -618,8 +440,8 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
           onClick={() => setActiveTab('templates')}
           className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
             activeTab === 'templates'
-              ? 'text-white border-b-2 border-blue-500'
-              : 'text-slate-400 hover:text-white'
+              ? 'text-foreground border-b-2 border-primary'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <FileText size={16} /> Šabloni
@@ -628,8 +450,8 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
           onClick={() => setActiveTab('case-studies')}
           className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
             activeTab === 'case-studies'
-              ? 'text-white border-b-2 border-blue-500'
-              : 'text-slate-400 hover:text-white'
+              ? 'text-foreground border-b-2 border-primary'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <ClipboardList size={16} /> Studije Slučaja
@@ -638,8 +460,8 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
           onClick={() => setActiveTab('sanity')}
           className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
             activeTab === 'sanity'
-              ? 'text-white border-b-2 border-blue-500'
-              : 'text-slate-400 hover:text-white'
+              ? 'text-foreground border-b-2 border-primary'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <Database size={16} /> Sanity CMS
@@ -653,20 +475,20 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
 
       {activeTab === 'sanity' && (
         <div className="space-y-6">
-          <Card className="bg-slate-900 border-slate-700">
+          <Card className="bg-gradient-to-b from-background to-muted border-border">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <Database size={20} /> Sanity CMS Integracija
               </CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardDescription>
                 Upravljajte šablonima i studijama slučaja kroz Sanity CMS
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col gap-4">
-                <div className="bg-slate-800 p-4 rounded-lg">
-                  <h3 className="text-white font-medium mb-2">Sanity Studio</h3>
-                  <p className="text-slate-400 text-sm mb-4">
+                <div className="bg-muted/50 p-4 rounded-lg border border-border">
+                  <h3 className="text-foreground font-medium mb-2">Sanity Studio</h3>
+                  <p className="text-muted-foreground text-sm mb-4">
                     Prijavite se na Sanity.io da biste kreirali i uređivali
                     šablone i studije slučaja.
                   </p>
@@ -674,28 +496,27 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                     onClick={() =>
                       window.open('https://www.sanity.io/manage', '_blank')
                     }
-                    className="bg-blue-600 hover:bg-blue-700"
                   >
                     <Database size={16} className="mr-2" /> Otvori Sanity Studio
                   </Button>
-                  <p className="text-slate-500 text-xs mt-2">
+                  <p className="text-muted-foreground text-xs mt-2">
                     Ili direktno:{' '}
                     <a
                       href="https://www.sanity.io/manage"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-400 hover:underline"
+                      className="text-primary hover:underline"
                     >
                       sanity.io/manage
                     </a>
                   </p>
                 </div>
 
-                <div className="bg-slate-800 p-4 rounded-lg">
-                  <h3 className="text-white font-medium mb-2">
+                <div className="bg-muted/50 p-4 rounded-lg border border-border">
+                  <h3 className="text-foreground font-medium mb-2">
                     Sinhronizacija sa Supabase
                   </h3>
-                  <p className="text-slate-400 text-sm mb-4">
+                  <p className="text-muted-foreground text-sm mb-4">
                     Sinhronizujte sadržaj iz Sanity CMS-a u Supabase bazu
                     podataka.
                   </p>
@@ -732,7 +553,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                         }
                       }}
                       disabled={syncingTemplates}
-                      className="bg-emerald-600 hover:bg-emerald-700"
+                      variant="default"
                     >
                       <RefreshCw
                         size={16}
@@ -780,7 +601,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                         }
                       }}
                       disabled={syncingCaseStudies}
-                      className="bg-purple-600 hover:bg-purple-700"
+                      variant="secondary"
                     >
                       <RefreshCw
                         size={16}
@@ -793,19 +614,19 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                   </div>
                 </div>
 
-                <div className="bg-slate-800 p-4 rounded-lg">
-                  <h3 className="text-white font-medium mb-2">Uputstvo</h3>
-                  <ol className="text-slate-400 text-sm space-y-2 list-decimal list-inside">
+                <div className="bg-muted/50 p-4 rounded-lg border border-border">
+                  <h3 className="text-foreground font-medium mb-2">Uputstvo</h3>
+                  <ol className="text-muted-foreground text-sm space-y-2 list-decimal list-inside">
                     <li>
                       Kliknite na "Otvori Sanity Studio" ili idite na{' '}
                       <a
                         href="https://www.sanity.io/manage"
                         target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:underline"
-                      >
-                        sanity.io/manage
-                      </a>
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      sanity.io/manage
+                    </a>
                     </li>
                     <li>Prijavite se sa vašim Sanity nalogom</li>
                     <li>Izaberite vaš projekat iz liste projekata</li>
@@ -831,54 +652,46 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
       {activeTab === 'users' && (
         <>
           {/* Stats Overview */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <Card className="bg-slate-900 border-slate-700">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="bg-gradient-to-b from-background to-muted border-border">
               <CardHeader className="p-3 md:p-4">
-                <CardDescription className="text-slate-400 text-sm">
+                <CardDescription className="text-sm">
                   <span className="md:inline">Ukupno korisnika</span>
                 </CardDescription>
-                <CardTitle className="text-xl md:text-2xl text-white">
-                  {users.length}
+                <CardTitle className="text-xl md:text-2xl text-foreground">
+                  {stats.totalUsers}
                 </CardTitle>
               </CardHeader>
             </Card>
-            <Card className="bg-slate-900 border-slate-700">
+            <Card className="bg-gradient-to-b from-background to-muted border-border">
               <CardHeader className="p-3 md:p-4">
-                <CardDescription className="text-slate-400 text-sm">
+                <CardDescription className="text-sm">
                   <span className="md:inline">Pro korisnici</span>
                 </CardDescription>
-                <CardTitle className="text-xl md:text-2xl text-white">
-                  {users.filter((u) => u.tier === 'pro').length}
+                <CardTitle className="text-xl md:text-2xl text-foreground">
+                  {stats.totalPro}
                 </CardTitle>
               </CardHeader>
             </Card>
-            <Card className="bg-slate-900 border-slate-700">
+            <Card className="bg-gradient-to-b from-background to-muted border-border">
               <CardHeader className="p-3 md:p-4">
-                <CardDescription className="text-slate-400 text-sm">
+                <CardDescription className="text-sm">
                   <span className="md:inline">Ukupno zadataka</span>
                 </CardDescription>
-                <CardTitle className="text-xl md:text-2xl text-white">
-                  {users.reduce(
-                    (sum, u) => sum + (u.realStats?.total_tasks || 0),
-                    0,
-                  )}
+                <CardTitle className="text-xl md:text-2xl text-foreground">
+                  {stats.totalTasks}
                 </CardTitle>
               </CardHeader>
             </Card>
-            <Card className="bg-slate-900 border-slate-700">
+            <Card className="bg-gradient-to-b from-background to-muted border-border">
               <CardHeader className="p-3 md:p-4">
-                <CardDescription className="text-slate-400 text-sm">
+                <CardDescription className="text-sm">
                   <span className="md:inline">Ukupno pregleda</span>
                 </CardDescription>
-                <CardTitle className="text-xl md:text-2xl text-white">
-                  {(() => {
-                    const total = users.reduce((sum, u) => {
-                      return sum + (u.realStats?.total_views || 0);
-                    }, 0);
-                    return total >= 1000
-                      ? `${(total / 1000).toFixed(1)}k`
-                      : total.toString();
-                  })()}
+                <CardTitle className="text-xl md:text-2xl text-foreground">
+                  {stats.totalViews >= 1000
+                    ? `${(stats.totalViews / 1000).toFixed(1)}k`
+                    : stats.totalViews.toString()}
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -890,21 +703,21 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
               placeholder="Pretraži korisnike..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full sm:max-w-md bg-slate-800 border-slate-700 text-white rounded-md"
+              className="w-full sm:max-w-md"
             />
             <Button
               onClick={() => setIsCreateModalOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 flex items-center gap-1 rounded-md justify-center sm:justify-start"
+              className="flex items-center gap-1 justify-center sm:justify-start"
             >
-              <Plus size={16} color="white" />
-              <span className="sm:inline text-white">Kreiraj korisnika</span>
+              <Plus size={16} />
+              <span className="sm:inline">Kreiraj korisnika</span>
             </Button>
           </div>
 
           {/* Users Table */}
-          <Card className="bg-slate-900 border-slate-700">
+          <Card className="bg-gradient-to-b from-background to-muted border-border">
             <CardHeader className="p-4">
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <Users size={18} /> Svi korisnici
               </CardTitle>
             </CardHeader>
@@ -912,32 +725,32 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
               {/* Mobile Card View */}
               <div className="md:hidden space-y-3">
                 {table.getRowModel().rows.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500">
+                  <div className="p-8 text-center text-muted-foreground">
                     Nema korisnika za prikaz
                   </div>
                 ) : (
                   table.getRowModel().rows.map((row) => {
                     const user = row.original;
-                    const email = userEmails[user.id];
+                    const email = user.email;
                     const isOpen = openActionMenu === user.id;
                     return (
                       <Card
                         key={row.id}
-                        className="bg-slate-800 border-slate-700 p-4"
+                        className="bg-muted/50 border-border p-4"
                       >
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex-1 min-w-0">
-                            <div className="text-white font-medium flex items-center gap-2 mb-1">
+                            <div className="text-foreground font-medium flex items-center gap-2 mb-1">
                               <span className="truncate">
                                 {user.business_name || 'Nema imena'}
                               </span>
-                              {emailConfirmations[user.id] === false && (
-                                <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-yellow-900/30 text-yellow-300 border border-yellow-800 flex-shrink-0">
+                              {user.email_confirmed === false && (
+                                <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-destructive/20 text-destructive border border-border flex-shrink-0">
                                   Email Nije Potvrđen
                                 </span>
                               )}
                             </div>
-                            <div className="text-xs text-slate-400 min-h-[16px] truncate">
+                            <div className="text-xs text-muted-foreground min-h-[16px] truncate">
                               {email || (
                                 <span className="invisible">Loading...</span>
                               )}
@@ -960,13 +773,13 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                                   className="fixed inset-0 z-10"
                                   onClick={() => setOpenActionMenu(null)}
                                 />
-                                <div className="absolute right-0 top-8 z-20 bg-slate-800 border border-slate-700 rounded-lg shadow-xl min-w-[160px]">
+                                <div className="absolute right-0 top-8 z-20 bg-popover border border-border rounded-lg shadow-xl min-w-[160px]">
                                   <button
                                     onClick={() => {
                                       setSelectedUser(user);
                                       setOpenActionMenu(null);
                                     }}
-                                    className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors flex items-center gap-2"
+                                    className="w-full text-left px-4 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors flex items-center gap-2"
                                   >
                                     Detalji
                                   </button>
@@ -976,7 +789,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                                       setIsUpdateModalOpen(true);
                                       setOpenActionMenu(null);
                                     }}
-                                    className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors flex items-center gap-2"
+                                    className="w-full text-left px-4 py-2 text-sm text-popover-foreground hover:bg-muted transition-colors flex items-center gap-2"
                                   >
                                     <Edit size={14} /> Ažuriraj
                                   </button>
@@ -986,7 +799,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                                       setIsDeleteModalOpen(true);
                                       setOpenActionMenu(null);
                                     }}
-                                    className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700 hover:text-red-300 transition-colors flex items-center gap-2"
+                                    className="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-muted transition-colors flex items-center gap-2"
                                   >
                                     <Trash2 size={14} /> Obriši
                                   </button>
@@ -997,29 +810,29 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-xs">
                           <div>
-                            <div className="text-slate-400 mb-1">Tier</div>
+                            <div className="text-muted-foreground mb-1">Tier</div>
                             <span
-                              className={`px-2 py-1 rounded text-xs font-bold inline-block ${
+                              className={`px-2 py-1 rounded text-xs font-bold inline-block border border-border ${
                                 user.tier === 'admin'
-                                  ? 'bg-yellow-900/30 text-yellow-300'
+                                  ? 'bg-primary/20 text-primary'
                                   : user.tier === 'pro'
-                                    ? 'bg-purple-900/30 text-purple-300'
-                                    : 'bg-slate-700 text-slate-400'
+                                    ? 'bg-chart-4/20 text-chart-4'
+                                    : 'bg-muted text-muted-foreground'
                               }`}
                             >
                               {user.tier?.toUpperCase() || 'PRO'}
                             </span>
                           </div>
                           <div>
-                            <div className="text-slate-400 mb-1">Zadaci</div>
-                            <div className="text-slate-300 font-medium">
+                            <div className="text-muted-foreground mb-1">Zadaci</div>
+                            <div className="text-foreground font-medium">
                               {user.realStats?.total_tasks || 0}/
                               {user.realStats?.published_tasks || 0}
                             </div>
                           </div>
                           <div>
-                            <div className="text-slate-400 mb-1">Pregledi</div>
-                            <div className="text-slate-300 font-medium">
+                            <div className="text-muted-foreground mb-1">Pregledi</div>
+                            <div className="text-foreground font-medium">
                               {(() => {
                                 const views = user.realStats?.total_views || 0;
                                 return views >= 1000
@@ -1042,12 +855,12 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                     {table.getHeaderGroups().map((headerGroup) => (
                       <tr
                         key={headerGroup.id}
-                        className="border-b border-slate-700"
+                        className="border-b border-border"
                       >
                         {headerGroup.headers.map((header) => (
                           <th
                             key={header.id}
-                            className="text-left p-3 text-slate-400 text-sm font-medium"
+                            className="text-left p-3 text-muted-foreground text-sm font-medium"
                             style={{
                               width: header.getSize(),
                               minWidth: header.column.columnDef.minSize,
@@ -1070,7 +883,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                       <tr>
                         <td
                           colSpan={columns.length}
-                          className="p-8 text-center text-slate-500"
+                          className="p-8 text-center text-muted-foreground"
                         >
                           Nema korisnika za prikaz
                         </td>
@@ -1079,7 +892,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                       table.getRowModel().rows.map((row) => (
                         <tr
                           key={row.id}
-                          className="border-b border-slate-800 hover:bg-slate-800/50"
+                          className="border-b border-border hover:bg-muted/50"
                         >
                           {row.getVisibleCells().map((cell) => (
                             <td
@@ -1106,39 +919,41 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
 
               {/* Pagination */}
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
-                <div className="text-xs sm:text-sm text-slate-400 text-center sm:text-left">
+                <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
                   Prikazano{' '}
-                  {table.getState().pagination.pageIndex *
-                    table.getState().pagination.pageSize +
-                    1}{' '}
+                  {pagination.total === 0
+                    ? '0'
+                    : (currentPage - 1) * pagination.pageSize + 1}{' '}
                   -{' '}
                   {Math.min(
-                    (table.getState().pagination.pageIndex + 1) *
-                      table.getState().pagination.pageSize,
-                    table.getFilteredRowModel().rows.length,
+                    currentPage * pagination.pageSize,
+                    pagination.total,
                   )}{' '}
-                  od {table.getFilteredRowModel().rows.length} korisnika
+                  od {pagination.total} korisnika
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage <= 1}
                     className="text-xs sm:text-sm"
                   >
                     <span className="hidden sm:inline">Prethodna</span>
                     <span className="sm:hidden">Preth.</span>
                   </Button>
-                  <div className="text-xs sm:text-sm text-slate-400">
-                    {table.getState().pagination.pageIndex + 1} /{' '}
-                    {table.getPageCount()}
+                  <div className="text-xs sm:text-sm text-muted-foreground">
+                    {currentPage} / {pagination.totalPages || 1}
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
+                    onClick={() =>
+                      setCurrentPage((p) =>
+                        Math.min(pagination.totalPages || 1, p + 1),
+                      )
+                    }
+                    disabled={currentPage >= pagination.totalPages}
                     className="text-xs sm:text-sm"
                   >
                     <span className="hidden sm:inline">Sledeća</span>
@@ -1153,27 +968,27 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
           {selectedUser &&
             typeof document !== 'undefined' &&
             createPortal(
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
-                <Card className="bg-white border-slate-200 w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl shadow-xl">
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+                <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-slate-900">
+                        <CardTitle className="text-foreground">
                           {selectedUser.business_name || 'Korisnik'}
                         </CardTitle>
-                        <CardDescription className="text-slate-500">
+                        <CardDescription>
                           ID: {selectedUser.id}
                         </CardDescription>
-                        {userEmails[selectedUser.id] && (
-                          <CardDescription className="text-slate-500 flex items-center gap-2">
-                            Email: {userEmails[selectedUser.id]}
-                            {emailConfirmations[selectedUser.id] === false && (
-                              <span className="px-2 py-0.5 rounded text-xs font-bold bg-yellow-900/30 text-yellow-300 border border-yellow-800">
+                        {selectedUser.email && (
+                          <CardDescription className="flex items-center gap-2">
+                            Email: {selectedUser.email}
+                            {selectedUser.email_confirmed === false && (
+                              <span className="px-2 py-0.5 rounded text-xs font-bold bg-destructive/20 text-destructive border border-border">
                                 Email Nije Potvrđen
                               </span>
                             )}
-                            {emailConfirmations[selectedUser.id] === true && (
-                              <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-900/30 text-green-300 border border-green-800">
+                            {selectedUser.email_confirmed === true && (
+                              <span className="px-2 py-0.5 rounded text-xs font-bold bg-chart-2/20 text-chart-2 border border-border">
                                 Email Potvrđen
                               </span>
                             )}
@@ -1181,8 +996,20 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                         )}
                         {(selectedUser as any).has_unlimited_free && (
                           <div className="mt-2">
-                            <span className="px-2 py-1 rounded text-xs font-bold bg-green-900/30 text-green-300">
+                            <span className="px-2 py-1 rounded text-xs font-bold bg-chart-2/20 text-chart-2 border border-border">
                               Neograničena Besplatna PRO Pretplata
+                            </span>
+                          </div>
+                        )}
+                        {(selectedUser as any).free_trial_ends_at && !(selectedUser as any).has_unlimited_free && (
+                          <div className="mt-2">
+                            <span className="px-2 py-1 rounded text-xs font-bold bg-chart-4/20 text-chart-4 border border-border">
+                              Probni period do:{' '}
+                              {new Date((selectedUser as any).free_trial_ends_at).toLocaleDateString('sr-RS', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                              })}
                             </span>
                           </div>
                         )}
@@ -1197,52 +1024,52 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <h3 className="text-slate-900 font-bold mb-2">
+                      <h3 className="text-foreground font-bold mb-2">
                         Statistike
                       </h3>
                       {loadingStatistics ? (
-                        <div className="text-slate-500 text-sm">
+                        <div className="text-muted-foreground text-sm">
                           Učitavanje statistika...
                         </div>
                       ) : (
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-slate-100 p-3 rounded-lg border border-slate-200">
-                            <div className="text-slate-500 text-sm">
+                          <div className="bg-muted/50 p-3 rounded-lg border border-border">
+                            <div className="text-muted-foreground text-sm">
                               Ukupno Zadataka
                             </div>
-                            <div className="text-slate-900 font-bold">
+                            <div className="text-foreground font-bold">
                               {userRealStatistics?.total_tasks || 0}
                             </div>
                           </div>
-                          <div className="bg-slate-100 p-3 rounded-lg border border-slate-200">
-                            <div className="text-slate-500 text-sm">
+                          <div className="bg-muted/50 p-3 rounded-lg border border-border">
+                            <div className="text-muted-foreground text-sm">
                               Objavljeno
                             </div>
-                            <div className="text-slate-900 font-bold">
+                            <div className="text-foreground font-bold">
                               {userRealStatistics?.published_tasks || 0}
                             </div>
                           </div>
-                          <div className="bg-slate-100 p-3 rounded-lg border border-slate-200">
-                            <div className="text-slate-500 text-sm">
+                          <div className="bg-muted/50 p-3 rounded-lg border border-border">
+                            <div className="text-muted-foreground text-sm">
                               Pregledi
                             </div>
-                            <div className="text-slate-900 font-bold">
+                            <div className="text-foreground font-bold">
                               {userRealStatistics?.total_views || '0'}
                             </div>
                           </div>
-                          <div className="bg-slate-100 p-3 rounded-lg border border-slate-200">
-                            <div className="text-slate-500 text-sm">
+                          <div className="bg-muted/50 p-3 rounded-lg border border-border">
+                            <div className="text-muted-foreground text-sm">
                               Angažman
                             </div>
-                            <div className="text-slate-900 font-bold">
+                            <div className="text-foreground font-bold">
                               {userRealStatistics?.total_engagement || '0'}
                             </div>
                           </div>
-                          <div className="bg-slate-100 p-3 rounded-lg border border-slate-200">
-                            <div className="text-slate-500 text-sm">
+                          <div className="bg-muted/50 p-3 rounded-lg border border-border">
+                            <div className="text-muted-foreground text-sm">
                               Konverzije
                             </div>
-                            <div className="text-slate-900 font-bold">
+                            <div className="text-foreground font-bold">
                               {userRealStatistics?.total_conversions || '0'}
                             </div>
                           </div>
@@ -1251,7 +1078,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                     </div>
 
                     <div>
-                      <h3 className="text-white font-bold mb-2">
+                      <h3 className="text-foreground font-bold mb-2">
                         Platni Istorija
                       </h3>
                       <div className="space-y-2">
@@ -1260,25 +1087,25 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
                           selectedUser.payments.map((payment) => (
                             <div
                               key={payment.id}
-                              className="bg-slate-100 p-3 rounded-lg border border-slate-200 flex justify-between"
+                              className="bg-muted/50 p-3 rounded-lg border border-border flex justify-between"
                             >
                               <div>
-                                <div className="text-slate-900 font-medium">
+                                <div className="text-foreground font-medium">
                                   ${payment.amount} - {payment.status}
                                 </div>
-                                <div className="text-slate-500 text-sm">
+                                <div className="text-muted-foreground text-sm">
                                   {new Date(
                                     payment.created_at,
                                   ).toLocaleDateString()}
                                 </div>
                               </div>
-                              <div className="text-slate-500 text-sm">
+                              <div className="text-muted-foreground text-sm">
                                 {payment.tier_at_payment?.toUpperCase()}
                               </div>
                             </div>
                           ))
                         ) : (
-                          <div className="text-slate-500 text-sm">
+                          <div className="text-muted-foreground text-sm">
                             Nema platnih podataka
                           </div>
                         )}
@@ -1294,7 +1121,7 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
           <CreateUserModal
             isOpen={isCreateModalOpen}
             onClose={() => setIsCreateModalOpen(false)}
-            onUserCreated={fetchAllUsers}
+            onUserCreated={() => fetchUsers(currentPage, debouncedSearch)}
           />
 
           {/* Delete User Modal */}
@@ -1304,12 +1131,12 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
               setIsDeleteModalOpen(false);
               setUserToDelete(null);
             }}
-            onUserDeleted={fetchAllUsers}
+            onUserDeleted={() => fetchUsers(currentPage, debouncedSearch)}
             user={
               userToDelete
                 ? {
                     id: userToDelete.id,
-                    email: userEmails[userToDelete.id],
+                    email: userToDelete.email,
                     business_name: userToDelete.business_name || undefined,
                   }
                 : null
@@ -1323,13 +1150,13 @@ export default function AdminDashboard({ userId }: AdminDashboardProps) {
               setIsUpdateModalOpen(false);
               setUserToUpdate(null);
             }}
-            onUserUpdated={fetchAllUsers}
+            onUserUpdated={() => fetchUsers(currentPage, debouncedSearch)}
             user={
               userToUpdate
                 ? {
                     ...userToUpdate,
-                    email: userEmails[userToUpdate.id],
-                    email_confirmed: emailConfirmations[userToUpdate.id],
+                    email: userToUpdate.email,
+                    email_confirmed: userToUpdate.email_confirmed,
                   }
                 : null
             }
