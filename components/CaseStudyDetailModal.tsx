@@ -1,8 +1,9 @@
 'use client';
 
 import type { Task } from '@/types';
-import { ExternalLink, Eye, Lightbulb, TrendingUp } from 'lucide-react';
+import { ExternalLink, Eye, Lightbulb, TrendingUp, X } from 'lucide-react';
 import Modal from './ui/modal';
+import { Button } from './ui/button';
 
 interface CaseStudyDetailModalProps {
   task: Task;
@@ -22,6 +23,17 @@ export default function CaseStudyDetailModal({
       className="max-h-[90vh] overflow-hidden flex flex-col"
     >
       <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex justify-end shrink-0 mb-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="shrink-0 -mr-2 -mt-1 text-slate-400 hover:text-slate-600"
+            aria-label="Zatvori"
+          >
+            <X size={20} />
+          </Button>
+        </div>
         <div className="flex flex-wrap items-center gap-2 mb-4">
           {task.category && (
             <span
@@ -65,22 +77,22 @@ export default function CaseStudyDetailModal({
           {(task.cover_image_url || task.result_views || task.result_engagement || task.result_conversions) && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {task.cover_image_url && (
-                <div className="md:col-span-2">
+                <div className="md:col-span-1">
                   <h4 className="text-sm font-bold text-slate-500 uppercase mb-3 flex items-center gap-2">
                     <Eye size={16} className="text-blue-600" /> Vizuelni Kontekst
                   </h4>
-                  <div className="w-full bg-slate-100 rounded-xl overflow-hidden border border-slate-200 aspect-video flex items-center justify-center">
+                  <div className="w-full max-w-[240px] mx-auto md:mx-0 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 aspect-[9/16] flex items-center justify-center">
                     <img
                       src={task.cover_image_url}
                       alt="Video Thumbnail"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-center"
                     />
                   </div>
                 </div>
               )}
 
               {(task.result_views || task.result_engagement || task.result_conversions) && (
-                <div className={task.cover_image_url ? 'md:col-span-1 space-y-4' : 'md:col-span-3 space-y-4'}>
+                <div className={task.cover_image_url ? 'md:col-span-2 space-y-4' : 'md:col-span-3 space-y-4'}>
                   <h4 className="text-sm font-bold text-slate-500 uppercase mb-3 flex items-center gap-2">
                     <TrendingUp size={16} className="text-emerald-600" /> Rezultati
                   </h4>

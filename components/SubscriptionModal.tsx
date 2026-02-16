@@ -1,7 +1,10 @@
 'use client';
 
-import { Check, CreditCard } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { Check, CreditCard, LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import Loader from './ui/loader';
 import Modal, { modalPrimaryButtonClass } from './ui/modal';
 
@@ -16,7 +19,35 @@ export default function SubscriptionModal({
   onClose,
   userId,
 }: SubscriptionModalProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setLoggingOut(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        toast.error('Greška pri odjavljivanju', {
+          description: error.message,
+        });
+        setLoggingOut(false);
+        return;
+      }
+
+      toast.success('Uspešno odjavljivanje', {
+        description: 'Vidimo se uskoro!',
+      });
+
+      onClose();
+      router.refresh();
+      router.push('/login');
+    } catch {
+      setLoggingOut(false);
+    }
+  };
 
   const handleCheckout = async () => {
     if (!userId) return;
@@ -166,6 +197,27 @@ export default function SubscriptionModal({
           Plaćanje obezbeđuje Stripe. Možete otkazati pretplatu u bilo kom
           trenutku.
         </p>
+
+        <div className="pt-2 border-t border-slate-200">
+          <button
+            type="button"
+            onClick={handleSignOut}
+            disabled={loggingOut}
+            className="w-full flex items-center justify-center gap-2 py-2.5 text-sm text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loggingOut ? (
+              <>
+                <Loader size="sm" />
+                <span>Odjavljivanje...</span>
+              </>
+            ) : (
+              <>
+                <LogOut size={16} />
+                <span>Ne želim da se pretplatim — odjavi me</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </Modal>
   );

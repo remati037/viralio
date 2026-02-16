@@ -13,6 +13,8 @@ interface DatePickerProps {
   maxDate?: string; // ISO date string
   disablePast?: boolean; // If true, disables all dates before today
   disabled?: boolean;
+  /** Use 'light' for modals/light backgrounds */
+  variant?: 'dark' | 'light';
 }
 
 const MONTHS = [
@@ -41,7 +43,9 @@ export default function DatePicker({
   maxDate,
   disablePast = false,
   disabled = false,
+  variant = 'dark',
 }: DatePickerProps) {
+  const isLight = variant === 'light';
   const [isOpen, setIsOpen] = useState(false);
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(new Date().getMonth());
@@ -327,29 +331,36 @@ export default function DatePicker({
     days.push(day);
   }
 
+  const triggerClass = isLight
+    ? 'w-full text-sm bg-white border border-slate-200 rounded-lg py-2 px-3 text-left flex items-center justify-between transition-colors hover:border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30'
+    : 'w-full text-sm bg-white border border-slate-700 rounded-lg py-2 px-3 text-left flex items-center justify-between transition-colors hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500';
+  const dropdownClass = isLight
+    ? 'date-picker-dropdown fixed z-[99999] bg-white border border-slate-200 rounded-lg shadow-xl p-4 min-w-[320px]'
+    : 'date-picker-dropdown fixed z-[99999] bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4 min-w-[320px]';
+
   return (
     <div ref={pickerRef} className={`relative ${className}`}>
       <button
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full text-sm bg-white border border-slate-700 rounded-lg py-2 px-3 text-left flex items-center justify-between transition-colors ${
+        className={`${triggerClass} ${
           disabled
             ? 'opacity-50 cursor-not-allowed'
-            : 'hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer'
-        } ${isOpen ? 'border-blue-500 ring-2 ring-blue-500/20' : ''}`}
+            : 'cursor-pointer'
+        } ${isOpen ? (isLight ? 'border-primary ring-2 ring-primary/20' : 'border-blue-500 ring-2 ring-blue-500/20') : ''}`}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
       >
         {selectedDate ? (
           <div className="flex items-center gap-2">
-            <Calendar size={16} className="text-blue-400" />
-            <span className="text-white">
+            <Calendar size={16} className={isLight ? 'text-slate-600' : 'text-blue-400'} />
+            <span className={isLight ? 'text-slate-900' : 'text-white'}>
               {formatDisplayDate(selectedDate)}
             </span>
           </div>
         ) : (
-          <span className="text-slate-500">{placeholder}</span>
+          <span className={isLight ? 'text-slate-400' : 'text-slate-500'}>{placeholder}</span>
         )}
         <div className="flex items-center gap-2">
           {selectedDate && (
@@ -358,7 +369,7 @@ export default function DatePicker({
                 e.stopPropagation();
                 onChange(null);
               }}
-              className="text-slate-400 hover:text-white transition-colors p-1 rounded cursor-pointer"
+              className={isLight ? 'text-slate-400 hover:text-slate-600 transition-colors p-1 rounded cursor-pointer' : 'text-slate-400 hover:text-white transition-colors p-1 rounded cursor-pointer'}
               title="Ukloni datum"
               role="button"
               tabIndex={0}
@@ -375,7 +386,7 @@ export default function DatePicker({
           )}
           <Calendar
             size={18}
-            className={`text-slate-400 transition-transform`}
+            className={isLight ? 'text-slate-500' : 'text-slate-400'}
           />
         </div>
       </button>
@@ -385,7 +396,7 @@ export default function DatePicker({
         mounted &&
         createPortal(
           <div
-            className="date-picker-dropdown fixed z-[99999] bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4 min-w-[320px]"
+            className={dropdownClass}
             style={{
               top: `${dropdownPosition.top}px`,
               left: `${dropdownPosition.left}px`,
@@ -398,19 +409,19 @@ export default function DatePicker({
               <button
                 type="button"
                 onClick={goToPreviousMonth}
-                className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                className={isLight ? 'p-1.5 rounded hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors' : 'p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors'}
                 aria-label="Prethodni mesec"
               >
                 <ChevronLeft size={18} />
               </button>
               <div className="flex items-center gap-2">
-                <span className="text-white font-semibold">
+                <span className={isLight ? 'text-slate-900 font-semibold' : 'text-white font-semibold'}>
                   {MONTHS[viewMonth]} {viewYear}
                 </span>
                 <button
                   type="button"
                   onClick={goToToday}
-                  className="px-2 py-1 text-xs text-blue-400 hover:text-blue-300 hover:bg-slate-700 rounded transition-colors"
+                  className={isLight ? 'px-2 py-1 text-xs text-primary hover:text-primary/80 hover:bg-slate-100 rounded transition-colors' : 'px-2 py-1 text-xs text-blue-400 hover:text-blue-300 hover:bg-slate-700 rounded transition-colors'}
                 >
                   Danas
                 </button>
@@ -418,7 +429,7 @@ export default function DatePicker({
               <button
                 type="button"
                 onClick={goToNextMonth}
-                className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                className={isLight ? 'p-1.5 rounded hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors' : 'p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors'}
                 aria-label="Sledeći mesec"
               >
                 <ChevronRight size={18} />
@@ -430,7 +441,7 @@ export default function DatePicker({
               {WEEKDAYS.map((day) => (
                 <div
                   key={day}
-                  className="text-center text-xs font-semibold text-slate-400 py-1 min-w-0"
+                  className={`text-center text-xs font-semibold py-1 min-w-0 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}
                 >
                   {day}
                 </div>
@@ -450,7 +461,7 @@ export default function DatePicker({
                 }
 
                 const date = new Date(viewYear, viewMonth, day);
-                const disabled = isDateDisabled(date);
+                const disabledDay = isDateDisabled(date);
                 const isSelectedDay = isSelected(date);
                 const isTodayDay = isToday(date);
 
@@ -459,14 +470,22 @@ export default function DatePicker({
                     key={day}
                     type="button"
                     onClick={() => handleDateSelect(day)}
-                    disabled={disabled}
+                    disabled={disabledDay}
                     className={`aspect-square min-w-0 flex items-center justify-center text-sm rounded transition-colors ${
-                      disabled
-                        ? 'text-slate-600 cursor-not-allowed'
+                      disabledDay
+                        ? isLight
+                          ? 'text-slate-300 cursor-not-allowed'
+                          : 'text-slate-600 cursor-not-allowed'
                         : isSelectedDay
-                          ? 'bg-blue-600 text-white font-semibold'
+                          ? isLight
+                            ? 'bg-primary text-white font-semibold'
+                            : 'bg-blue-600 text-white font-semibold'
                           : isTodayDay
-                            ? 'bg-blue-600/20 text-blue-400 font-semibold border border-blue-500'
+                            ? isLight
+                              ? 'bg-primary/15 text-primary font-semibold border border-primary/50'
+                              : 'bg-blue-600/20 text-blue-400 font-semibold border border-blue-500'
+                            : isLight
+                            ? 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
                             : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                     }`}
                   >

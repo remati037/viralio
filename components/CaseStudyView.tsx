@@ -213,20 +213,21 @@ export default function CaseStudyView({
 
       <div className="space-y-8">
         {loadingCaseStudies ? (
-          <div className="space-y-6">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="rounded-xl border-border bg-card p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Skeleton height={200} className="rounded-lg" />
-                  <div className="md:col-span-2 space-y-4">
-                    <Skeleton height={28} width="80%" />
-                    <Skeleton height={20} width="60%" />
-                    <Skeleton height={56} />
-                    <div className="flex gap-4">
-                      <Skeleton height={20} width={80} />
-                      <Skeleton height={20} width={80} />
-                      <Skeleton height={20} width={80} />
-                    </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i} className="rounded-xl border-border bg-card overflow-hidden flex flex-col">
+                <Skeleton className="aspect-[9/16] w-full rounded-t-xl shrink-0" />
+                <div className="p-4 space-y-3">
+                  <div className="flex gap-2">
+                    <Skeleton height={20} width={64} className="rounded" />
+                    <Skeleton height={20} width={48} className="rounded" />
+                  </div>
+                  <Skeleton height={20} width="90%" className="rounded" />
+                  <Skeleton height={16} width="70%" className="rounded" />
+                  <Skeleton height={40} className="rounded" />
+                  <div className="flex gap-4 pt-2">
+                    <Skeleton height={16} width={48} />
+                    <Skeleton height={16} width={48} />
                   </div>
                 </div>
               </Card>
@@ -268,28 +269,27 @@ export default function CaseStudyView({
             </div>
           </div>
         ) : (
-          visibleCaseStudies.map((task) => (
-            <Card
-              key={task.id}
-              onClick={() => onCaseStudyClick(task)}
-              className={`group overflow-hidden ${cardBase}`}
-            >
-              <div
-                className={`flex flex-col ${task.cover_image_url ? 'md:flex-row' : ''}`}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {visibleCaseStudies.map((task) => (
+              <Card
+                key={task.id}
+                onClick={() => onCaseStudyClick(task)}
+                className={`group overflow-hidden flex flex-col ${cardBase}`}
               >
-                {task.cover_image_url ? (
-                  <div className="md:w-72 shrink-0 relative">
-                    <div className="aspect-video w-full bg-muted overflow-hidden rounded-l-xl md:rounded-l-xl md:rounded-r-none">
+                {/* 9:16 portrait image on top */}
+                <div className="w-full relative shrink-0">
+                  {task.cover_image_url ? (
+                    <div className="aspect-[9/16] w-full bg-muted overflow-hidden rounded-t-xl">
                       <img
                         src={task.cover_image_url}
                         alt={task.title ? `Naslovna slika: ${task.title}` : 'Naslovna slika studije slučaja'}
-                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                        className="h-full w-full object-cover object-center transition-transform duration-200 group-hover:scale-[1.02]"
                         loading="lazy"
                         onError={(e) => {
-                          const el = e.target as HTMLImageElement
-                          el.style.display = 'none'
-                          const fallback = el.nextElementSibling as HTMLElement
-                          if (fallback) fallback.className = 'absolute inset-0 flex items-center justify-center bg-muted text-muted-foreground text-xs'
+                          const el = e.target as HTMLImageElement;
+                          el.style.display = 'none';
+                          const fallback = el.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.className = 'absolute inset-0 flex items-center justify-center bg-muted text-muted-foreground text-xs';
                         }}
                       />
                       <div
@@ -299,21 +299,26 @@ export default function CaseStudyView({
                         Slika nije učitana
                       </div>
                     </div>
-                    {task.format && (
-                      <span
-                        className={`absolute top-2 left-2 px-2 py-0.5 text-[10px] font-semibold rounded-md ${
-                          task.format === 'Kratka Forma'
-                            ? 'bg-chart-1 text-primary-foreground'
-                            : 'bg-chart-2 text-primary-foreground'
-                        }`}
-                      >
-                        {task.format}
-                      </span>
-                    )}
-                  </div>
-                ) : null}
+                  ) : (
+                    <div className="aspect-[9/16] w-full bg-muted rounded-t-xl flex items-center justify-center text-muted-foreground text-sm">
+                      Nema slike
+                    </div>
+                  )}
+                  {task.format && (
+                    <span
+                      className={`absolute top-2 left-2 px-2 py-0.5 text-[10px] font-semibold rounded-md ${
+                        task.format === 'Kratka Forma'
+                          ? 'bg-chart-1 text-primary-foreground'
+                          : 'bg-chart-2 text-primary-foreground'
+                      }`}
+                    >
+                      {task.format}
+                    </span>
+                  )}
+                </div>
 
-                <div className="flex flex-1 flex-col p-5 md:p-6">
+                {/* All data below image */}
+                <div className="flex flex-1 flex-col p-4 min-h-0">
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     {task.category && (
                       <span
@@ -340,38 +345,38 @@ export default function CaseStudyView({
                     )}
                   </div>
 
-                  <h2 className="text-lg font-bold text-card-foreground mb-2 leading-tight">
+                  <h2 className="text-base font-bold text-card-foreground mb-1.5 leading-tight line-clamp-2">
                     {task.title}
                   </h2>
 
                   {task.original_template && (
-                    <p className="text-xs text-muted-foreground mb-3">
+                    <p className="text-xs text-muted-foreground mb-2 line-clamp-1" title={task.original_template}>
                       Šablon: {task.original_template}
                     </p>
                   )}
 
                   {task.analysis && task.analysis.trim() !== '' && (
-                    <p className="text-muted-foreground text-sm line-clamp-3 mb-4">
-                      {getPlainTextPreview(task.analysis)}
+                    <p className="text-muted-foreground text-sm line-clamp-3 mb-3 flex-1">
+                      {getPlainTextPreview(task.analysis, 120)}
                     </p>
                   )}
 
-                  <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 pt-3 border-t border-border">
-                    {task.result_views && (
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2 border-t border-border mt-auto">
+                    {task.result_views != null && task.result_views !== '' && (
                       <span className="flex items-center gap-1.5 text-xs text-chart-2">
-                        <Eye size={14} className="shrink-0" />
+                        <Eye size={12} className="shrink-0" />
                         {task.result_views}
                       </span>
                     )}
-                    {task.result_engagement && (
+                    {task.result_engagement != null && task.result_engagement !== '' && (
                       <span className="flex items-center gap-1.5 text-xs text-chart-4">
-                        <Heart size={14} className="shrink-0" />
+                        <Heart size={12} className="shrink-0" />
                         {task.result_engagement}
                       </span>
                     )}
-                    {task.result_conversions && (
+                    {task.result_conversions != null && task.result_conversions !== '' && (
                       <span className="flex items-center gap-1.5 text-xs text-chart-3">
-                        <Target size={14} className="shrink-0" />
+                        <Target size={12} className="shrink-0" />
                         {task.result_conversions}
                       </span>
                     )}
@@ -383,15 +388,15 @@ export default function CaseStudyView({
                         onClick={(e) => e.stopPropagation()}
                         className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
                       >
-                        <ExternalLink size={14} className="shrink-0" />
-                        Pogledaj video
+                        <ExternalLink size={12} className="shrink-0" />
+                        Video
                       </a>
                     )}
                   </div>
                 </div>
-              </div>
-            </Card>
-          ))
+              </Card>
+            ))}
+          </div>
         )}
       </div>
     </>

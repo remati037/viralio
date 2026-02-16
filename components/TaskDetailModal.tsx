@@ -20,9 +20,13 @@ import {
   Youtube,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import AIAssistant from './AIAssistant';
+import Modal, {
+  modalCancelButtonClass,
+  modalInputClass,
+  modalPrimaryButtonClass,
+} from './ui/modal';
 import AICreditBadge from './ui/ai-credit-badge';
 import CategorySelect, { type TaskCategory } from './ui/category-select';
 import DatePicker from './ui/date-picker';
@@ -480,29 +484,38 @@ export default function TaskDetailModal({
     }
   };
 
-  const taskFormat =
-    editedTask.format === 'Kratka Forma' ? 'text-chart-1' : 'text-chart-2';
-
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
-      <div className="bg-white border border-slate-200 w-full max-w-2xl rounded-xl shadow-xl flex flex-col max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
-          <div className="flex flex-col gap-2 w-full">
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      bare
+      maxWidth="4xl"
+      className="max-h-[90vh] overflow-hidden flex flex-col p-0"
+    >
+      <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200 bg-white">
+          <div className="flex flex-col gap-2 w-full min-w-0">
             <div
               className={`flex ${
                 editedTask.category ? 'justify-between' : 'justify-end'
-              } items-center w-full`}
+              } items-center w-full gap-2`}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap min-w-0">
                 {editedTask.category && (
                   <span
-                    className="text-xs font-bold uppercase tracking-wider bg-slate-800 px-2 py-1 rounded border w-fit"
+                    className="text-xs font-bold uppercase tracking-wider px-2 py-1 rounded border shrink-0"
                     style={{
                       color: editedTask.category.color,
-                      borderColor: `${editedTask.category.color}40`,
+                      borderColor: `${editedTask.category.color}60`,
+                      backgroundColor: `${editedTask.category.color}15`,
                     }}
                   >
                     {editedTask.category.name}
+                  </span>
+                )}
+                {editedTask.format && (
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-100 px-2 py-1 rounded border border-slate-200 shrink-0">
+                    {editedTask.format}
                   </span>
                 )}
                 {credits && (
@@ -514,11 +527,11 @@ export default function TaskDetailModal({
                   />
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 shrink-0">
                 {!task.is_admin_case_study && (
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="text-chart-1 hover:text-chart-1/90 transition-colors p-2 hover:bg-chart-1/20 rounded-lg"
+                    className="text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors p-2 rounded-lg"
                     title="Obriši zadatak"
                   >
                     <Trash2 size={20} />
@@ -526,25 +539,24 @@ export default function TaskDetailModal({
                 )}
                 <button
                   onClick={onClose}
-                  className="text-slate-400 hover:text-slate-100 hover:bg-slate-700/50 rounded-lg p-2 transition-colors"
+                  className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-2 transition-colors"
+                  aria-label="Zatvori"
                 >
                   <X size={24} />
                 </button>
               </div>
             </div>
 
-            <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
+            <h3 className="text-xl font-bold text-slate-900">
               {editedTask.title}
             </h3>
-            <span className={`text-sm font-semibold ${taskFormat}`}>
-              {editedTask.format}
-            </span>
-            <p className="text-slate-400 text-xs mt-1">
+            <p className="text-slate-500 text-sm">
               Kreirano:{' '}
-              {new Date(editedTask.created_at).toLocaleDateString('sr-RS')}{' '}
+              {new Date(editedTask.created_at).toLocaleDateString('sr-RS')}
               {editedTask.publish_date && (
-                <span className="font-semibold text-chart-4">
-                  | Planirano:{' '}
+                <span className="font-medium text-slate-700">
+                  {' '}
+                  · Planirano:{' '}
                   {new Date(editedTask.publish_date).toLocaleDateString(
                     'sr-RS',
                   )}
@@ -554,33 +566,33 @@ export default function TaskDetailModal({
           </div>
         </div>
 
-        <div className="flex border-b border-slate-700/80 flex-wrap justify-center bg-slate-900/50">
+        <div className="flex border-b border-slate-200 flex-wrap justify-center bg-white shrink-0">
           <button
             onClick={() => setActiveTab('script')}
-            className={`py-3 px-6 text-sm font-medium transition-colors flex items-center gap-2 rounded-t-lg ${
+            className={`py-3 px-5 text-sm font-medium transition-colors flex items-center gap-2 ${
               activeTab === 'script'
-                ? 'text-slate-100 border-b-2 border-chart-2 bg-slate-800/30'
-                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/20'
+                ? 'text-slate-900 border-b-2 border-primary bg-slate-50/80'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             }`}
           >
             <FileText size={14} /> Skripta
           </button>
           <button
             onClick={() => setActiveTab('inspiration')}
-            className={`py-3 px-6 text-sm font-medium transition-colors flex items-center gap-2 rounded-t-lg ${
+            className={`py-3 px-5 text-sm font-medium transition-colors flex items-center gap-2 ${
               activeTab === 'inspiration'
-                ? 'text-slate-100 border-b-2 border-chart-2 bg-slate-800/30'
-                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/20'
+                ? 'text-slate-900 border-b-2 border-primary bg-slate-50/80'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             }`}
           >
             <Link size={14} /> Inspiracija
           </button>
           <button
             onClick={() => setActiveTab('schedule')}
-            className={`py-3 px-6 text-sm font-medium transition-colors flex items-center gap-2 rounded-t-lg ${
+            className={`py-3 px-5 text-sm font-medium transition-colors flex items-center gap-2 ${
               activeTab === 'schedule'
-                ? 'text-slate-100 border-b-2 border-chart-2 bg-slate-800/30'
-                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/20'
+                ? 'text-slate-900 border-b-2 border-primary bg-slate-50/80'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             }`}
           >
             <Calendar size={14} /> Raspored
@@ -588,10 +600,10 @@ export default function TaskDetailModal({
           {editedTask.status === 'published' && (
             <button
               onClick={() => setActiveTab('results')}
-              className={`py-3 px-6 text-sm font-medium transition-colors flex items-center gap-2 rounded-t-lg ${
+              className={`py-3 px-5 text-sm font-medium transition-colors flex items-center gap-2 ${
                 activeTab === 'results'
-                  ? 'text-slate-100 border-b-2 border-chart-2 bg-slate-800/30'
-                  : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/20'
+                  ? 'text-slate-900 border-b-2 border-primary bg-slate-50/80'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
               }`}
             >
               <ClipboardList size={14} /> Rezultati
@@ -599,40 +611,34 @@ export default function TaskDetailModal({
           )}
         </div>
 
-        <div className="p-4 overflow-y-auto flex-1 space-y-6 bg-slate-50">
+        <div className="p-5 overflow-y-auto flex-1 space-y-6 bg-slate-50">
           {activeTab === 'script' && (
-            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/60 space-y-4">
-              <h4 className="text-sm font-semibold text-slate-100 uppercase tracking-wide mb-2 flex items-center gap-2">
-                <Edit3 size={14} className="text-chart-2" />
+            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
+              <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                <Edit3 size={14} className="text-slate-600" />
                 Skripta
-                {/* <span
-                  className={`ml-1 font-bold ${
-                    isLongForm ? 'text-green-400' : 'text-red-400'
-                  }`}
-                >
-                  {editedTask.format}
-                </span> */}
               </h4>
 
               {/* Status Selection */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   Status
                 </label>
                 <StatusSelect
                   value={editedTask.status}
                   onChange={handleStatusChange}
                   className="w-full"
+                  variant="light"
                 />
               </div>
 
               {/* Category Selection */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Kategorija <span className="text-chart-1">*</span>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Kategorija <span className="text-red-500">*</span>
                 </label>
                 {loadingCategories ? (
-                  <div className="w-full bg-slate-700 border border-slate-600 rounded-md p-3 text-slate-400">
+                  <div className="w-full border border-slate-200 rounded-lg p-3 text-slate-500 bg-slate-50">
                     Učitavanje kategorija...
                   </div>
                 ) : (
@@ -648,13 +654,14 @@ export default function TaskDetailModal({
                     placeholder="Izaberi kategoriju"
                     className="w-full"
                     disabled={isEditingDisabled}
+                    variant="light"
                   />
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Ton / Stil <span className="text-chart-1">*</span>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Ton / Stil <span className="text-red-500">*</span>
                 </label>
                 <ToneSelect
                   value={tone}
@@ -662,33 +669,34 @@ export default function TaskDetailModal({
                   placeholder="Izaberite ton"
                   className="w-full"
                   disabled={isEditingDisabled}
+                  variant="light"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Ciljna Publika <span className="text-chart-1">*</span>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Ciljna Publika <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
                   placeholder="npr. Preduzetnici 25-40 godina, Marketinški stručnjaci..."
-                  className="w-full bg-slate-800/60 border border-slate-600 rounded-lg py-2 px-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-chart-2/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`w-full rounded-lg py-2 px-3 border focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${modalInputClass}`}
                   disabled={isEditingDisabled}
                 />
               </div>
 
               {/* Editing Disabled Notice for Published Tasks */}
               {isEditingDisabled && (
-                <div className="bg-chart-3/20 border border-chart-3/40 rounded-xl p-4">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                   <div className="flex items-start gap-3">
-                    <Info className="text-chart-3 w-5 h-5 mt-0.5 shrink-0" />
+                    <Info className="text-amber-600 w-5 h-5 mt-0.5 shrink-0" />
                     <div className="flex-1">
-                      <h4 className="text-sm font-semibold text-chart-3 mb-1">
+                      <h4 className="text-sm font-semibold text-amber-800 mb-1">
                         Zadatak je objavljen
                       </h4>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-slate-600">
                         Ne možete menjati skriptu, inspiraciju ili raspored za
                         objavljene zadatke. Možete samo urediti rezultate na
                         kartici "Rezultati".
@@ -710,24 +718,24 @@ export default function TaskDetailModal({
 
                 if (!hasAllRequiredFields && !isEditingDisabled) {
                   return (
-                    <div className="bg-chart-3/10 border border-chart-3/40 rounded-xl p-4 space-y-2">
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
                       <div className="flex items-start gap-3">
-                        <Info className="text-chart-3 w-5 h-5 mt-0.5 shrink-0" />
+                        <Info className="text-blue-600 w-5 h-5 mt-0.5 shrink-0" />
                         <div className="flex-1">
-                          <h4 className="text-sm font-semibold text-slate-100 mb-1">
+                          <h4 className="text-sm font-semibold text-slate-900 mb-1">
                             Potrebno za AI generator
                           </h4>
-                          <p className="text-xs text-slate-400 mb-2">
+                          <p className="text-xs text-slate-600 mb-2">
                             Da biste koristili AI generator, molimo popunite
                             sledeća obavezna polja:
                           </p>
-                          <ul className="list-disc list-inside space-y-1 text-xs text-slate-400">
+                          <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
                             {missingFields.map((field) => (
                               <li
                                 key={field}
                                 className="flex items-center gap-2"
                               >
-                                <span className="text-chart-3">•</span>
+                                <span className="text-blue-600">•</span>
                                 <span>{field}</span>
                               </li>
                             ))}
@@ -742,7 +750,7 @@ export default function TaskDetailModal({
 
               {isLongForm ? (
                 <div className="flex-1 flex flex-col min-h-[300px]">
-                  <label className="text-chart-2 text-xs font-semibold block mb-1">
+                  <label className="text-slate-700 text-sm font-medium block mb-1">
                     CEO SCENARIO / TEKST (Duga Forma)
                   </label>
                   <RichTextEditor
@@ -753,6 +761,7 @@ export default function TaskDetailModal({
                     placeholder="Pišite ceo scenario bez razdvajanja na HOOK/BODY/CTA"
                     minHeight="350px"
                     disabled={isEditingDisabled}
+                    variant="light"
                     aiButton={{
                       fieldType: 'fullScript',
                       taskContext: {
@@ -781,7 +790,7 @@ export default function TaskDetailModal({
               ) : (
                 <>
                   <div>
-                    <label className="text-chart-1 text-xs font-semibold block mb-1">
+                    <label className="text-slate-700 text-sm font-medium block mb-1">
                       01. HOOK (Udica)
                     </label>
                     <RichTextEditor
@@ -792,6 +801,7 @@ export default function TaskDetailModal({
                       placeholder="Unesite udicu ovde (0-3 sekunde)"
                       minHeight="80px"
                       disabled={isEditingDisabled}
+                      variant="light"
                       aiButton={{
                         fieldType: 'hook',
                         taskContext: {
@@ -811,7 +821,7 @@ export default function TaskDetailModal({
                   </div>
 
                   <div>
-                    <label className="text-chart-2 text-xs font-semibold block mb-1">
+                    <label className="text-slate-700 text-sm font-medium block mb-1">
                       02. BODY (Vrednost)
                     </label>
                     <RichTextEditor
@@ -822,6 +832,7 @@ export default function TaskDetailModal({
                       placeholder="Unesite ključnu vrednost ovde (3-45 sekundi)"
                       minHeight="120px"
                       disabled={isEditingDisabled}
+                      variant="light"
                       aiButton={{
                         fieldType: 'body',
                         taskContext: {
@@ -841,7 +852,7 @@ export default function TaskDetailModal({
                   </div>
 
                   <div>
-                    <label className="text-chart-4 text-xs font-semibold block mb-1">
+                    <label className="text-slate-700 text-sm font-medium block mb-1">
                       03. CTA (Poziv na akciju)
                     </label>
                     <RichTextEditor
@@ -852,6 +863,7 @@ export default function TaskDetailModal({
                       placeholder="Unesite poziv na akciju ovde"
                       minHeight="60px"
                       disabled={isEditingDisabled}
+                      variant="light"
                       aiButton={{
                         fieldType: 'cta',
                         taskContext: {
@@ -941,9 +953,9 @@ export default function TaskDetailModal({
           )}
 
           {activeTab === 'inspiration' && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold text-slate-200 uppercase tracking-wide flex items-center gap-2 mt-2">
-                <Trello size={14} className="text-chart-2" /> Dodaj Linkove
+            <div className="space-y-4">
+              <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2">
+                <Trello size={14} className="text-slate-600" /> Dodaj Linkove
                 Konkurenata
               </h4>
 
@@ -964,7 +976,7 @@ export default function TaskDetailModal({
                     }
                   }}
                   placeholder="Paste link (YouTube, Instagram, TikTok...)"
-                  className="flex-1 bg-slate-800/60 border border-slate-600 rounded-lg py-2 px-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-chart-2/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`flex-1 rounded-lg py-2 px-3 border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${modalInputClass}`}
                   disabled={isEditingDisabled}
                 />
                 <button
@@ -972,7 +984,7 @@ export default function TaskDetailModal({
                   disabled={
                     !linkInput.trim() || isAddingLink || isEditingDisabled
                   }
-                  className="px-4 py-2 bg-chart-2 hover:bg-chart-2/90 text-white rounded-lg text-sm font-medium transition-colors disabled:bg-slate-700 disabled:text-slate-500 flex items-center gap-2"
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2 ${modalPrimaryButtonClass}`}
                 >
                   {isAddingLink ? (
                     <>
@@ -987,14 +999,14 @@ export default function TaskDetailModal({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                 {(editedTask.inspiration_links || []).length === 0 ? (
-                  <div className="col-span-full text-center py-10 text-slate-600 border-2 border-dashed border-slate-800 rounded-md text-sm">
+                  <div className="col-span-full text-center py-10 text-slate-500 border-2 border-dashed border-slate-200 rounded-xl bg-white text-sm">
                     Nema dodatih linkova za inspiraciju.
                   </div>
                 ) : (
                   (editedTask.inspiration_links || []).map((item) => (
                     <div
                       key={item.id}
-                      className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700 relative group"
+                      className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm relative group"
                     >
                       {item.display_url && item.type === 'youtube' ? (
                         <div className="relative">
@@ -1014,8 +1026,8 @@ export default function TaskDetailModal({
                           />
                         </div>
                       ) : (
-                        <div className="p-3 text-sm text-slate-400 bg-slate-700/50 flex items-center gap-2">
-                          <Link size={16} className="text-blue-400" />
+                        <div className="p-3 text-sm text-slate-500 bg-slate-50 flex items-center gap-2 border-b border-slate-200">
+                          <Link size={16} className="text-slate-600" />
                           Eksterni Link
                         </div>
                       )}
@@ -1024,7 +1036,7 @@ export default function TaskDetailModal({
                           href={item.link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-blue-400 hover:underline truncate max-w-[80%]"
+                          className="text-xs text-primary hover:underline truncate max-w-[80%]"
                         >
                           {item.link
                             .replace(/^https?:\/\//, '')
@@ -1056,7 +1068,7 @@ export default function TaskDetailModal({
                           disabled={
                             removingLinkId === item.id || isEditingDisabled
                           }
-                          className="text-slate-600 hover:text-red-400 transition-colors shrink-0 disabled:opacity-50"
+                          className="text-slate-500 hover:text-red-600 transition-colors shrink-0 disabled:opacity-50"
                           title="Obriši link"
                         >
                           {removingLinkId === item.id ? (
@@ -1074,13 +1086,13 @@ export default function TaskDetailModal({
           )}
 
           {activeTab === 'schedule' && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-bold text-blue-100 uppercase mt-2 flex items-center gap-2">
-                <Calendar size={14} className="text-blue-100" /> Datum
+            <div className="space-y-4">
+              <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2">
+                <Calendar size={14} className="text-slate-600" /> Datum
                 Objavljivanja
               </h4>
 
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Planirani Datum
               </label>
               <DatePicker
@@ -1104,18 +1116,19 @@ export default function TaskDetailModal({
                 className="w-full"
                 disablePast={true}
                 disabled={isEditingDisabled}
+                variant="light"
               />
             </div>
           )}
 
           {activeTab === 'results' && (
             <div className="space-y-4">
-              <h4 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
-                <Eye size={14} className="text-emerald-400" /> Analiza rezultata
+              <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                <Eye size={14} className="text-emerald-600" /> Analiza rezultata
               </h4>
 
               <div>
-                <label className="text-blue-400 text-xs font-bold block mb-1">
+                <label className="text-slate-700 text-sm font-medium block mb-1">
                   Detaljna analiza
                 </label>
                 <RichTextEditor
@@ -1125,12 +1138,13 @@ export default function TaskDetailModal({
                   }}
                   placeholder="Opišite detaljno zašto je ova objava bila uspešna i koje ste lekcije naučili."
                   minHeight="120px"
+                  variant="light"
                 />
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="text-emerald-400 text-xs font-bold block mb-1">
+                  <label className="text-slate-700 text-sm font-medium block mb-1">
                     Broj pregleda
                   </label>
                   <input
@@ -1139,11 +1153,11 @@ export default function TaskDetailModal({
                     onChange={(e) =>
                       handleUpdate('result_views', e.target.value)
                     }
-                    className="w-full bg-slate-700 p-3 rounded-lg text-white"
+                    className={`w-full p-3 rounded-lg border ${modalInputClass}`}
                   />
                 </div>
                 <div>
-                  <label className="text-purple-400 text-xs font-bold block mb-1">
+                  <label className="text-slate-700 text-sm font-medium block mb-1">
                     Engagement
                   </label>
                   <input
@@ -1152,11 +1166,11 @@ export default function TaskDetailModal({
                     onChange={(e) =>
                       handleUpdate('result_engagement', e.target.value)
                     }
-                    className="w-full bg-slate-700 p-3 rounded-lg text-white"
+                    className={`w-full p-3 rounded-lg border ${modalInputClass}`}
                   />
                 </div>
                 <div>
-                  <label className="text-yellow-400 text-xs font-bold block mb-1">
+                  <label className="text-slate-700 text-sm font-medium block mb-1">
                     Broj konverzija
                   </label>
                   <input
@@ -1165,7 +1179,7 @@ export default function TaskDetailModal({
                     onChange={(e) =>
                       handleUpdate('result_conversions', e.target.value)
                     }
-                    className="w-full bg-slate-700 p-3 rounded-lg text-white"
+                    className={`w-full p-3 rounded-lg border ${modalInputClass}`}
                   />
                 </div>
               </div>
@@ -1198,22 +1212,22 @@ export default function TaskDetailModal({
           )}
         </div>
 
-        <div className="p-3 border-t border-slate-800 flex justify-between items-center gap-2">
+        <div className="p-4 border-t border-slate-200 bg-white flex flex-wrap justify-end items-center gap-3 shrink-0">
           {!task.is_admin_case_study && (
             <button
               onClick={() => setShowDeleteConfirm(true)}
               disabled={isDeleting}
-              className="w-full py-3 px-4 rounded-md font-medium flex items-center justify-center gap-2 transition-colors bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/20 disabled:bg-red-800 disabled:text-red-300"
+              className="py-2.5 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors bg-white border border-slate-300 text-red-600 hover:bg-red-50 hover:border-red-200 disabled:opacity-50"
             >
               {isDeleting ? (
                 <>
                   <Loader className="w-4 h-4" />
-                  <span className="text-md">Brisanje...</span>
+                  <span>Brisanje...</span>
                 </>
               ) : (
                 <>
                   <Trash2 className="w-4 h-4" />
-                  <span className="text-md">Obriši Zadatak</span>
+                  <span>Obriši Zadatak</span>
                 </>
               )}
             </button>
@@ -1222,11 +1236,7 @@ export default function TaskDetailModal({
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className={`w-full py-3 px-4 rounded-md font-medium flex items-center justify-center gap-2 transition-colors ${
-              isSaving
-                ? 'bg-blue-800 text-blue-300'
-                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
-            }`}
+            className={`py-2.5 px-5 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 ${modalPrimaryButtonClass}`}
           >
             {isSaving ? (
               <>
@@ -1247,7 +1257,7 @@ export default function TaskDetailModal({
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
             <div className="bg-white border border-slate-200 rounded-xl p-6 max-w-md w-full shadow-xl">
               <h3 className="text-xl font-bold text-slate-900 mb-2 flex items-center gap-2">
-                <Trash2 size={24} className="text-chart-1" />
+                <Trash2 size={24} className="text-red-600" />
                 Potvrdite Brisanje
               </h3>
               <p className="text-slate-600 mb-6">
@@ -1261,14 +1271,14 @@ export default function TaskDetailModal({
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
                   disabled={isDeleting}
-                  className="py-2 px-4 rounded-lg font-medium border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                  className={modalCancelButtonClass + ' py-2 px-4 rounded-lg font-medium'}
                 >
                   Otkaži
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={isDeleting}
-                  className="py-2 px-4 rounded-lg font-medium bg-chart-1 hover:bg-chart-1/90 text-white transition-colors disabled:opacity-50 flex items-center gap-2"
+                  className="py-2 px-4 rounded-lg font-medium bg-red-600 hover:bg-red-500 text-white transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                   {isDeleting ? (
                     <>
@@ -1287,9 +1297,8 @@ export default function TaskDetailModal({
           </div>
         )}
       </div>
-    </div>
+    </Modal>
   );
 
-  if (typeof document === 'undefined') return modalContent;
-  return createPortal(modalContent, document.body);
+  return modalContent;
 }

@@ -11,14 +11,29 @@ interface StatusSelectProps {
   onChange: (status: TaskStatus) => void;
   className?: string;
   disabled?: boolean;
+  /** Use 'light' for modals/light backgrounds */
+  variant?: 'dark' | 'light';
 }
+
+const triggerClassDark =
+  'w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-left flex items-center justify-between transition-colors hover:border-slate-600 text-white';
+const triggerClassLight =
+  'w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-left flex items-center justify-between transition-colors hover:border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30';
+const listClassDark =
+  'absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-auto divide-y-[0.5px] divide-slate-700 p-2';
+const listClassLight =
+  'absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-auto divide-y divide-slate-100 p-2';
 
 export default function StatusSelect({
   value,
   onChange,
   className = '',
   disabled = false,
+  variant = 'dark',
 }: StatusSelectProps) {
+  const isLight = variant === 'light';
+  const triggerClass = isLight ? triggerClassLight : triggerClassDark;
+  const listClass = isLight ? listClassLight : listClassDark;
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const selectRef = useRef<HTMLDivElement>(null);
@@ -105,11 +120,11 @@ export default function StatusSelect({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
         disabled={disabled}
-        className={`w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-left flex items-center justify-between transition-colors ${
+        className={`${triggerClass} ${
           disabled
             ? 'opacity-50 cursor-not-allowed'
-            : 'hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer'
-        } ${isOpen ? 'border-blue-500 ring-2 ring-blue-500/20' : ''}`}
+            : 'cursor-pointer'
+        } ${isOpen ? (isLight ? 'border-primary ring-2 ring-primary/20' : 'border-blue-500 ring-2 ring-blue-500/20') : ''}`}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
@@ -126,11 +141,11 @@ export default function StatusSelect({
             </span>
           </div>
         ) : (
-          <span className="text-slate-500">Izaberi status</span>
+          <span className={isLight ? 'text-slate-400' : 'text-slate-500'}>Izaberi status</span>
         )}
         <ChevronDown
           size={18}
-          className={`text-slate-400 transition-transform ${
+          className={`${isLight ? 'text-slate-500' : 'text-slate-400'} transition-transform ${
             isOpen ? 'transform rotate-180' : ''
           }`}
         />
@@ -140,7 +155,7 @@ export default function StatusSelect({
         <ul
           ref={listRef}
           role="listbox"
-          className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-auto divide-y-[0.5px] divide-slate-700 p-2"
+          className={listClass}
         >
           {KANBAN_COLUMNS.map((column, index) => (
             <li
@@ -153,11 +168,17 @@ export default function StatusSelect({
                 setHighlightedIndex(-1);
               }}
               onMouseEnter={() => setHighlightedIndex(index)}
-              className={`px-3 py-2 cursor-pointer transition-colors flex items-center gap-2 ${
+              className={`px-3 py-2 cursor-pointer transition-colors flex items-center gap-2 rounded ${
                 value === column.id
-                  ? 'bg-blue-600/20'
+                  ? isLight
+                    ? 'bg-primary/10 text-slate-900'
+                    : 'bg-blue-600/20'
                   : highlightedIndex === index
-                  ? 'bg-slate-700 text-white'
+                  ? isLight
+                    ? 'bg-slate-100 text-slate-900'
+                    : 'bg-slate-700 text-white'
+                  : isLight
+                  ? 'text-slate-700 hover:bg-slate-50'
                   : 'text-slate-300 hover:bg-slate-700'
               }`}
             >
