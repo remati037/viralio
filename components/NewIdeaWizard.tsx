@@ -74,7 +74,7 @@ export default function NewIdeaWizard({
     title: '',
     niche: NICHES[0].name,
     format: 'Kratka Forma' as 'Kratka Forma' | 'Duga Forma',
-    network: NETWORKS[0].name,
+    networks: [NETWORKS[0].name] as string[],
     hook: '',
     hookHtml: '',
     body: '',
@@ -247,7 +247,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
         ...prev,
         title: prev.title || template.title,
         format: effectiveFormat as 'Kratka Forma' | 'Duga Forma',
-        network: networkForFormat,
+        networks: [networkForFormat],
         originalTemplate: template.title,
         fullScript: generatedScript,
         fullScriptHtml: generatedScript,
@@ -267,7 +267,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
         ...prev,
         title: prev.title || template.title,
         format: effectiveFormat as 'Kratka Forma' | 'Duga Forma',
-        network: networkForFormat,
+        networks: [networkForFormat],
         originalTemplate: template.title,
         hook: hookText,
         hookHtml: hookText,
@@ -374,31 +374,11 @@ ZAKLJUČAK: ${template.structure.cta}`;
   };
 
   const handleSave = async () => {
-    if (!selectedCategoryId) {
-      toast.error('Kategorija je obavezna', {
-        description: 'Molimo izaberite kategoriju pre čuvanja skripte.',
+    if (!formData.title.trim()) {
+      toast.error('Nedostaje naslov', {
+        description: 'Molimo unesite naslov zadatka.',
       });
       return;
-    }
-
-    if (formData.format === 'Kratka Forma') {
-      if (
-        !formData.title.trim() ||
-        (!formData.hook.trim() && !formData.body.trim() && !formData.cta.trim())
-      ) {
-        toast.error('Nedostaju podaci', {
-          description:
-            'Molimo unesite naslov i bar jedan deo skripte (Hook, Body ili CTA) pre čuvanja.',
-        });
-        return;
-      }
-    } else {
-      if (!formData.title.trim() || !formData.fullScript.trim()) {
-        toast.error('Nedostaju podaci', {
-          description: 'Molimo unesite naslov i skriptu pre čuvanja.',
-        });
-        return;
-      }
     }
 
     setIsSaving(true);
@@ -412,20 +392,21 @@ ZAKLJUČAK: ${template.structure.cta}`;
       format: effectiveFormat,
       hook:
         effectiveFormat === 'Duga Forma'
-          ? formData.fullScript.trim()
-          : formData.hook.trim(),
+          ? (formData.fullScript || '').trim()
+          : (formData.hook || '').trim(),
       body:
         effectiveFormat === 'Duga Forma'
           ? 'CEO TEKST se nalazi u Hook/Skripta polju u detaljima.'
-          : formData.body.trim(),
+          : (formData.body || '').trim(),
       cta:
         effectiveFormat === 'Duga Forma'
           ? 'Duga Forma: Nema odvojenog CTA za Kanban.'
-          : formData.cta.trim(),
+          : (formData.cta || '').trim(),
       status: 'idea' as const,
       publish_date: formData.publish_date || null,
       original_template: formData.originalTemplate,
-      category_id: selectedCategoryId,
+      category_id: selectedCategoryId || null,
+      publish_networks: formData.networks.length > 0 ? formData.networks : null,
     };
 
     await onSaveToPlan(
@@ -724,12 +705,15 @@ ZAKLJUČAK: ${template.structure.cta}`;
 
           <div className="space-y-2">
             <Label className="text-slate-700">Mreža za objavljivanje</Label>
+            <p className="text-xs text-slate-500">Izaberite jednu ili više mreža</p>
             <div className="flex flex-wrap gap-2">
-              {NETWORKS.filter(
-                (net) =>
-                  !isLongFormHidden() ||
-                  (net.id !== 'youtube' && net.id !== 'facebook'),
-              ).map((net) => {
+              {NETWORKS.filter((net) => {
+                const isShortForm = net.id === 'instagram' || net.id === 'tiktok';
+                const isLongFormNetwork = net.id === 'youtube' || net.id === 'facebook';
+                if (formData.format === 'Duga Forma' && !isLongFormHidden())
+                  return true;
+                return isShortForm;
+              }).map((net) => {
                 const Icon = net.icon;
                 const isLongFormNetwork =
                   net.id === 'youtube' || net.id === 'facebook';
@@ -744,30 +728,34 @@ ZAKLJUČAK: ${template.structure.cta}`;
                   formData.originalTemplate !== 'Ručni Unos' &&
                   !matchesFormat
                 );
+                const isSelected = formData.networks.includes(net.name);
 
                 return (
                   <Button
                     key={net.id}
                     type="button"
-                    variant={
-                      formData.network === net.name ? 'default' : 'outline'
-                    }
+                    variant={isSelected ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => {
                       if (isDisabled) return;
-                      setFormData((p) => ({
-                        ...p,
-                        network: net.name,
-                        format: isLongFormHidden()
-                          ? 'Kratka Forma'
-                          : net.id === 'youtube' || net.id === 'facebook'
-                            ? 'Duga Forma'
-                            : 'Kratka Forma',
-                      }));
+                      setFormData((p) => {
+                        const next = isSelected
+                          ? p.networks.filter((n) => n !== net.name)
+                          : [...p.networks, net.name];
+                        return {
+                          ...p,
+                          networks: next.length > 0 ? next : [net.name],
+                          format: isLongFormHidden()
+                            ? 'Kratka Forma'
+                            : net.id === 'youtube' || net.id === 'facebook'
+                              ? 'Duga Forma'
+                              : p.format,
+                        };
+                      });
                     }}
                     disabled={isDisabled}
                     className={
-                      formData.network === net.name
+                      isSelected
                         ? 'gap-2 bg-chart-2 text-white border-chart-2'
                         : isDisabled
                           ? 'cursor-not-allowed opacity-50'
@@ -777,9 +765,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
                     <Icon
                       size={16}
                       className={
-                        formData.network === net.name
-                          ? 'text-primary-foreground'
-                          : net.color
+                        isSelected ? 'text-primary-foreground' : net.color
                       }
                     />
                     {net.name}
@@ -1213,16 +1199,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
               type="button"
               size="lg"
               onClick={handleSave}
-              disabled={
-                isSaving ||
-                !formData.title.trim() ||
-                !selectedCategoryId ||
-                (isLongForm && !formData.fullScript.trim()) ||
-                (!isLongForm &&
-                  !formData.hook.trim() &&
-                  !formData.body.trim() &&
-                  !formData.cta.trim())
-              }
+              disabled={isSaving || !formData.title.trim()}
               className={cn(
                 'w-full gap-2 text-base font-semibold border-0 rounded-xl py-6',
                 modalPrimaryButtonClass,

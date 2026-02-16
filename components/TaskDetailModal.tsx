@@ -1,6 +1,6 @@
 'use client';
 
-import { KANBAN_COLUMNS } from '@/lib/constants';
+import { KANBAN_COLUMNS, NETWORKS } from '@/lib/constants';
 import { useAICredits } from '@/lib/hooks/useAICredits';
 import { createClient } from '@/lib/supabase/client';
 import { getYoutubeThumbnail } from '@/lib/utils/helpers';
@@ -58,10 +58,24 @@ export default function TaskDetailModal({
   onRemoveInspirationLink,
 }: TaskDetailModalProps) {
   const supabase = createClient();
-  const [editedTask, setEditedTask] = useState<Task>({
+
+  /** Normalize publish_networks from API (array, undefined, or PG text form) */
+  const normalizePublishNetworks = (t: Task): string[] | null => {
+    const raw: unknown = (t as Task & { publish_networks?: unknown }).publish_networks;
+    if (Array.isArray(raw)) return raw.length ? (raw as string[]) : null;
+    if (typeof raw === 'string') {
+      if (raw === '' || raw === '{}') return null;
+      const parsed = raw.replace(/^\{|\}$/g, '').split(',').map((s: string) => s.replace(/^"|"$/g, '').trim()).filter(Boolean);
+      return parsed.length ? parsed : null;
+    }
+    return null;
+  };
+
+  const [editedTask, setEditedTask] = useState<Task>(() => ({
     ...task,
     inspiration_links: task.inspiration_links || [],
-  });
+    publish_networks: normalizePublishNetworks(task),
+  }));
   const [isSaving, setIsSaving] = useState(false);
   const [linkInput, setLinkInput] = useState('');
   const [isAddingLink, setIsAddingLink] = useState(false);
@@ -117,19 +131,21 @@ export default function TaskDetailModal({
   );
 
   useEffect(() => {
+    const normalizedPublishNetworks = normalizePublishNetworks(task);
+
     // If we're actively managing links (adding/removing), don't overwrite inspiration_links
     // This prevents race conditions when parent updates task state
     if (isManagingLinksRef.current) {
-      // Only update other fields, preserve inspiration_links
       setEditedTask((prev) => ({
         ...task,
         inspiration_links: prev.inspiration_links || [],
+        publish_networks: normalizedPublishNetworks,
       }));
     } else {
-      // Normal update - use task's inspiration_links
       setEditedTask({
         ...task,
         inspiration_links: task.inspiration_links || [],
+        publish_networks: normalizedPublishNetworks,
       });
     }
 
@@ -426,13 +442,6 @@ export default function TaskDetailModal({
       return;
     }
 
-    if (!editedTask.category_id) {
-      toast.error('Kategorija je obavezna', {
-        description: 'Molimo izaberite kategoriju pre čuvanja skripte.',
-      });
-      return;
-    }
-
     setIsSaving(true);
 
     const updatedTask: TaskUpdate = {
@@ -453,7 +462,9 @@ export default function TaskDetailModal({
       result_engagement: editedTask.result_engagement,
       result_conversions: editedTask.result_conversions,
       analysis: analysisHtml,
-      category_id: editedTask.category_id,
+      // Explicit null so DB accepts update when category is not selected
+      category_id: editedTask.category_id ?? null,
+      publish_networks: editedTask.publish_networks ?? null,
     };
 
     await onUpdate(updatedTask);
@@ -563,6 +574,11 @@ export default function TaskDetailModal({
                 </span>
               )}
             </p>
+            {(editedTask.publish_networks ?? []).length > 0 && (
+              <p className="text-slate-500 text-sm mt-1">
+                Mreža: {(editedTask.publish_networks ?? []).join(', ')}
+              </p>
+            )}
           </div>
         </div>
 
@@ -1086,38 +1102,81 @@ export default function TaskDetailModal({
           )}
 
           {activeTab === 'schedule' && (
-            <div className="space-y-4">
-              <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2">
-                <Calendar size={14} className="text-slate-600" /> Datum
-                Objavljivanja
-              </h4>
-
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Planirani Datum
-              </label>
-              <DatePicker
-                value={
-                  editedTask.publish_date
-                    ? editedTask.publish_date.substring(0, 10)
-                    : null
-                }
-                onChange={(date) => {
-                  if (date) {
-                    // DatePicker returns YYYY-MM-DD (local date)
-                    // Store as UTC midnight to avoid timezone shifts
-                    // This ensures the date stays the same regardless of user's timezone
-                    const isoString = `${date}T00:00:00.000Z`;
-                    handleUpdate('publish_date', isoString);
-                  } else {
-                    handleUpdate('publish_date', null);
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2 mb-3">
+                  <Calendar size={14} className="text-slate-600" /> Datum
+                  Objavljivanja
+                </h4>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Planirani Datum
+                </label>
+                <DatePicker
+                  value={
+                    editedTask.publish_date
+                      ? editedTask.publish_date.substring(0, 10)
+                      : null
                   }
-                }}
-                placeholder="Izaberi datum objavljivanja"
-                className="w-full"
-                disablePast={true}
-                disabled={isEditingDisabled}
-                variant="light"
-              />
+                  onChange={(date) => {
+                    if (date) {
+                      const isoString = `${date}T00:00:00.000Z`;
+                      handleUpdate('publish_date', isoString);
+                    } else {
+                      handleUpdate('publish_date', null);
+                    }
+                  }}
+                  placeholder="Izaberi datum objavljivanja"
+                  className="w-full"
+                  disablePast={true}
+                  disabled={isEditingDisabled}
+                  variant="light"
+                />
+              </div>
+
+              <div>
+                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2 mb-2">
+                  <Trello size={14} className="text-slate-600" /> Mreža za
+                  objavljivanje
+                </h4>
+                <p className="text-xs text-slate-500 mb-2">
+                  Izaberite jednu ili više mreža
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {NETWORKS.filter((net) => {
+                    if (isLongForm) return true;
+                    return net.id !== 'youtube' && net.id !== 'facebook';
+                  }).map((net) => {
+                    const Icon = net.icon;
+                    const currentNetworks = editedTask.publish_networks ?? [];
+                    const selected = currentNetworks.includes(net.name);
+                    return (
+                      <button
+                        key={net.id}
+                        type="button"
+                        onClick={() => {
+                          // Networks are always editable (metadata), only date is locked when published
+                          const next = selected
+                            ? currentNetworks.filter((n) => n !== net.name)
+                            : [...currentNetworks, net.name];
+                          handleUpdate(
+                            'publish_networks',
+                            next.length > 0 ? next : null,
+                          );
+                        }}
+                        disabled={false}
+                        className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                          selected
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Icon size={16} className={net.color} />
+                        {net.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
 

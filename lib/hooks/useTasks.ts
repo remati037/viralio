@@ -24,7 +24,7 @@ export function useTasks(userId: string | null) {
       try {
         const { data, error: fetchError } = await supabase
           .from('tasks')
-          .select('*, inspiration_links(*), category:task_categories(*)')
+          .select('*, publish_networks, inspiration_links(*), category:task_categories(*)')
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
 
@@ -45,11 +45,11 @@ export function useTasks(userId: string | null) {
     if (!userId) return { data: null, error: 'User not authenticated' }
 
     try {
-      const { data, error: insertError } = await supabase
-        .from('tasks')
-        .insert({ ...task, user_id: userId })
-        .select('*, inspiration_links(*), category:task_categories(*)')
-        .single()
+        const { data, error: insertError } = await supabase
+          .from('tasks')
+          .insert({ ...task, user_id: userId })
+          .select('*, publish_networks, inspiration_links(*), category:task_categories(*)')
+          .single()
 
       if (insertError) throw insertError
 
@@ -75,7 +75,7 @@ export function useTasks(userId: string | null) {
         .from('tasks')
         .update(updates)
         .eq('id', taskId)
-        .select('*, inspiration_links(*), category:task_categories(*)')
+        .select('*, publish_networks, inspiration_links(*), category:task_categories(*)')
         .single()
 
       if (updateError) throw updateError
