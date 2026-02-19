@@ -22,15 +22,16 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import AIAssistant from './AIAssistant';
+import AICreditBadge from './ui/ai-credit-badge';
+import AiLanguageSelect from './ui/ai-language-select';
+import CategorySelect, { type TaskCategory } from './ui/category-select';
+import DatePicker from './ui/date-picker';
+import Loader from './ui/loader';
 import Modal, {
   modalCancelButtonClass,
   modalInputClass,
   modalPrimaryButtonClass,
 } from './ui/modal';
-import AICreditBadge from './ui/ai-credit-badge';
-import CategorySelect, { type TaskCategory } from './ui/category-select';
-import DatePicker from './ui/date-picker';
-import Loader from './ui/loader';
 import RichTextEditor from './ui/rich-text-editor';
 import StatusSelect from './ui/status-select';
 import ToneSelect, { type Tone } from './ui/tone-select';
@@ -61,11 +62,16 @@ export default function TaskDetailModal({
 
   /** Normalize publish_networks from API (array, undefined, or PG text form) */
   const normalizePublishNetworks = (t: Task): string[] | null => {
-    const raw: unknown = (t as Task & { publish_networks?: unknown }).publish_networks;
+    const raw: unknown = (t as Task & { publish_networks?: unknown })
+      .publish_networks;
     if (Array.isArray(raw)) return raw.length ? (raw as string[]) : null;
     if (typeof raw === 'string') {
       if (raw === '' || raw === '{}') return null;
-      const parsed = raw.replace(/^\{|\}$/g, '').split(',').map((s: string) => s.replace(/^"|"$/g, '').trim()).filter(Boolean);
+      const parsed = raw
+        .replace(/^\{|\}$/g, '')
+        .split(',')
+        .map((s: string) => s.replace(/^"|"$/g, '').trim())
+        .filter(Boolean);
       return parsed.length ? parsed : null;
     }
     return null;
@@ -89,6 +95,9 @@ export default function TaskDetailModal({
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [tone, setTone] = useState<Tone | null>(null);
   const [targetAudience, setTargetAudience] = useState('');
+  const [aiLanguage, setAiLanguage] = useState<
+    'Serbian' | 'English' | 'Croatian' | 'Bosnian' | 'Macedonian'
+  >('Serbian');
   const pendingLinksRef = useRef<Map<string, any>>(new Map());
   const isManagingLinksRef = useRef<boolean>(false);
   const { credits } = useAICredits(task.user_id);
@@ -703,6 +712,20 @@ export default function TaskDetailModal({
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Jezik AI generatora
+                </label>
+                <AiLanguageSelect
+                  value={aiLanguage}
+                  onChange={setAiLanguage}
+                  placeholder="Jezik AI generatora"
+                  className="w-full"
+                  disabled={isEditingDisabled}
+                  variant="light"
+                />
+              </div>
+
               {/* Editing Disabled Notice for Published Tasks */}
               {isEditingDisabled && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
@@ -791,6 +814,7 @@ export default function TaskDetailModal({
                         categoryName: editedTask.category?.name,
                         tone: tone || undefined,
                         targetAudience: targetAudience || undefined,
+                        aiLanguage,
                       },
                     }}
                   />
@@ -831,6 +855,7 @@ export default function TaskDetailModal({
                           categoryName: editedTask.category?.name,
                           tone: tone || undefined,
                           targetAudience: targetAudience || undefined,
+                          aiLanguage,
                         },
                       }}
                     />
@@ -862,6 +887,7 @@ export default function TaskDetailModal({
                           categoryName: editedTask.category?.name,
                           tone: tone || undefined,
                           targetAudience: targetAudience || undefined,
+                          aiLanguage,
                         },
                       }}
                     />
@@ -893,6 +919,7 @@ export default function TaskDetailModal({
                           categoryName: editedTask.category?.name,
                           tone: tone || undefined,
                           targetAudience: targetAudience || undefined,
+                          aiLanguage,
                         },
                       }}
                     />
@@ -914,6 +941,7 @@ export default function TaskDetailModal({
                       categoryName: editedTask.category?.name,
                       tone: tone || undefined,
                       targetAudience: targetAudience || undefined,
+                      aiLanguage,
                     }}
                     onGenerateComplete={(field, content) => {
                       if (field === 'title') {
@@ -1330,7 +1358,9 @@ export default function TaskDetailModal({
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
                   disabled={isDeleting}
-                  className={modalCancelButtonClass + ' py-2 px-4 rounded-lg font-medium'}
+                  className={
+                    modalCancelButtonClass + ' py-2 px-4 rounded-lg font-medium'
+                  }
                 >
                   Otkaži
                 </button>

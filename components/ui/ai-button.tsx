@@ -1,5 +1,6 @@
 'use client';
 
+import { getLanguageInstruction } from '@/lib/constants/ai-languages';
 import { TONE_OPTIONS } from '@/components/ui/tone-select';
 import { useUserId } from '@/components/UserContext';
 import { useAICredits } from '@/lib/hooks/useAICredits';
@@ -21,6 +22,7 @@ interface AIButtonProps {
     categoryName?: string;
     tone?: string | null;
     targetAudience?: string | null;
+    aiLanguage?: string | null;
   };
   onGenerate: (content: string) => void;
   className?: string;
@@ -57,7 +59,7 @@ Your ONLY goal is to write opening lines that stop the scroll immediately.
 ### STRICT RULES FOR HOOKS
 1.  *NO GREETINGS:* NEVER start with "Hello everyone", "Hi guys", "Dobrodošli". Start instantly.
 2.  *LENGTH:* Maximum 10-15 words per hook. It must be spoken in under 3 seconds.
-3.  *LANGUAGE:* Serbian (Latin script). Use the informal "Ti" (You).
+3.  *LANGUAGE:* ${getLanguageInstruction(context?.aiLanguage)}.
 4.  *TONE:* Urgent, specific, and bold.
 5.  *VISUAL CUE:* The text must imply visual movement or a strong statement.
 
@@ -102,7 +104,7 @@ You are an expert Short-Form Video Scriptwriter for the Balkan market (Serbia, C
 - *Target Audience:* ${context?.targetAudience} (optional, default: General public)
 
 ### STRICT WRITING RULES (CRITICAL)
-1.  *LANGUAGE:* Output must be in *SERBIAN* (Latin script).
+1.  *LANGUAGE:* Output must be in *${(context?.aiLanguage || 'Serbian').toUpperCase()}*.
 2.  *TONE & STYLE:*
     - Use the informal "Ti" (You) to address the viewer directly. NEVER use the formal "Vi" unless explicitly requested.
     - Write exactly how people speak in Belgrade/region (urban, modern, conversational).
@@ -145,7 +147,7 @@ Your task is to take a User's DRAFT CTA and rewrite it into 3 high-converting va
     - Add "Urgency" or "FOMO" (Fear Of Missing Out).
 
 ### STRICT RULES
-1.  *Language:* Serbian (Latin script). Informal "Ti".
+1.  *Language:* ${getLanguageInstruction(context?.aiLanguage)}.
 2.  *Length:* Short and punchy (max 8-10 words).
 3.  *Tone:* Confident and directive.
 
@@ -175,7 +177,7 @@ TOPIC: "${context?.title}"`;
       hasContent
         ? `Trenutni sadržaj: ${currentContent.substring(0, 200)}. `
         : ''
-    }Naslov treba da bude kratak, jasan i privlačan.${categoryInfo}${toneInfo}${audienceInfo}`;
+    }Naslov treba da bude kratak, jasan i privlačan. OUTPUT LANGUAGE: ${context?.aiLanguage || 'Serbian'}.${categoryInfo}${toneInfo}${audienceInfo}`;
   },
   fullScript: (context, currentContent) => {
     const hasContent = currentContent.trim().length > 0;
@@ -194,7 +196,7 @@ TOPIC: "${context?.title}"`;
         : ''
     }Uključi ceo tekst bez razdvajanja na delove. Format: ${
       context?.format || 'Duga Forma'
-    }.${categoryInfo}${toneInfo}${audienceInfo}`;
+    }. OUTPUT LANGUAGE: ${context?.aiLanguage || 'Serbian'}.${categoryInfo}${toneInfo}${audienceInfo}`;
   },
 };
 

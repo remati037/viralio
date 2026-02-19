@@ -435,7 +435,7 @@ export default function PlannerPage() {
           />
         )}
 
-        <div key={plannerView} className="w-full overflow-x-auto h-full">
+        <div key={plannerView} className="w-full min-w-0 overflow-x-auto h-full">
           {plannerView === 'kanban' ? (
             <KanbanBoard
               tasks={tasks}

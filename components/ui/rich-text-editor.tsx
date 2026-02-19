@@ -38,6 +38,7 @@ export interface RichTextEditorProps {
       categoryName?: string;
       tone?: string | null;
       targetAudience?: string | null;
+      aiLanguage?: string | null;
     };
   };
 }

@@ -132,7 +132,7 @@ Guidelines:
 - Hooks should be attention-grabbing and create curiosity (0-3 seconds)
 - Body should deliver value and keep viewers engaged (3-45 seconds for short form)
 - CTAs should be clear and actionable
-- Write in Serbian language (Cyrillic or Latin script, match user's preference)
+- Write in ${taskContext?.aiLanguage || 'Serbian'} language
 - Be creative, engaging, and optimized for viral potential
 
 CRITICAL: When generating hooks, return ONLY the hook text itself - no explanations, no labels, no additional text. Just the hook.${hooksContext}`

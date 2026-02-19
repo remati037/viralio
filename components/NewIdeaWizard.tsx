@@ -34,6 +34,7 @@ import Loader from './ui/loader';
 import Modal, { modalInputClass, modalPrimaryButtonClass } from './ui/modal';
 import RichTextEditor from './ui/rich-text-editor';
 import Skeleton from './ui/skeleton';
+import AiLanguageSelect from './ui/ai-language-select';
 import ToneSelect, { type Tone } from './ui/tone-select';
 
 interface NewIdeaWizardProps {
@@ -87,6 +88,12 @@ export default function NewIdeaWizard({
     publish_date: null as string | null,
     tone: null as Tone | null,
     targetAudience: '',
+    aiLanguage: 'Serbian' as
+      | 'Serbian'
+      | 'English'
+      | 'Croatian'
+      | 'Bosnian'
+      | 'Macedonian',
   });
   const [isSaving, setIsSaving] = useState(false);
   const [inspirationLinks, setInspirationLinks] = useState<
@@ -704,6 +711,19 @@ ZAKLJUČAK: ${template.structure.cta}`;
           </div>
 
           <div className="space-y-2">
+            <Label className="text-slate-700">Jezik AI generatora</Label>
+            <AiLanguageSelect
+              value={formData.aiLanguage}
+              onChange={(aiLanguage) =>
+                setFormData((p) => ({ ...p, aiLanguage }))
+              }
+              placeholder="Jezik AI generatora"
+              className="w-full"
+              variant="light"
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label className="text-slate-700">Mreža za objavljivanje</Label>
             <p className="text-xs text-slate-500">Izaberite jednu ili više mreža</p>
             <div className="flex flex-wrap gap-2">
@@ -825,6 +845,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
                     )?.name,
                     tone: formData.tone,
                     targetAudience: formData.targetAudience || undefined,
+                    aiLanguage: formData.aiLanguage,
                   },
                 }}
               />
@@ -879,6 +900,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       )?.name,
                       tone: formData.tone,
                       targetAudience: formData.targetAudience || undefined,
+                      aiLanguage: formData.aiLanguage,
                     },
                   }}
                 />
@@ -916,6 +938,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       )?.name,
                       tone: formData.tone,
                       targetAudience: formData.targetAudience || undefined,
+                      aiLanguage: formData.aiLanguage,
                     },
                   }}
                 />
@@ -953,6 +976,7 @@ ZAKLJUČAK: ${template.structure.cta}`;
                       )?.name,
                       tone: formData.tone,
                       targetAudience: formData.targetAudience || undefined,
+                      aiLanguage: formData.aiLanguage,
                     },
                   }}
                 />

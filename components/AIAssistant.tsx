@@ -1,6 +1,7 @@
 'use client';
 
 import { useUserId } from '@/components/UserContext';
+import { getLanguageInstruction } from '@/lib/constants/ai-languages';
 import { useAICredits } from '@/lib/hooks/useAICredits';
 import { Copy, Loader2, Send, Sparkles, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -25,6 +26,7 @@ interface AIAssistantProps {
     categoryName?: string;
     tone?: string | null;
     targetAudience?: string | null;
+    aiLanguage?: string | null;
   };
   onGenerateComplete?: (
     field: 'title' | 'hook' | 'body' | 'cta' | 'all',
@@ -326,7 +328,7 @@ export default function AIAssistant({
         taskContext?.format || 'video'
       } u niši ${
         taskContext?.niche || 'marketing'
-      }. Naslov treba da bude kratak, jasan i privlačan.${categoryInfo}${toneInfo}${audienceInfo}`,
+      }. Naslov treba da bude kratak, jasan i privlačan. OUTPUT LANGUAGE: ${taskContext?.aiLanguage || 'Serbian'}.${categoryInfo}${toneInfo}${audienceInfo}`,
     },
     {
       label: 'Generiši Hook',
@@ -344,7 +346,7 @@ Your ONLY goal is to write opening lines that stop the scroll immediately.
 ### STRICT RULES FOR HOOKS
 1.  *NO GREETINGS:* NEVER start with "Hello everyone", "Hi guys", "Dobrodošli". Start instantly.
 2.  *LENGTH:* Maximum 10-15 words per hook. It must be spoken in under 3 seconds.
-3.  *LANGUAGE:* Serbian (Latin script). Use the informal "Ti" (You).
+3.  *LANGUAGE:* ${getLanguageInstruction(taskContext?.aiLanguage)}.
 4.  *TONE:* Urgent, specific, and bold.
 5.  *VISUAL CUE:* The text must imply visual movement or a strong statement.
 
@@ -384,7 +386,7 @@ You are an expert Short-Form Video Scriptwriter for the Balkan market (Serbia, C
 - *Target Audience:* ${taskContext?.targetAudience} (optional, default: General public)
 
 ### STRICT WRITING RULES (CRITICAL)
-1.  *LANGUAGE:* Output must be in *SERBIAN* (Latin script).
+1.  *LANGUAGE:* Output must be in *${(taskContext?.aiLanguage || 'Serbian').toUpperCase()}*.
 2.  *TONE & STYLE:*
     - Use the informal "Ti" (You) to address the viewer directly. NEVER use the formal "Vi" unless explicitly requested.
     - Write exactly how people speak in Belgrade/region (urban, modern, conversational).
@@ -429,7 +431,7 @@ Your task is to take a User's DRAFT CTA and rewrite it into 3 high-converting va
     - Add "Urgency" or "FOMO" (Fear Of Missing Out).
 
 ### STRICT RULES
-1.  *Language:* Serbian (Latin script). Informal "Ti".
+1.  *Language:* ${getLanguageInstruction(taskContext?.aiLanguage)}.
 2.  *Length:* Short and punchy (max 8-10 words).
 3.  *Tone:* Confident and directive.
 
@@ -453,7 +455,7 @@ TOPIC: "${taskContext?.title}"`,
         taskContext?.format || 'video'
       } u niši ${
         taskContext?.niche || 'marketing'
-      }. Uključi naslov, hook, body i CTA. Formatiraj jasno sa oznakama HOOK:, BODY:, CTA:${categoryInfo}${toneInfo}${audienceInfo}`,
+      }. Uključi naslov, hook, body i CTA. Formatiraj jasno sa oznakama HOOK:, BODY:, CTA:. OUTPUT LANGUAGE: ${taskContext?.aiLanguage || 'Serbian'}.${categoryInfo}${toneInfo}${audienceInfo}`,
     },
   ];
 

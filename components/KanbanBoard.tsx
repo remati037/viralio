@@ -47,7 +47,7 @@ export default function KanbanBoard({
   };
 
   return (
-    <div className="h-full overflow-x-auto pb-4">
+    <div className="h-full min-w-0 overflow-x-auto pb-4">
       <div className="flex gap-2 min-w-0 w-full h-full">
         {KANBAN_COLUMNS.map((column, colIndex) => {
           const columnTasks = tasks.filter((t) => t.status === column.id);
