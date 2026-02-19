@@ -122,9 +122,9 @@ export default function SubscriptionModal({
   const plan = {
     name: 'Pro',
     trial: '7 dana besplatno',
-    price: '€19',
+    price: '€27',
     period: 'mesečno',
-    afterTrial: 'Nakon probnog perioda 19€ mesečno do otkazivanja.',
+    afterTrial: 'Nakon probnog perioda 27€ mesečno do otkazivanja.',
     features: [
       'Unlimited tasks',
       'Kanban board view',
