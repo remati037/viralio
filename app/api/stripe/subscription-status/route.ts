@@ -3,6 +3,8 @@ import { getUser } from '@/lib/utils/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
+export const dynamic = 'force-dynamic'
+
 // Initialize Stripe
 let stripe: Stripe | null = null
 try {
@@ -121,7 +123,9 @@ export async function GET(request: NextRequest) {
       const trialEnd = sub.trial_end
       const currentPeriodEnd = sub.current_period_end
       const now = Math.floor(Date.now() / 1000)
-      const isCancelled = sub.cancel_at_period_end === true
+      // Cancelled: either "cancel at period end" (portal) or already canceled/deleted
+      const isCancelled =
+        sub.cancel_at_period_end === true || sub.status === 'canceled'
 
       // Determine if trial is active
       const isTrialActive = isTrialing || (trialEnd && trialEnd > now)
@@ -143,10 +147,10 @@ export async function GET(request: NextRequest) {
         trialDaysRemaining: isTrialActive && trialEnd ? Math.ceil((trialEnd - now) / (24 * 60 * 60)) : null,
       })
     } catch (error: any) {
-      // Subscription might not exist in Stripe anymore
+      // Subscription might not exist in Stripe anymore (e.g. cancelled in portal and deleted)
       console.error('Error retrieving subscription:', error)
       return NextResponse.json({
-        isCancelled: false,
+        isCancelled: true,
         hasActiveSubscription: false,
         error: 'Subscription not found in Stripe',
       })

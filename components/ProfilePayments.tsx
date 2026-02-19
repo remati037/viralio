@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import type { Payment, Profile } from '@/types';
-import { Calendar, CreditCard, ExternalLink, X } from 'lucide-react';
+import { Calendar, CreditCard, ExternalLink, RefreshCw, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import CancelSubscriptionModal from './CancelSubscriptionModal';
@@ -51,7 +51,10 @@ export default function ProfilePayments({
     if (!profile?.id) return;
     setLoadingStatus(true);
     try {
-      const response = await fetch('/api/stripe/subscription-status');
+      const response = await fetch('/api/stripe/subscription-status', {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      });
       const data = await response.json();
       setSubscriptionStatus(data);
     } catch (error: unknown) {
@@ -60,6 +63,17 @@ export default function ProfilePayments({
       setLoadingStatus(false);
     }
   };
+
+  // Refetch when user returns to this tab (e.g. after cancelling in Stripe portal)
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && profile?.id) {
+        fetchSubscriptionStatus();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [profile?.id]);
 
   const fetchPayments = async () => {
     if (!profile?.id) return;
@@ -257,9 +271,20 @@ export default function ProfilePayments({
                 {profile?.tier === 'pro' && nextPayment && (
                   <div className="mt-6 pt-6 border-t border-border space-y-3">
                     {subscriptionStatus?.isCancelled ? (
-                      <div className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-border bg-muted px-4 py-2 font-medium text-muted-foreground">
-                        <X size={16} />
-                        Otkazali ste pretplatu
+                      <div className="space-y-2">
+                        <div className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-border bg-muted px-4 py-2 font-medium text-muted-foreground">
+                          <X size={16} />
+                          Otkazali ste pretplatu
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => fetchSubscriptionStatus()}
+                          disabled={loadingStatus}
+                          className="text-muted-foreground hover:text-foreground mx-auto flex items-center gap-1.5 text-xs transition-colors disabled:opacity-50"
+                        >
+                          <RefreshCw size={12} className={loadingStatus ? 'animate-spin' : ''} />
+                          Osveži status pretplate
+                        </button>
                       </div>
                     ) : (
                       <>
@@ -284,6 +309,15 @@ export default function ProfilePayments({
                           Na Stripe stranici možete otkazati pretplatu, promeniti
                           karticu ili pogledati račune. Povratak na: Plaćanje.
                         </p>
+                        <button
+                          type="button"
+                          onClick={() => fetchSubscriptionStatus()}
+                          disabled={loadingStatus}
+                          className="text-muted-foreground hover:text-foreground mx-auto mt-1 flex items-center gap-1.5 text-xs transition-colors disabled:opacity-50"
+                        >
+                          <RefreshCw size={12} className={loadingStatus ? 'animate-spin' : ''} />
+                          Osveži status pretplate
+                        </button>
                       </>
                     )}
                   </div>

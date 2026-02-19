@@ -122,6 +122,38 @@ export async function PUT(
       )
     }
 
+    // If free_trial_ends_at was changed and user has an active Stripe subscription in trial, sync trial_end to Stripe
+    if (stripe && freeTrialEndsAt !== undefined) {
+      const { data: payment } = await adminClient
+        .from('payments')
+        .select('stripe_subscription_id')
+        .eq('user_id', userId)
+        .not('stripe_subscription_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      const subscriptionId = (payment as { stripe_subscription_id?: string } | null)?.stripe_subscription_id
+      if (subscriptionId) {
+        try {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+          if (subscription.status === 'trialing' && subscription.trial_end) {
+            const trialEndUnix = freeTrialEndsAt
+              ? Math.floor(new Date(freeTrialEndsAt).getTime() / 1000)
+              : null
+            if (trialEndUnix && trialEndUnix > Math.floor(Date.now() / 1000)) {
+              await stripe.subscriptions.update(subscriptionId, {
+                trial_end: trialEndUnix,
+              })
+            }
+          }
+        } catch (err) {
+          console.error('Error syncing trial end to Stripe:', err)
+          // Profile was already updated; don't fail the request
+        }
+      }
+    }
+
     // If email or password needs to be updated, update auth user
     if (body.email || body.password) {
       const updateData: any = {}

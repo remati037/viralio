@@ -71,17 +71,18 @@ export default function DatePicker({
     setMounted(true);
   }, []);
 
-  // Set initial view to selected date or current date
+  // Set view to selected date or today when value changes (use value string so we don't reset on every render from new Date ref)
   useEffect(() => {
-    if (selectedDate) {
-      setViewYear(selectedDate.getFullYear());
-      setViewMonth(selectedDate.getMonth());
+    if (value) {
+      const [y, m] = value.split('-').map(Number);
+      setViewYear(y);
+      setViewMonth(m - 1);
     } else {
       const now = new Date();
       setViewYear(now.getFullYear());
       setViewMonth(now.getMonth());
     }
-  }, [selectedDate]);
+  }, [value]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
