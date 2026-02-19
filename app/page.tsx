@@ -21,9 +21,9 @@ export default async function Home({
   // Handle PKCE code from Supabase (password reset, email verification, etc.)
   // Supabase may redirect to root URL with code parameter instead of callback
   if (params.code) {
-    const type = params.type || 'recovery';
-    // Redirect to callback route which will handle code exchange
-    redirect(`/auth/callback?code=${params.code}${type ? `&type=${type}` : ''}`);
+    const type = params.type;
+    // Redirect to callback; pass type as-is (signup/email → confirm-success, recovery/invite → set-password)
+    redirect(`/auth/callback?code=${encodeURIComponent(params.code)}${type ? `&type=${encodeURIComponent(type)}` : ''}`);
   }
   
   // Handle password reset/invite tokens from Supabase verify redirect (query params)

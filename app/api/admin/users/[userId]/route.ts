@@ -95,13 +95,17 @@ export async function PUT(
     const freeTrialEndsAt =
       body.has_unlimited_free === true ? null : body.free_trial_ends_at ?? undefined
 
+    // Unlimited free users get Pro tier so they have full access
+    const tier =
+      body.has_unlimited_free === true ? 'pro' : (body.tier ?? undefined)
+
     const profileUpdate: Record<string, unknown> = {
       business_name: body.business_name,
       target_audience: body.target_audience,
       persona: body.persona,
       monthly_goal_short: body.monthly_goal_short,
       monthly_goal_long: body.monthly_goal_long,
-      tier: body.tier,
+      tier,
       has_unlimited_free: body.has_unlimited_free,
       updated_at: new Date().toISOString(),
     }

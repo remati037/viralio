@@ -342,6 +342,7 @@ export default function UpdateUserModal({
                 setFormData({
                   ...formData,
                   has_unlimited_free: e.target.checked,
+                  tier: e.target.checked ? 'pro' : formData.tier,
                   free_trial_ends_at: e.target.checked ? null : formData.free_trial_ends_at,
                 })
               }

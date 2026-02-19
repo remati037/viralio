@@ -125,10 +125,15 @@ export default function HashTokenHandler() {
             return;
           }
 
-          // If session was set successfully, redirect to home
+          // If session was set successfully, redirect
           if (session) {
             window.history.replaceState(null, '', window.location.pathname);
-            router.push('/');
+            // Email confirmation (signup): show success page then sign in
+            if (type === 'signup' || type === 'email') {
+              router.push('/auth/confirm-success');
+            } else {
+              router.push('/');
+            }
             setHandled(true);
             return;
           }

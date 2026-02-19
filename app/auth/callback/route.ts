@@ -73,17 +73,14 @@ export async function GET(request: Request) {
       return NextResponse.redirect(redirectUrl)
     }
 
-    // If type is missing but we have a session, check if it's a recovery flow
-    // by checking if user needs to set password (password might be null for recovery)
-    if (!type && session.user) {
-      // For password reset, Supabase might not always include type
-      // Redirect to set-password to be safe - it will check if password needs to be set
-      const redirectUrl = new URL('/auth/set-password', origin)
-      redirectUrl.searchParams.set('type', 'recovery')
-      return NextResponse.redirect(redirectUrl)
+    // Email confirmation (signup): show success page and ask user to sign in
+    // Don't prompt for password - they already set it at registration
+    if (type === 'signup' || type === 'email' || !type) {
+      await supabase.auth.signOut()
+      return NextResponse.redirect(new URL('/auth/confirm-success', origin))
     }
 
-    // For regular OAuth/signup flows, ensure profile is set up
+    // For regular OAuth flows (non-email), ensure profile is set up
     if (session.user) {
       const businessName = session.user.user_metadata?.business_name
       if (businessName) {
